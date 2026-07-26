@@ -1,0 +1,1 @@
+"""Core TripSync application package."""
