@@ -26,3 +26,33 @@ The first version will use controlled values where practical so retrieval result
 and group-fit scoring can be evaluated consistently. Additional fields, such as
 opening hours or geographic coordinates, should only be added when the application
 uses them.
+
+Controlled values are:
+
+- `walking_level`: `low`, `moderate`, or `high`;
+- `budget_level`: `free`, `low`, `moderate`, or `high`;
+- trip `pace`: `relaxed`, `balanced`, or `packed`.
+
+## Traveler profile
+
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `name` | string | Yes | Display name, unique within a trip |
+| `interests` | list of strings | Yes | One to twelve normalized interest tags |
+| `walking_tolerance` | string | Yes | Maximum preferred walking level |
+| `food_restrictions` | list of strings | No | Dietary restrictions or allergies |
+| `must_do_activities` | list of strings | No | Activities the traveler wants prioritized |
+
+## Trip request
+
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `destination` | string | Yes | Destination city or region |
+| `country` | string | Yes | Destination country |
+| `days` | integer | Yes | Trip length from one to five days |
+| `budget_level` | string | Yes | Group budget level |
+| `pace` | string | Yes | `relaxed`, `balanced`, or `packed` |
+| `travelers` | list | Yes | Two to six validated traveler profiles |
+
+All models reject unknown fields. User-entered tag lists are trimmed, converted to
+lowercase, de-duplicated, and stripped of blank entries.
