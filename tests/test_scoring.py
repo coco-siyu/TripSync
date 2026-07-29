@@ -120,6 +120,28 @@ class GroupFitScoringTests(unittest.TestCase):
         self.assertTrue(boosted_fit.must_do_match)
         self.assertEqual(boosted_fit.score - base_fit.score, 20)
 
+    def test_must_do_match_ignores_spacing_and_punctuation(self) -> None:
+        activity = make_activity(
+            "rome_vatican_museums",
+            "Vatican Museums",
+            ["art"],
+        )
+        trip = make_trip(
+            [
+                make_traveler(
+                    "Coco",
+                    ["food"],
+                    must_do_activities=["vaticanmuseums"],
+                ),
+                make_traveler("Sam", ["architecture"]),
+            ]
+        )
+
+        coco_fit = score_activity(activity, trip).traveler_fits[0]
+
+        self.assertTrue(coco_fit.must_do_match)
+        self.assertEqual(coco_fit.must_do_score, 20)
+
     def test_walking_conflict_is_penalized_and_explained(self) -> None:
         activity = make_activity(
             "rome_hill_walk",

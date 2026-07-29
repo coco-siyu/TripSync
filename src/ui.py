@@ -11,6 +11,7 @@ import streamlit as st
 from pydantic import ValidationError
 
 from src.models import Activity, TravelerProfile, TripRequest
+from src.must_dos import UnmatchedMustDo, resolve_must_dos
 from src.scoring import GroupFitResult, rank_activities
 
 
@@ -155,10 +156,19 @@ def _initialize_state() -> None:
         },
         "traveler_count": 2,
         "trip_request": None,
+        "selected_activity_ids": [],
+        "dismissed_must_do_ids": [],
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def _reset_activity_selections() -> None:
+    """Clear shortlist state when a new trip request is submitted."""
+
+    st.session_state.selected_activity_ids = []
+    st.session_state.dismissed_must_do_ids = []
 
 
 def _apply_styles() -> None:
@@ -292,7 +302,8 @@ def _apply_styles() -> None:
 
         .st-key-trip-card,
         .st-key-travelers-shell,
-        .st-key-summary-card {
+        .st-key-summary-card,
+        .st-key-shortlist-card {
             background: rgba(255,255,255,0.94);
             border: 1px solid rgba(23, 107, 255, 0.14);
             border-radius: 1.35rem;
@@ -303,6 +314,12 @@ def _apply_styles() -> None:
         .st-key-summary-card {
             background: linear-gradient(115deg, #FFFFFF 0%, #FFF1C8 100%);
             border-color: rgba(255, 190, 61, 0.42);
+        }
+
+        .st-key-shortlist-card {
+            background: linear-gradient(125deg, #FFFFFF 0%, #E9FBF9 100%);
+            border-color: rgba(0, 169, 157, 0.28);
+            margin-top: 1.5rem;
         }
 
         div[class*="st-key-traveler-card-"] {
@@ -423,6 +440,23 @@ def _apply_styles() -> None:
             font-size: 0.82rem;
             margin: 0.35rem 0;
             padding: 0.45rem 0.65rem;
+        }
+
+        .ts-must-do-line {
+            background: rgba(255,90,95,0.10);
+            border-left: 3px solid var(--sunset-coral);
+            border-radius: 0.45rem;
+            color: #B5323A;
+            font-size: 0.82rem;
+            font-weight: 800;
+            margin: 0.4rem 0 0.7rem;
+            padding: 0.42rem 0.65rem;
+        }
+
+        .ts-shortlist-meta {
+            color: rgba(21,50,74,0.62);
+            font-size: 0.78rem;
+            margin-top: -0.45rem;
         }
 
         div[data-testid="stForm"] {
@@ -558,6 +592,7 @@ def _render_trip_step() -> None:
                 exclude={"travelers"},
             )
             st.session_state.trip_request = sample_trip.model_dump(mode="json")
+            _reset_activity_selections()
             st.session_state.planner_step = "results"
             st.rerun()
 
@@ -669,6 +704,7 @@ def _render_travelers_step() -> None:
                 )
             else:
                 st.session_state.trip_request = trip_request.model_dump(mode="json")
+                _reset_activity_selections()
                 st.session_state.planner_step = "results"
                 st.rerun()
 
@@ -714,15 +750,109 @@ def _activity_lookup(activities: list[Activity]) -> dict[str, Activity]:
     return {activity.id: activity for activity in activities}
 
 
+def _owner_names(owners: tuple[str, ...]) -> str:
+    if len(owners) == 1:
+        return owners[0]
+    return " + ".join(owners)
+
+
+def _sync_initial_must_dos(must_do_ids: list[str]) -> None:
+    """Add new must-dos once while respecting deliberate removals."""
+
+    selected = list(st.session_state.selected_activity_ids)
+    dismissed = set(st.session_state.dismissed_must_do_ids)
+    for activity_id in must_do_ids:
+        if activity_id not in selected and activity_id not in dismissed:
+            selected.append(activity_id)
+    st.session_state.selected_activity_ids = selected
+
+
+def _add_activity_to_shortlist(activity_id: str) -> None:
+    selected = list(st.session_state.selected_activity_ids)
+    if activity_id not in selected:
+        selected.append(activity_id)
+    st.session_state.selected_activity_ids = selected
+    st.session_state.dismissed_must_do_ids = [
+        dismissed_id
+        for dismissed_id in st.session_state.dismissed_must_do_ids
+        if dismissed_id != activity_id
+    ]
+
+
+def _remove_activity_from_shortlist(
+    activity_id: str,
+    *,
+    is_must_do: bool,
+) -> None:
+    st.session_state.selected_activity_ids = [
+        selected_id
+        for selected_id in st.session_state.selected_activity_ids
+        if selected_id != activity_id
+    ]
+    if (
+        is_must_do
+        and activity_id not in st.session_state.dismissed_must_do_ids
+    ):
+        st.session_state.dismissed_must_do_ids = [
+            *st.session_state.dismissed_must_do_ids,
+            activity_id,
+        ]
+
+
+def _render_unmatched_must_do(entry: UnmatchedMustDo) -> None:
+    message = (
+        f'{entry.traveler_name}’s must-do “{entry.entered_value}” '
+        "did not match a known activity."
+    )
+    if entry.suggested_activity_name:
+        message += f" Did you mean {entry.suggested_activity_name}?"
+    message += " Edit the traveler profile to correct it."
+    st.warning(message, icon=":material/search_off:")
+
+
+def _render_activity_action(
+    activity: Activity,
+    *,
+    is_must_do: bool,
+) -> None:
+    selected = activity.id in st.session_state.selected_activity_ids
+    label = "Remove from trip" if selected else "Add to trip"
+    icon = ":material/remove_circle:" if selected else ":material/add_circle:"
+    if st.button(
+        label,
+        key=f"activity-selection-{activity.id}",
+        icon=icon,
+        type="secondary" if selected else "primary",
+        width="stretch",
+    ):
+        if selected:
+            _remove_activity_from_shortlist(
+                activity.id,
+                is_must_do=is_must_do,
+            )
+            st.toast(f"Removed {activity.name} from your trip.")
+        else:
+            _add_activity_to_shortlist(activity.id)
+            st.toast(f"Added {activity.name} to your trip.")
+        st.rerun()
+
+
 def _render_result_card(
-    rank: int,
+    rank: int | None,
     result: GroupFitResult,
     activity: Activity,
+    must_do_owners: tuple[str, ...] = (),
 ) -> None:
-    with st.container(key=f"result-card-{rank}-{result.activity_id}"):
+    card_position = rank if rank is not None else "must-do"
+    with st.container(
+        key=f"result-card-{card_position}-{result.activity_id}"
+    ):
         score_col, content_col = st.columns([1, 4], gap="large")
         with score_col:
-            st.caption(f"#{rank} group fit")
+            rank_label = (
+                f"#{rank} group fit" if rank is not None else "Group fit score"
+            )
+            st.caption(rank_label)
             st.markdown(
                 f'<div class="ts-score"><strong>{result.total_score:.0f}</strong>'
                 "<span>/100</span></div>",
@@ -742,6 +872,13 @@ def _render_result_card(
                 f"{activity.walking_level.value.title()} walking · "
                 f"{activity.budget_level.value.title()} budget"
             )
+            if must_do_owners:
+                owner_names = escape(_owner_names(must_do_owners))
+                st.markdown(
+                    '<div class="ts-must-do-line">★ Must-do for '
+                    f"{owner_names}</div>",
+                    unsafe_allow_html=True,
+                )
             st.write(activity.description)
 
             matched = sorted(
@@ -779,6 +916,83 @@ def _render_result_card(
                     icon=":material/open_in_new:",
                 )
 
+            _render_activity_action(
+                activity,
+                is_must_do=bool(must_do_owners),
+            )
+
+
+def _render_shortlist(
+    activity_by_id: dict[str, Activity],
+    owners_by_activity_id: dict[str, tuple[str, ...]],
+) -> None:
+    selected_ids = [
+        activity_id
+        for activity_id in st.session_state.selected_activity_ids
+        if activity_id in activity_by_id
+    ]
+    st.session_state.selected_activity_ids = selected_ids
+
+    with st.container(key="shortlist-card"):
+        st.markdown(
+            '<div class="ts-section-label">Saved for this trip</div>',
+            unsafe_allow_html=True,
+        )
+        st.header("Your trip shortlist")
+        if not selected_ids:
+            st.caption(
+                "Add activities from any view. Your choices stay here while "
+                "you compare the results."
+            )
+            return
+
+        total_duration = sum(
+            activity_by_id[activity_id].duration_hours
+            for activity_id in selected_ids
+        )
+        st.markdown(
+            _chip_row(
+                [
+                    f"{len(selected_ids)} activities",
+                    f"{format_duration(total_duration)} total",
+                ]
+            ),
+            unsafe_allow_html=True,
+        )
+
+        for activity_id in selected_ids:
+            activity = activity_by_id[activity_id]
+            owners = owners_by_activity_id.get(activity_id, ())
+            detail_col, action_col = st.columns(
+                [4, 1],
+                vertical_alignment="center",
+            )
+            icon = CATEGORY_ICONS.get(activity.category, "🧭")
+            detail_col.markdown(f"**{icon} {activity.name}**")
+            if owners:
+                detail = f"Must-do for {_owner_names(owners)}"
+            else:
+                detail = "Added from group recommendations"
+            detail_col.markdown(
+                '<div class="ts-shortlist-meta">'
+                f"{escape(detail)} · {format_duration(activity.duration_hours)}"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            if action_col.button(
+                "Remove",
+                key=f"shortlist-remove-{activity_id}",
+                icon=":material/close:",
+                type="tertiary",
+                width="stretch",
+            ):
+                _remove_activity_from_shortlist(
+                    activity_id,
+                    is_must_do=bool(owners),
+                )
+                st.toast(f"Removed {activity.name} from your trip.")
+                st.rerun()
+
 
 def _render_results_step() -> None:
     if not st.session_state.trip_request:
@@ -789,6 +1003,12 @@ def _render_results_step() -> None:
     activities = load_sample_activities()
     activity_by_id = _activity_lookup(activities)
     results = rank_activities(activities, trip)
+    result_by_activity_id = {
+        result.activity_id: result for result in results
+    }
+    must_do_resolution = resolve_must_dos(activities, trip.travelers)
+    owners_by_activity_id = must_do_resolution.owners_by_activity_id
+    _sync_initial_must_dos(list(owners_by_activity_id))
 
     _render_summary(trip)
     st.space("medium")
@@ -796,23 +1016,52 @@ def _render_results_step() -> None:
     st.header("Your strongest matches")
     st.markdown(
         '<p class="ts-helper">Scores combine shared interests, walking comfort, '
-        "must-dos, budget, and fairness. Open any card to see the reasoning.</p>",
+        "must-dos, budget, and fairness. Switch views without losing anything "
+        "you add to your trip.</p>",
         unsafe_allow_html=True,
     )
 
-    result_count = st.segmented_control(
+    for unmatched in must_do_resolution.unmatched:
+        _render_unmatched_must_do(unmatched)
+
+    result_view = st.segmented_control(
         "Results to show",
-        [5, len(results)],
-        default=5,
-        format_func=lambda value: "Top 5" if value == 5 else "All activities",
+        ["top_five", "must_dos", "all"],
+        default="top_five",
+        format_func=lambda value: {
+            "top_five": "Top 5",
+            "must_dos": f"Must-dos ({len(owners_by_activity_id)})",
+            "all": "All activities",
+        }[value],
         label_visibility="collapsed",
+        key="results_view",
     )
-    for rank, result in enumerate(results[: result_count or 5], start=1):
+
+    if result_view == "must_dos":
+        displayed_results = [
+            (None, result_by_activity_id[activity_id])
+            for activity_id in owners_by_activity_id
+        ]
+    elif result_view == "all":
+        displayed_results = list(enumerate(results, start=1))
+    else:
+        displayed_results = list(enumerate(results[:5], start=1))
+
+    if not displayed_results:
+        st.info(
+            "No recognized must-dos yet. Edit the traveler profiles to add one.",
+            icon=":material/bookmark:",
+        )
+
+    for rank, result in displayed_results:
         _render_result_card(
             rank,
             result,
             activity_by_id[result.activity_id],
+            owners_by_activity_id.get(result.activity_id, ()),
         )
+
+    _render_shortlist(activity_by_id, owners_by_activity_id)
 
 
 def render_app() -> None:

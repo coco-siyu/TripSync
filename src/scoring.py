@@ -14,6 +14,7 @@ from src.models import (
     TripSyncModel,
     WalkingLevel,
 )
+from src.must_dos import matches_must_do
 
 
 INTEREST_WEIGHT = 55.0
@@ -81,13 +82,8 @@ def _interest_score(matched_interests: Sequence[str]) -> float:
 def _must_do_match(activity: Activity, traveler: TravelerProfile) -> bool:
     """Match must-do entries against stable activity names and identifiers."""
 
-    activity_keys = {
-        activity.id.casefold(),
-        activity.id.replace("_", " ").casefold(),
-        activity.name.casefold(),
-    }
     return any(
-        must_do.casefold() in activity_keys
+        matches_must_do(activity, must_do)
         for must_do in traveler.must_do_activities
     )
 

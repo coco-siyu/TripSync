@@ -95,6 +95,20 @@ class PreferenceFlowHelpersTests(unittest.TestCase):
 
 
 class StreamlitInteractionTests(unittest.TestCase):
+    @staticmethod
+    def _sample_results_app() -> AppTest:
+        sample_trip = build_sample_trip()
+        app = AppTest.from_file("app.py")
+        app.session_state["planner_step"] = "results"
+        app.session_state["trip_basics"] = sample_trip.model_dump(
+            mode="json",
+            exclude={"travelers"},
+        )
+        app.session_state["trip_request"] = sample_trip.model_dump(mode="json")
+        app.session_state["selected_activity_ids"] = []
+        app.session_state["dismissed_must_do_ids"] = []
+        return app.run()
+
     def test_app_opens_on_trip_basics_without_exceptions(self) -> None:
         app = AppTest.from_file("app.py")
         app.run()
@@ -139,6 +153,73 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertEqual(app.session_state["planner_step"], "results")
         self.assertEqual(app.header[0].value, "Your strongest matches")
+
+    def test_results_views_are_ordered_and_must_dos_initialize_shortlist(
+        self,
+    ) -> None:
+        app = self._sample_results_app()
+        results_view = next(
+            group
+            for group in app.get("button_group")
+            if group.key == "results_view"
+        )
+
+        self.assertEqual(
+            results_view.options,
+            ["Top 5", "Must-dos (2)", "All activities"],
+        )
+        self.assertEqual(
+            app.session_state["selected_activity_ids"],
+            ["rome_colosseum", "rome_borghese_gallery"],
+        )
+        self.assertTrue(
+            any(
+                markdown.value
+                == '<div class="ts-must-do-line">★ Must-do for Sam</div>'
+                for markdown in app.markdown
+            )
+        )
+
+    def test_must_do_view_filters_cards_without_changing_shortlist(self) -> None:
+        app = self._sample_results_app()
+        results_view = next(
+            group
+            for group in app.get("button_group")
+            if group.key == "results_view"
+        )
+        results_view.select("Must-dos (2)").run()
+
+        self.assertEqual(app.session_state["results_view"], "must_dos")
+        self.assertEqual(
+            [subheader.value for subheader in app.subheader[1:]],
+            ["🏛️ Colosseum", "🎨 Borghese Gallery"],
+        )
+        self.assertEqual(
+            app.session_state["selected_activity_ids"],
+            ["rome_colosseum", "rome_borghese_gallery"],
+        )
+
+    def test_added_recommendation_persists_and_removed_must_do_stays_removed(
+        self,
+    ) -> None:
+        app = self._sample_results_app()
+        app.button(key="activity-selection-rome_pantheon").click().run()
+
+        self.assertIn(
+            "rome_pantheon",
+            app.session_state["selected_activity_ids"],
+        )
+
+        app.button(key="shortlist-remove-rome_colosseum").click().run()
+
+        self.assertNotIn(
+            "rome_colosseum",
+            app.session_state["selected_activity_ids"],
+        )
+        self.assertIn(
+            "rome_colosseum",
+            app.session_state["dismissed_must_do_ids"],
+        )
 
 
 if __name__ == "__main__":
