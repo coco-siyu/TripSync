@@ -1,0 +1,26 @@
+[theme]
+base = "light"
+primaryColor = "#176BFF"
+backgroundColor = "#FFF8F0"
+secondaryBackgroundColor = "#EAF3FF"
+textColor = "#15324A"
+blueColor = "#176BFF"
+greenColor = "#00A99D"
+orangeColor = "#FFBE3D"
+redColor = "#FF5A5F"
+grayColor = "#7A8793"
+font = "sans-serif"
+headingFont = "sans-serif"
+headingFontWeights = [800, 750, 700, 700, 700, 700]
+baseFontSize = 16
+baseRadius = "large"
+buttonRadius = "full"
+borderColor = "#C9D9EA"
+showWidgetBorder = true
+showSidebarBorder = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"

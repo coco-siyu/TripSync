@@ -2,16 +2,14 @@
 
 import streamlit as st
 
+from src.ui import render_app
 
-st.set_page_config(page_title="TripSync", page_icon="🧭", layout="wide")
 
-st.title("TripSync")
-st.caption(
-    "An AI-powered group travel planner that balances traveler preferences, "
-    "constraints, and interests."
+st.set_page_config(
+    page_title="TripSync · Plan together",
+    page_icon="🧭",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-st.info(
-    "TripSync is currently in development. The first interactive traveler form "
-    "will be added in the next milestone."
-)
+render_app()

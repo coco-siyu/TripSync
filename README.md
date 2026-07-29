@@ -196,7 +196,7 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Create the first sample activity dataset
 - [x] Build traveler and trip input models
 - [x] Implement group-fit scoring
-- [ ] Build the first Streamlit preference form
+- [x] Build the first Streamlit preference form
 - [ ] Add text retrieval
 - [ ] Generate a grounded itinerary
 - [ ] Add activity rejection and day regeneration
