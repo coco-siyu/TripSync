@@ -191,8 +191,8 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Define the problem and MVP scope
 - [x] Create the initial repository structure
 - [x] Define the activity-data schema
-- [ ] Create the first sample activity dataset
-- [ ] Build traveler and trip input models
+- [x] Create the first sample activity dataset
+- [x] Build traveler and trip input models
 - [ ] Implement group-fit scoring
 - [ ] Build the first Streamlit preference form
 - [ ] Add text retrieval
