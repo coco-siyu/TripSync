@@ -4,10 +4,11 @@
 
 ## Project status
 
-TripSync is currently in the **project scaffolding and data-design phase**. The first
-working milestone will recommend activities for a group based on traveler profiles.
-Itinerary generation will be added after the recommendation and retrieval logic can
-be evaluated independently.
+TripSync now has a working **preference, retrieval, and recommendation flow**. It
+collects validated group preferences, retrieves grounded destination activities,
+ranks them with an explainable group-fit formula, identifies must-dos, and lets the
+organizer maintain a shortlist. Itinerary generation is the next major product
+phase.
 
 ## The problem
 
@@ -66,7 +67,8 @@ For each candidate activity, the application will consider:
 
 The UI will display both a group-fit score and a traveler coverage explanation.
 The initial deterministic formula is documented in
-[docs/scoring.md](docs/scoring.md).
+[docs/scoring.md](docs/scoring.md), and the text-retrieval boundary is documented in
+[docs/retrieval.md](docs/retrieval.md).
 
 ## Initial technical approach
 
@@ -175,8 +177,7 @@ rejected recommendations and common planning failures.
 
 ## Local setup
 
-The application is not functional yet. These commands prepare the development
-environment for the upcoming implementation:
+These commands prepare the environment and start the working Streamlit application:
 
 ```bash
 python -m venv .venv
@@ -197,7 +198,7 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Build traveler and trip input models
 - [x] Implement group-fit scoring
 - [x] Build the first Streamlit preference form
-- [ ] Add text retrieval
+- [x] Add text retrieval
 - [ ] Generate a grounded itinerary
 - [ ] Add activity rejection and day regeneration
 - [ ] Evaluate retrieval approaches

@@ -4,8 +4,11 @@ The current suite covers:
 
 - trip, traveler, and activity data validation;
 - sample-catalog integrity;
+- deterministic text retrieval, destination filtering, fallbacks, and must-do
+  inclusion;
 - group-fit interest, walking, must-do, budget, and fairness rules;
-- deterministic activity ranking.
+- deterministic activity ranking;
+- Streamlit preference, retrieval, must-do, and shortlist interactions.
 
 Run all tests from the repository root:
 
@@ -13,5 +16,4 @@ Run all tests from the repository root:
 .venv/bin/python -m unittest -v
 ```
 
-Retrieval filtering and itinerary constraint checks will be added with those
-components.
+Itinerary constraint checks will be added with the itinerary-generation component.

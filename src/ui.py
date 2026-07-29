@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from src.models import Activity, TravelerProfile, TripRequest
 from src.must_dos import UnmatchedMustDo, resolve_must_dos
 from src.scoring import GroupFitResult, rank_activities
+from src.search import RetrievedActivity, retrieve_activities
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -841,6 +842,7 @@ def _render_result_card(
     rank: int | None,
     result: GroupFitResult,
     activity: Activity,
+    retrieval: RetrievedActivity,
     must_do_owners: tuple[str, ...] = (),
 ) -> None:
     card_position = rank if rank is not None else "must-do"
@@ -901,6 +903,11 @@ def _render_result_card(
                 )
 
             with st.expander("Why this fits your group"):
+                st.markdown("**Why it was retrieved**")
+                for reason in retrieval.reasons:
+                    st.caption(reason)
+
+                st.markdown("**How it fits each traveler**")
                 for fit in result.traveler_fits:
                     status = "✓" if fit.matched_interests or fit.must_do_match else "○"
                     st.markdown(
@@ -1002,11 +1009,27 @@ def _render_results_step() -> None:
     trip = TripRequest.model_validate(st.session_state.trip_request)
     activities = load_sample_activities()
     activity_by_id = _activity_lookup(activities)
-    results = rank_activities(activities, trip)
+    retrieval_response = retrieve_activities(activities, trip)
+    retrieval_by_activity_id = {
+        result.activity_id: result
+        for result in retrieval_response.results
+    }
+    retrieved_activities = [
+        activity_by_id[result.activity_id]
+        for result in retrieval_response.results
+    ]
+    destination_activities = [
+        activity_by_id[activity_id]
+        for activity_id in retrieval_response.destination_activity_ids
+    ]
+    results = rank_activities(retrieved_activities, trip)
     result_by_activity_id = {
         result.activity_id: result for result in results
     }
-    must_do_resolution = resolve_must_dos(activities, trip.travelers)
+    must_do_resolution = resolve_must_dos(
+        destination_activities,
+        trip.travelers,
+    )
     owners_by_activity_id = must_do_resolution.owners_by_activity_id
     _sync_initial_must_dos(list(owners_by_activity_id))
 
@@ -1020,6 +1043,28 @@ def _render_results_step() -> None:
         "you add to your trip.</p>",
         unsafe_allow_html=True,
     )
+
+    if not retrieval_response.destination_activity_ids:
+        st.warning(
+            "The current activity catalog has no entries for "
+            f"{trip.destination}, {trip.country}. Try Rome, Italy while "
+            "the prototype catalog expands.",
+            icon=":material/location_off:",
+        )
+        _render_shortlist(activity_by_id, owners_by_activity_id)
+        return
+
+    st.caption(
+        f"Text retrieval found {len(retrieval_response.results)} relevant "
+        f"activities from {len(retrieval_response.destination_activity_ids)} "
+        "destination records."
+    )
+    if retrieval_response.used_fallback:
+        st.info(
+            "No direct interest or must-do text matched, so TripSync is "
+            "showing the complete destination catalog.",
+            icon=":material/travel_explore:",
+        )
 
     for unmatched in must_do_resolution.unmatched:
         _render_unmatched_must_do(unmatched)
@@ -1058,6 +1103,7 @@ def _render_results_step() -> None:
             rank,
             result,
             activity_by_id[result.activity_id],
+            retrieval_by_activity_id[result.activity_id],
             owners_by_activity_id.get(result.activity_id, ()),
         )
 

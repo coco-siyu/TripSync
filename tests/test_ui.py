@@ -180,6 +180,51 @@ class StreamlitInteractionTests(unittest.TestCase):
             )
         )
 
+    def test_results_explain_the_text_retrieval_stage(self) -> None:
+        app = self._sample_results_app()
+
+        self.assertTrue(
+            any(
+                caption.value
+                == (
+                    "Text retrieval found 12 relevant activities from 12 "
+                    "destination records."
+                )
+                for caption in app.caption
+            )
+        )
+        self.assertTrue(
+            any(
+                markdown.value == "**Why it was retrieved**"
+                for markdown in app.markdown
+            )
+        )
+        self.assertTrue(
+            any(
+                caption.value == "Must-do for Sam"
+                for caption in app.caption
+            )
+        )
+
+    def test_unknown_destination_shows_catalog_guardrail(self) -> None:
+        trip = build_sample_trip().model_copy(
+            update={"destination": "Tokyo", "country": "Japan"}
+        )
+        app = AppTest.from_file("app.py")
+        app.session_state["planner_step"] = "results"
+        app.session_state["trip_request"] = trip.model_dump(mode="json")
+        app.session_state["selected_activity_ids"] = []
+        app.session_state["dismissed_must_do_ids"] = []
+        app.run()
+
+        self.assertFalse(app.exception)
+        self.assertTrue(
+            any(
+                "no entries for Tokyo, Japan" in warning.value
+                for warning in app.warning
+            )
+        )
+
     def test_must_do_view_filters_cards_without_changing_shortlist(self) -> None:
         app = self._sample_results_app()
         results_view = next(
