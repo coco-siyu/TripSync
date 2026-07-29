@@ -65,6 +65,8 @@ For each candidate activity, the application will consider:
 - fairness, so one traveler does not dominate the itinerary.
 
 The UI will display both a group-fit score and a traveler coverage explanation.
+The initial deterministic formula is documented in
+[docs/scoring.md](docs/scoring.md).
 
 ## Initial technical approach
 
@@ -193,7 +195,7 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Define the activity-data schema
 - [x] Create the first sample activity dataset
 - [x] Build traveler and trip input models
-- [ ] Implement group-fit scoring
+- [x] Implement group-fit scoring
 - [ ] Build the first Streamlit preference form
 - [ ] Add text retrieval
 - [ ] Generate a grounded itinerary
