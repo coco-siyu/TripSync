@@ -48,6 +48,16 @@ class _DayState:
         return round(self.activity_hours + self.transition_hours, 2)
 
 
+@dataclass(frozen=True)
+class ReplacementOutcome:
+    """Result of replacing or removing one scheduled activity."""
+
+    plan: ItineraryPlan
+    removed_activity: ScheduledActivity
+    replacement_activity: ScheduledActivity | None
+    day_number: int
+
+
 def _unique_ids(activity_ids: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     unique: list[str] = []
@@ -169,6 +179,7 @@ def build_itinerary(
     selected_activity_ids: Sequence[str],
     *,
     must_do_owners_by_activity_id: Mapping[str, Sequence[str]] | None = None,
+    excluded_activity_ids: Sequence[str] = (),
     auto_fill: bool = True,
 ) -> ItineraryPlan:
     """Build a stable itinerary from shortlisted and ranked activities.
@@ -183,13 +194,18 @@ def build_itinerary(
         result.activity_id: result for result in ranked_results
     }
     owners_by_id = must_do_owners_by_activity_id or {}
+    excluded_ids = set(excluded_activity_ids)
     rule = PACE_RULES[trip.pace]
     days = [
         _DayState(day_number=day_number)
         for day_number in range(1, trip.days + 1)
     ]
 
-    selected_ids = _unique_ids(selected_activity_ids)
+    selected_ids = [
+        activity_id
+        for activity_id in _unique_ids(selected_activity_ids)
+        if activity_id not in excluded_ids
+    ]
     known_selected_ids = [
         activity_id
         for activity_id in selected_ids
@@ -239,6 +255,7 @@ def build_itinerary(
             activity_id = result.activity_id
             if (
                 activity_id in scheduled_or_selected_ids
+                or activity_id in excluded_ids
                 or activity_id not in activity_by_id
             ):
                 continue
@@ -271,4 +288,142 @@ def build_itinerary(
         auto_fill=auto_fill,
         days=itinerary_days,
         unscheduled=unscheduled,
+    )
+
+
+def replace_itinerary_activity(
+    plan: ItineraryPlan,
+    rejected_activity_id: str,
+    activities: Sequence[Activity],
+    ranked_results: Sequence[GroupFitResult],
+    *,
+    excluded_activity_ids: Sequence[str] = (),
+    must_do_owners_by_activity_id: Mapping[str, Sequence[str]] | None = None,
+) -> ReplacementOutcome:
+    """Replace one activity without changing any other itinerary day."""
+
+    activity_by_id = {activity.id: activity for activity in activities}
+    result_by_id = {
+        result.activity_id: result for result in ranked_results
+    }
+    owners_by_id = must_do_owners_by_activity_id or {}
+    target_day: ItineraryDay | None = None
+    target_position: int | None = None
+    removed_activity: ScheduledActivity | None = None
+
+    for day in plan.days:
+        for position, scheduled in enumerate(day.activities):
+            if scheduled.activity_id == rejected_activity_id:
+                target_day = day
+                target_position = position
+                removed_activity = scheduled
+                break
+        if removed_activity is not None:
+            break
+
+    if (
+        target_day is None
+        or target_position is None
+        or removed_activity is None
+    ):
+        raise ValueError(
+            f"activity {rejected_activity_id!r} is not in the itinerary"
+        )
+
+    remaining_activities = [
+        activity
+        for activity in target_day.activities
+        if activity.activity_id != rejected_activity_id
+    ]
+    scheduled_ids = {
+        activity.activity_id
+        for day in plan.days
+        for activity in day.activities
+        if activity.activity_id != rejected_activity_id
+    }
+    excluded_ids = {
+        *excluded_activity_ids,
+        rejected_activity_id,
+    }
+
+    replacement: ScheduledActivity | None = None
+    transition_hours_with_replacement = (
+        TRANSITION_HOURS * len(remaining_activities)
+    )
+    remaining_activity_hours = sum(
+        activity.duration_hours for activity in remaining_activities
+    )
+
+    for result in ranked_results:
+        candidate_id = result.activity_id
+        if (
+            candidate_id in scheduled_ids
+            or candidate_id in excluded_ids
+            or candidate_id not in activity_by_id
+        ):
+            continue
+        candidate = activity_by_id[candidate_id]
+        planned_hours = (
+            remaining_activity_hours
+            + candidate.duration_hours
+            + transition_hours_with_replacement
+        )
+        if planned_hours > target_day.capacity_hours + 0.01:
+            continue
+
+        replacement = _scheduled_activity(
+            candidate,
+            source=ItinerarySource.RECOMMENDATION,
+            must_do_owners=owners_by_id.get(candidate_id, ()),
+            result=result_by_id.get(candidate_id),
+        ).model_copy(
+            update={
+                "reason": (
+                    "Replacement selected from the group-fit ranking after "
+                    f"removing {removed_activity.activity_name}."
+                )
+            }
+        )
+        break
+
+    updated_activities = list(remaining_activities)
+    if replacement is not None:
+        updated_activities.insert(target_position, replacement)
+
+    activity_hours = round(
+        sum(activity.duration_hours for activity in updated_activities),
+        2,
+    )
+    transition_hours = round(
+        TRANSITION_HOURS * max(0, len(updated_activities) - 1),
+        2,
+    )
+    updated_day = ItineraryDay(
+        day_number=target_day.day_number,
+        activities=updated_activities,
+        activity_hours=activity_hours,
+        transition_hours=transition_hours,
+        planned_hours=round(activity_hours + transition_hours, 2),
+        capacity_hours=target_day.capacity_hours,
+    )
+    updated_days = [
+        (
+            updated_day.model_dump(mode="json")
+            if day.day_number == target_day.day_number
+            else day.model_dump(mode="json")
+        )
+        for day in plan.days
+    ]
+    updated_plan = ItineraryPlan.model_validate(
+        {
+            **plan.model_dump(mode="json"),
+            "days": updated_days,
+        }
+    )
+
+    return ReplacementOutcome(
+        plan=updated_plan,
+        removed_activity=removed_activity,
+        replacement_activity=replacement,
+        day_number=target_day.day_number,
     )

@@ -1,0 +1,219 @@
+[
+  {
+    "case_id": "ancient_rome_landmarks",
+    "description": "Travelers looking for history, architecture, and ancient Rome landmarks.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Ari",
+          "interests": ["history", "ancient rome"],
+          "walking_tolerance": "high"
+        },
+        {
+          "name": "Bea",
+          "interests": ["architecture"],
+          "walking_tolerance": "moderate"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_colosseum",
+      "rome_roman_forum",
+      "rome_capitoline_museums",
+      "rome_pantheon"
+    ]
+  },
+  {
+    "case_id": "art_and_sculpture",
+    "description": "A group primarily interested in art and sculpture collections.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 2,
+      "budget_level": "high",
+      "pace": "relaxed",
+      "travelers": [
+        {
+          "name": "Cleo",
+          "interests": ["art", "sculpture"],
+          "walking_tolerance": "moderate"
+        },
+        {
+          "name": "Dara",
+          "interests": ["art"],
+          "walking_tolerance": "low"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_borghese_gallery",
+      "rome_vatican_museums",
+      "rome_capitoline_museums"
+    ]
+  },
+  {
+    "case_id": "food_and_local_culture",
+    "description": "Travelers seeking food, local culture, and neighborhood atmosphere.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 4,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Emi",
+          "interests": ["food", "local culture"],
+          "walking_tolerance": "moderate"
+        },
+        {
+          "name": "Finn",
+          "interests": ["food", "culture"],
+          "walking_tolerance": "high"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_testaccio_market",
+      "rome_trastevere_walk"
+    ]
+  },
+  {
+    "case_id": "nature_and_relaxation",
+    "description": "A lower-intensity group looking for nature, relaxation, and photography.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "low",
+      "pace": "relaxed",
+      "travelers": [
+        {
+          "name": "Gia",
+          "interests": ["nature", "relaxation"],
+          "walking_tolerance": "moderate"
+        },
+        {
+          "name": "Hugo",
+          "interests": ["photography", "nature"],
+          "walking_tolerance": "moderate"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_villa_borghese",
+      "rome_appian_way"
+    ]
+  },
+  {
+    "case_id": "cycling_history_outdoors",
+    "description": "An active group looking for cycling, outdoor space, and history.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 5,
+      "budget_level": "moderate",
+      "pace": "packed",
+      "travelers": [
+        {
+          "name": "Inez",
+          "interests": ["cycling", "nature"],
+          "walking_tolerance": "high"
+        },
+        {
+          "name": "Jules",
+          "interests": ["history", "outdoors"],
+          "walking_tolerance": "high"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_appian_way"
+    ]
+  },
+  {
+    "case_id": "religious_art",
+    "description": "Travelers interested in religion, art, and historic sacred architecture.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Kai",
+          "interests": ["religion", "art"],
+          "walking_tolerance": "high"
+        },
+        {
+          "name": "Lina",
+          "interests": ["religion", "architecture"],
+          "walking_tolerance": "moderate"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_vatican_museums",
+      "rome_pantheon"
+    ]
+  },
+  {
+    "case_id": "industrial_design_museum",
+    "description": "A niche museum query combining industrial design and art.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 2,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Mara",
+          "interests": ["industrial design"],
+          "walking_tolerance": "low"
+        },
+        {
+          "name": "Nico",
+          "interests": ["art"],
+          "walking_tolerance": "moderate"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_centrale_montemartini"
+    ]
+  },
+  {
+    "case_id": "compact_vatican_must_do",
+    "description": "A compact, unspaced must-do entry must still retrieve Vatican Museums.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Ona",
+          "interests": ["food"],
+          "walking_tolerance": "moderate",
+          "must_do_activities": ["vaticanmuseums"]
+        },
+        {
+          "name": "Pax",
+          "interests": ["shopping"],
+          "walking_tolerance": "low"
+        }
+      ]
+    },
+    "relevant_activity_ids": [
+      "rome_vatican_museums"
+    ]
+  }
+]

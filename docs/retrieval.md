@@ -38,9 +38,25 @@ comfort, must-dos, budget, and fairness.
 The UI preserves retrieval evidence on each result card under “Why this fits your
 group,” so the candidate-selection and group-ranking explanations remain visible.
 
-## Next evaluation step
+## Evaluation baseline
 
 The retrieval output is deterministic and includes matched terms, traveler coverage,
-must-do ownership, and reasons. This evidence can be used to build a small
-ground-truth query set and calculate Hit Rate and Mean Reciprocal Rank before adding
-vector or hybrid retrieval.
+must-do ownership, and reasons. The first benchmark uses eight labeled trip requests
+and reports Hit Rate@K, Mean Reciprocal Rank, and Mean Recall.
+
+At `K=5`, the current catalog and deterministic text retriever produce:
+
+- Hit Rate@5: `1.000`;
+- MRR@5: `0.938`;
+- Mean Recall@5: `1.000`.
+
+Run the benchmark with:
+
+```bash
+.venv/bin/python -m evaluation.retrieval
+```
+
+See [evaluation/README.md](../evaluation/README.md) for definitions, case-level
+output, and the limitations of this small curated baseline. Vector and hybrid
+retrievers should implement the same ranked-output boundary so they can be compared
+against these labels without changing the metrics.

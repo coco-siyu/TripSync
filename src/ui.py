@@ -14,11 +14,13 @@ from src.models import (
     Activity,
     ItineraryPlan,
     ItinerarySource,
+    RejectedActivity,
+    RejectionReason,
     TravelerProfile,
     TripRequest,
 )
 from src.must_dos import UnmatchedMustDo, resolve_must_dos
-from src.planner import build_itinerary
+from src.planner import build_itinerary, replace_itinerary_activity
 from src.scoring import GroupFitResult, rank_activities
 from src.search import RetrievedActivity, retrieve_activities
 
@@ -167,6 +169,9 @@ def _initialize_state() -> None:
         "selected_activity_ids": [],
         "dismissed_must_do_ids": [],
         "itinerary_plan": None,
+        "rejected_activities": {},
+        "itinerary_undo": None,
+        "itinerary_notice": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -179,12 +184,17 @@ def _reset_activity_selections() -> None:
     st.session_state.selected_activity_ids = []
     st.session_state.dismissed_must_do_ids = []
     st.session_state.itinerary_plan = None
+    st.session_state.rejected_activities = {}
+    st.session_state.itinerary_undo = None
+    st.session_state.itinerary_notice = None
 
 
 def _invalidate_itinerary() -> None:
     """Discard a generated plan after its inputs change."""
 
     st.session_state.itinerary_plan = None
+    st.session_state.itinerary_undo = None
+    st.session_state.itinerary_notice = None
 
 
 def _apply_styles() -> None:
@@ -479,6 +489,17 @@ def _apply_styles() -> None:
             color: #B5323A;
             font-size: 0.82rem;
             font-weight: 800;
+            margin: 0.4rem 0 0.7rem;
+            padding: 0.42rem 0.65rem;
+        }
+
+        .ts-rejected-line {
+            background: rgba(111, 79, 166, 0.10);
+            border-left: 3px solid #6F4FA6;
+            border-radius: 0.45rem;
+            color: #5B3E8A;
+            font-size: 0.82rem;
+            font-weight: 750;
             margin: 0.4rem 0 0.7rem;
             padding: 0.42rem 0.65rem;
         }
@@ -797,6 +818,24 @@ def _sync_initial_must_dos(must_do_ids: list[str]) -> None:
     st.session_state.selected_activity_ids = selected
 
 
+def _rejected_activity_records() -> dict[str, RejectedActivity]:
+    return {
+        activity_id: RejectedActivity.model_validate(payload)
+        for activity_id, payload in st.session_state.rejected_activities.items()
+    }
+
+
+def _excluded_activity_ids() -> list[str]:
+    return list(
+        dict.fromkeys(
+            [
+                *st.session_state.dismissed_must_do_ids,
+                *st.session_state.rejected_activities,
+            ]
+        )
+    )
+
+
 def _add_activity_to_shortlist(activity_id: str) -> None:
     selected = list(st.session_state.selected_activity_ids)
     if activity_id not in selected:
@@ -808,6 +847,13 @@ def _add_activity_to_shortlist(activity_id: str) -> None:
         if dismissed_id != activity_id
     ]
     _invalidate_itinerary()
+
+
+def _restore_rejected_activity(activity_id: str) -> None:
+    rejected = dict(st.session_state.rejected_activities)
+    rejected.pop(activity_id, None)
+    st.session_state.rejected_activities = rejected
+    _add_activity_to_shortlist(activity_id)
 
 
 def _remove_activity_from_shortlist(
@@ -875,16 +921,24 @@ def _render_result_card(
     activity: Activity,
     retrieval: RetrievedActivity,
     must_do_owners: tuple[str, ...] = (),
+    rejection: RejectedActivity | None = None,
 ) -> None:
-    card_position = rank if rank is not None else "must-do"
+    card_position = (
+        rank
+        if rank is not None
+        else "rejected" if rejection is not None else "must-do"
+    )
     with st.container(
         key=f"result-card-{card_position}-{result.activity_id}"
     ):
         score_col, content_col = st.columns([1, 4], gap="large")
         with score_col:
-            rank_label = (
-                f"#{rank} group fit" if rank is not None else "Group fit score"
-            )
+            if rank is not None:
+                rank_label = f"#{rank} group fit"
+            elif rejection is not None:
+                rank_label = "Previous group fit"
+            else:
+                rank_label = "Group fit score"
             st.caption(rank_label)
             st.markdown(
                 f'<div class="ts-score"><strong>{result.total_score:.0f}</strong>'
@@ -910,6 +964,15 @@ def _render_result_card(
                 st.markdown(
                     '<div class="ts-must-do-line">★ Must-do for '
                     f"{owner_names}</div>",
+                    unsafe_allow_html=True,
+                )
+            if rejection is not None:
+                rejection_detail = f"Rejected: {rejection.reason.value}"
+                if rejection.note:
+                    rejection_detail += f" · {rejection.note}"
+                st.markdown(
+                    '<div class="ts-rejected-line">'
+                    f"{escape(rejection_detail)}</div>",
                     unsafe_allow_html=True,
                 )
             st.write(activity.description)
@@ -954,10 +1017,22 @@ def _render_result_card(
                     icon=":material/open_in_new:",
                 )
 
-            _render_activity_action(
-                activity,
-                is_must_do=bool(must_do_owners),
-            )
+            if rejection is not None:
+                if st.button(
+                    "Restore to shortlist",
+                    key=f"restore-rejected-{activity.id}",
+                    icon=":material/restore:",
+                    type="primary",
+                    width="stretch",
+                ):
+                    _restore_rejected_activity(activity.id)
+                    st.toast(f"Restored {activity.name} to your shortlist.")
+                    st.rerun()
+            else:
+                _render_activity_action(
+                    activity,
+                    is_must_do=bool(must_do_owners),
+                )
 
 
 def _itinerary_slot_label(position: int, total: int) -> str:
@@ -974,9 +1049,101 @@ def _itinerary_slot_label(position: int, total: int) -> str:
     return f"Stop {position + 1}"
 
 
+def _json_copy(value: Any) -> Any:
+    return json.loads(json.dumps(value))
+
+
+def _reject_and_replace_activity(
+    plan: ItineraryPlan,
+    activity: Activity,
+    reason: RejectionReason,
+    note: str,
+    candidate_activities: list[Activity],
+    ranked_results: list[GroupFitResult],
+    owners_by_activity_id: dict[str, tuple[str, ...]],
+) -> None:
+    previous_state = {
+        "itinerary_plan": _json_copy(
+            st.session_state.itinerary_plan
+        ),
+        "rejected_activities": _json_copy(
+            st.session_state.rejected_activities
+        ),
+        "selected_activity_ids": list(
+            st.session_state.selected_activity_ids
+        ),
+        "dismissed_must_do_ids": list(
+            st.session_state.dismissed_must_do_ids
+        ),
+    }
+    outcome = replace_itinerary_activity(
+        plan,
+        activity.id,
+        candidate_activities,
+        ranked_results,
+        excluded_activity_ids=[
+            *_excluded_activity_ids(),
+            activity.id,
+        ],
+        must_do_owners_by_activity_id=owners_by_activity_id,
+    )
+    rejection = RejectedActivity(
+        activity_id=activity.id,
+        activity_name=activity.name,
+        reason=reason,
+        note=note.strip() or None,
+        day_number=outcome.day_number,
+    )
+    rejected = dict(st.session_state.rejected_activities)
+    rejected[activity.id] = rejection.model_dump(mode="json")
+
+    st.session_state.itinerary_undo = previous_state
+    st.session_state.rejected_activities = rejected
+    st.session_state.selected_activity_ids = [
+        selected_id
+        for selected_id in st.session_state.selected_activity_ids
+        if selected_id != activity.id
+    ]
+    if (
+        owners_by_activity_id.get(activity.id)
+        and activity.id not in st.session_state.dismissed_must_do_ids
+    ):
+        st.session_state.dismissed_must_do_ids = [
+            *st.session_state.dismissed_must_do_ids,
+            activity.id,
+        ]
+    st.session_state.itinerary_plan = outcome.plan.model_dump(mode="json")
+
+    if outcome.replacement_activity is None:
+        st.session_state.itinerary_notice = (
+            f"{activity.name} was rejected, but no unused activity could "
+            f"fit Day {outcome.day_number} without breaking its pace limits. "
+            "The time remains open."
+        )
+    else:
+        st.session_state.itinerary_notice = (
+            f"{activity.name} was replaced with "
+            f"{outcome.replacement_activity.activity_name} on "
+            f"Day {outcome.day_number}. Every other day stayed unchanged."
+        )
+
+
+def _undo_last_replacement() -> None:
+    snapshot = st.session_state.itinerary_undo
+    if not snapshot:
+        return
+    for key, value in snapshot.items():
+        st.session_state[key] = _json_copy(value)
+    st.session_state.itinerary_undo = None
+    st.session_state.itinerary_notice = "The last replacement was undone."
+
+
 def _render_itinerary(
     plan: ItineraryPlan,
     activity_by_id: dict[str, Activity],
+    candidate_activities: list[Activity],
+    ranked_results: list[GroupFitResult],
+    owners_by_activity_id: dict[str, tuple[str, ...]],
 ) -> None:
     scheduled = [
         activity
@@ -1010,6 +1177,21 @@ def _render_itinerary(
             "Daily timing includes a 30-minute transition estimate between "
             "activities. Opening hours and route optimization are not live yet."
         )
+        if st.session_state.itinerary_notice:
+            st.info(
+                st.session_state.itinerary_notice,
+                icon=":material/swap_horiz:",
+            )
+        if st.session_state.itinerary_undo:
+            if st.button(
+                "Undo last replacement",
+                key="undo-itinerary-replacement",
+                icon=":material/undo:",
+                type="secondary",
+            ):
+                _undo_last_replacement()
+                st.toast("The previous itinerary is back.")
+                st.rerun()
 
         for day in plan.days:
             with st.container(
@@ -1069,6 +1251,71 @@ def _render_itinerary(
                         )
                     st.caption(" · ".join(details))
                     st.caption(scheduled_activity.reason)
+                    if activity is not None:
+                        with st.popover(
+                            "Replace activity",
+                            key=(
+                                "replace-activity-"
+                                f"{scheduled_activity.activity_id}"
+                            ),
+                            icon=":material/swap_horiz:",
+                            type="tertiary",
+                        ):
+                            if scheduled_activity.must_do_owners:
+                                st.warning(
+                                    "This is a must-do for "
+                                    + " + ".join(
+                                        scheduled_activity.must_do_owners
+                                    )
+                                    + ". Replacing it will count as an "
+                                    "intentional override.",
+                                    icon=":material/bookmark_remove:",
+                                )
+                            reason_value = st.selectbox(
+                                "Why replace this activity?",
+                                [
+                                    reason.value
+                                    for reason in RejectionReason
+                                ],
+                                key=(
+                                    "rejection-reason-"
+                                    f"{scheduled_activity.activity_id}"
+                                ),
+                            )
+                            note = ""
+                            if reason_value == RejectionReason.OTHER.value:
+                                note = st.text_input(
+                                    "Optional note",
+                                    key=(
+                                        "rejection-note-"
+                                        f"{scheduled_activity.activity_id}"
+                                    ),
+                                    max_chars=300,
+                                )
+                            if st.button(
+                                "Replace on this day",
+                                key=(
+                                    "confirm-reject-"
+                                    f"{scheduled_activity.activity_id}"
+                                ),
+                                icon=":material/find_replace:",
+                                type="primary",
+                                width="stretch",
+                            ):
+                                _reject_and_replace_activity(
+                                    plan,
+                                    activity,
+                                    RejectionReason(reason_value),
+                                    note,
+                                    candidate_activities,
+                                    ranked_results,
+                                    owners_by_activity_id,
+                                )
+                                st.toast(
+                                    f"Rejected {activity.name} and updated "
+                                    f"Day {day.day_number}."
+                                )
+                                st.rerun()
 
         if plan.unscheduled:
             st.warning(
@@ -1192,9 +1439,12 @@ def _render_shortlist(
                 ranked_results,
                 selected_ids,
                 must_do_owners_by_activity_id=owners_by_activity_id,
+                excluded_activity_ids=_excluded_activity_ids(),
                 auto_fill=auto_fill,
             )
             st.session_state.itinerary_plan = plan.model_dump(mode="json")
+            st.session_state.itinerary_undo = None
+            st.session_state.itinerary_notice = None
             st.toast("Your itinerary is ready.")
             st.rerun()
 
@@ -1204,6 +1454,9 @@ def _render_shortlist(
                 st.session_state.itinerary_plan
             ),
             activity_by_id,
+            candidate_activities,
+            ranked_results,
+            owners_by_activity_id,
         )
 
 
@@ -1238,6 +1491,18 @@ def _render_results_step() -> None:
     )
     owners_by_activity_id = must_do_resolution.owners_by_activity_id
     _sync_initial_must_dos(list(owners_by_activity_id))
+    rejected_records = _rejected_activity_records()
+    rejected_ids = set(rejected_records)
+    active_results = [
+        result
+        for result in results
+        if result.activity_id not in rejected_ids
+    ]
+    active_must_do_ids = [
+        activity_id
+        for activity_id in owners_by_activity_id
+        if activity_id not in rejected_ids
+    ]
 
     _render_summary(trip)
     st.space("medium")
@@ -1283,12 +1548,13 @@ def _render_results_step() -> None:
 
     result_view = st.segmented_control(
         "Results to show",
-        ["top_five", "must_dos", "all"],
+        ["top_five", "must_dos", "all", "rejected"],
         default="top_five",
         format_func=lambda value: {
             "top_five": "Top 5",
-            "must_dos": f"Must-dos ({len(owners_by_activity_id)})",
+            "must_dos": f"Must-dos ({len(active_must_do_ids)})",
             "all": "All activities",
+            "rejected": f"Rejected ({len(rejected_records)})",
         }[value],
         label_visibility="collapsed",
         key="results_view",
@@ -1297,18 +1563,32 @@ def _render_results_step() -> None:
     if result_view == "must_dos":
         displayed_results = [
             (None, result_by_activity_id[activity_id])
-            for activity_id in owners_by_activity_id
+            for activity_id in active_must_do_ids
         ]
     elif result_view == "all":
-        displayed_results = list(enumerate(results, start=1))
+        displayed_results = list(enumerate(active_results, start=1))
+    elif result_view == "rejected":
+        displayed_results = [
+            (None, result_by_activity_id[activity_id])
+            for activity_id in rejected_records
+            if activity_id in result_by_activity_id
+        ]
     else:
-        displayed_results = list(enumerate(results[:5], start=1))
+        displayed_results = list(enumerate(active_results[:5], start=1))
 
     if not displayed_results:
-        st.info(
-            "No recognized must-dos yet. Edit the traveler profiles to add one.",
-            icon=":material/bookmark:",
-        )
+        if result_view == "rejected":
+            st.info(
+                "No rejected activities yet. Anything you replace from an "
+                "itinerary will stay available here.",
+                icon=":material/history:",
+            )
+        elif result_view == "must_dos":
+            st.info(
+                "No active recognized must-dos yet. Edit the traveler "
+                "profiles or restore one from Rejected.",
+                icon=":material/bookmark:",
+            )
 
     for rank, result in displayed_results:
         _render_result_card(
@@ -1317,6 +1597,7 @@ def _render_results_step() -> None:
             activity_by_id[result.activity_id],
             retrieval_by_activity_id[result.activity_id],
             owners_by_activity_id.get(result.activity_id, ()),
+            rejected_records.get(result.activity_id),
         )
 
     _render_shortlist(

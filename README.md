@@ -7,7 +7,8 @@
 TripSync now has a working **preference, retrieval, recommendation, and itinerary
 flow**. It collects validated group preferences, retrieves grounded destination
 activities, ranks them with an explainable group-fit formula, identifies must-dos,
-maintains a shortlist, and builds a pace-aware multi-day itinerary.
+maintains a shortlist, builds a pace-aware multi-day itinerary, and uses structured
+rejection feedback to replace an activity without changing the other days.
 
 ## The problem
 
@@ -30,7 +31,7 @@ The first version will allow an organizer to:
 4. Retrieve and rank relevant activities for the destination.
 5. Generate a one-to-five-day itinerary.
 6. See why each activity was selected and which travelers it serves.
-7. reject an activity as too expensive, too demanding, or uninteresting.
+7. Reject an activity as too expensive, too demanding, or uninteresting.
 8. Regenerate the affected day using that feedback.
 
 The MVP will not include booking, live prices, flight or hotel search, payments,
@@ -200,9 +201,10 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Build the first Streamlit preference form
 - [x] Add text retrieval
 - [x] Generate a grounded itinerary
-- [ ] Add activity rejection and day regeneration
-- [ ] Evaluate retrieval approaches
-- [ ] Evaluate itinerary quality
+- [x] Add activity rejection and day regeneration
+- [x] Establish a reproducible retrieval-evaluation baseline
+- [ ] Compare vector and hybrid retrieval
+- [x] Evaluate itinerary quality
 - [ ] Add monitoring and persistent storage
 - [ ] Add Docker configuration and deployment instructions
 

@@ -1,0 +1,182 @@
+[
+  {
+    "case_id": "balanced_group_must_dos",
+    "description": "A balanced three-day group with two active must-dos and automatic filling.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Coco",
+          "interests": ["history", "food", "photography"],
+          "walking_tolerance": "moderate",
+          "must_do_activities": ["Colosseum"]
+        },
+        {
+          "name": "Sam",
+          "interests": ["art", "architecture", "relaxation"],
+          "walking_tolerance": "low",
+          "must_do_activities": ["Borghese Gallery"]
+        }
+      ]
+    },
+    "selected_activity_ids": [
+      "rome_colosseum",
+      "rome_borghese_gallery"
+    ],
+    "auto_fill": true
+  },
+  {
+    "case_id": "relaxed_nature_trip",
+    "description": "A relaxed nature-focused trip that must respect lower daily limits.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "low",
+      "pace": "relaxed",
+      "travelers": [
+        {
+          "name": "Ari",
+          "interests": ["nature", "relaxation"],
+          "walking_tolerance": "moderate",
+          "must_do_activities": ["Villa Borghese Gardens"]
+        },
+        {
+          "name": "Bea",
+          "interests": ["food", "photography"],
+          "walking_tolerance": "moderate"
+        }
+      ]
+    },
+    "selected_activity_ids": [
+      "rome_villa_borghese",
+      "rome_testaccio_market"
+    ],
+    "auto_fill": true
+  },
+  {
+    "case_id": "packed_ancient_rome",
+    "description": "A packed history trip with multiple ancient-Rome shortlist choices.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 2,
+      "budget_level": "high",
+      "pace": "packed",
+      "travelers": [
+        {
+          "name": "Cleo",
+          "interests": ["history", "archaeology", "ancient rome"],
+          "walking_tolerance": "high",
+          "must_do_activities": ["Roman Forum and Palatine Hill"]
+        },
+        {
+          "name": "Dara",
+          "interests": ["architecture", "history"],
+          "walking_tolerance": "high",
+          "must_do_activities": ["Pantheon"]
+        }
+      ]
+    },
+    "selected_activity_ids": [
+      "rome_roman_forum",
+      "rome_pantheon",
+      "rome_capitoline_museums"
+    ],
+    "auto_fill": true
+  },
+  {
+    "case_id": "shortlist_only_food_and_photos",
+    "description": "A shortlist-only plan must not introduce extra recommendations.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 2,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Emi",
+          "interests": ["food", "local culture", "shopping"],
+          "walking_tolerance": "moderate"
+        },
+        {
+          "name": "Finn",
+          "interests": ["culture", "photography"],
+          "walking_tolerance": "high"
+        }
+      ]
+    },
+    "selected_activity_ids": [
+      "rome_testaccio_market",
+      "rome_trastevere_walk",
+      "rome_trevi_fountain"
+    ],
+    "auto_fill": false
+  },
+  {
+    "case_id": "rejected_must_do_override",
+    "description": "An excluded must-do must stay out while another active must-do remains scheduled.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Gia",
+          "interests": ["history", "food"],
+          "walking_tolerance": "moderate",
+          "must_do_activities": ["Colosseum"]
+        },
+        {
+          "name": "Hugo",
+          "interests": ["art", "architecture"],
+          "walking_tolerance": "low",
+          "must_do_activities": ["Borghese Gallery"]
+        }
+      ]
+    },
+    "selected_activity_ids": [
+      "rome_colosseum",
+      "rome_borghese_gallery"
+    ],
+    "excluded_activity_ids": [
+      "rome_colosseum"
+    ],
+    "auto_fill": true
+  },
+  {
+    "case_id": "compact_vatican_must_do",
+    "description": "A compact must-do entry must remain grounded and prioritized in the itinerary.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {
+          "name": "Inez",
+          "interests": ["religion", "art"],
+          "walking_tolerance": "high",
+          "must_do_activities": ["vaticanmuseums"]
+        },
+        {
+          "name": "Jules",
+          "interests": ["food", "culture"],
+          "walking_tolerance": "moderate"
+        }
+      ]
+    },
+    "selected_activity_ids": [
+      "rome_vatican_museums"
+    ],
+    "auto_fill": true
+  }
+]

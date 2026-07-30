@@ -15,7 +15,11 @@ from src.models import (
     TravelerProfile,
     TripRequest,
 )
-from src.planner import PACE_RULES, build_itinerary
+from src.planner import (
+    PACE_RULES,
+    build_itinerary,
+    replace_itinerary_activity,
+)
 from src.scoring import rank_activities
 
 
@@ -156,6 +160,137 @@ class ItineraryPlannerTests(unittest.TestCase):
                 for activity in scheduled
             )
         )
+
+    def test_excluded_activity_is_not_added_by_auto_fill(self) -> None:
+        plan = build_itinerary(
+            self.trip,
+            self.activities,
+            self.results,
+            ["rome_colosseum"],
+            must_do_owners_by_activity_id=self.must_do_owners,
+            excluded_activity_ids=[
+                "rome_colosseum",
+                "rome_pantheon",
+            ],
+            auto_fill=True,
+        )
+        scheduled_ids = {
+            activity.activity_id
+            for day in plan.days
+            for activity in day.activities
+        }
+
+        self.assertNotIn("rome_colosseum", scheduled_ids)
+        self.assertNotIn("rome_pantheon", scheduled_ids)
+
+    def test_replacement_changes_only_the_affected_day(self) -> None:
+        plan = build_itinerary(
+            self.trip,
+            self.activities,
+            self.results,
+            ["rome_colosseum", "rome_borghese_gallery"],
+            must_do_owners_by_activity_id=self.must_do_owners,
+        )
+        original_other_days = {
+            day.day_number: day.model_dump(mode="json")
+            for day in plan.days
+            if day.day_number != 1
+        }
+
+        outcome = replace_itinerary_activity(
+            plan,
+            "rome_colosseum",
+            self.activities,
+            self.results,
+            excluded_activity_ids=["rome_colosseum"],
+            must_do_owners_by_activity_id=self.must_do_owners,
+        )
+
+        self.assertEqual(outcome.day_number, 1)
+        self.assertIsNotNone(outcome.replacement_activity)
+        self.assertNotEqual(
+            outcome.replacement_activity.activity_id,
+            "rome_colosseum",
+        )
+        self.assertEqual(
+            {
+                day.day_number: day.model_dump(mode="json")
+                for day in outcome.plan.days
+                if day.day_number != 1
+            },
+            original_other_days,
+        )
+        scheduled_ids = [
+            activity.activity_id
+            for day in outcome.plan.days
+            for activity in day.activities
+        ]
+        self.assertNotIn("rome_colosseum", scheduled_ids)
+        self.assertEqual(len(scheduled_ids), len(set(scheduled_ids)))
+        self.assertTrue(
+            all(
+                day.planned_hours <= day.capacity_hours
+                for day in outcome.plan.days
+            )
+        )
+
+    def test_replacement_respects_previous_rejections(self) -> None:
+        plan = build_itinerary(
+            self.trip,
+            self.activities,
+            self.results,
+            ["rome_colosseum", "rome_borghese_gallery"],
+            must_do_owners_by_activity_id=self.must_do_owners,
+        )
+
+        outcome = replace_itinerary_activity(
+            plan,
+            "rome_colosseum",
+            self.activities,
+            self.results,
+            excluded_activity_ids=[
+                "rome_colosseum",
+                "rome_testaccio_market",
+                "rome_trastevere_walk",
+            ],
+        )
+
+        replacement_id = (
+            outcome.replacement_activity.activity_id
+            if outcome.replacement_activity
+            else None
+        )
+        self.assertNotIn(
+            replacement_id,
+            {"rome_colosseum", "rome_testaccio_market", "rome_trastevere_walk"},
+        )
+
+    def test_replacement_can_leave_an_explained_open_slot(self) -> None:
+        colosseum = next(
+            activity
+            for activity in self.activities
+            if activity.id == "rome_colosseum"
+        )
+        results = rank_activities([colosseum], self.trip)
+        plan = build_itinerary(
+            self.trip,
+            [colosseum],
+            results,
+            [colosseum.id],
+            must_do_owners_by_activity_id=self.must_do_owners,
+            auto_fill=False,
+        )
+
+        outcome = replace_itinerary_activity(
+            plan,
+            colosseum.id,
+            [colosseum],
+            results,
+            excluded_activity_ids=[colosseum.id],
+        )
+
+        self.assertIsNone(outcome.replacement_activity)
+        self.assertFalse(outcome.plan.days[0].activities)
 
     def test_selected_activity_too_long_for_pace_is_explained(self) -> None:
         long_activity = self.activities[0].model_copy(

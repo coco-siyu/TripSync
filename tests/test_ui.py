@@ -167,7 +167,12 @@ class StreamlitInteractionTests(unittest.TestCase):
 
         self.assertEqual(
             results_view.options,
-            ["Top 5", "Must-dos (2)", "All activities"],
+            [
+                "Top 5",
+                "Must-dos (2)",
+                "All activities",
+                "Rejected (0)",
+            ],
         )
         self.assertEqual(
             app.session_state["selected_activity_ids"],
@@ -323,6 +328,109 @@ class StreamlitInteractionTests(unittest.TestCase):
         app.button(key="shortlist-remove-rome_colosseum").click().run()
 
         self.assertIsNone(app.session_state["itinerary_plan"])
+
+    def test_rejected_activity_moves_to_history_and_is_replaced(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        before = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        )
+        unchanged_days = {
+            day.day_number: day.model_dump(mode="json")
+            for day in before.days
+            if day.day_number != 1
+        }
+
+        app.selectbox(
+            key="rejection-reason-rome_colosseum"
+        ).set_value("Too much walking")
+        app.button(key="confirm-reject-rome_colosseum").click().run()
+
+        after = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        )
+        self.assertIn(
+            "rome_colosseum",
+            app.session_state["rejected_activities"],
+        )
+        self.assertNotIn(
+            "rome_colosseum",
+            [
+                activity.activity_id
+                for day in after.days
+                for activity in day.activities
+            ],
+        )
+        self.assertEqual(
+            {
+                day.day_number: day.model_dump(mode="json")
+                for day in after.days
+                if day.day_number != 1
+            },
+            unchanged_days,
+        )
+        results_view = next(
+            group
+            for group in app.get("button_group")
+            if group.key == "results_view"
+        )
+        self.assertIn("Rejected (1)", results_view.options)
+        self.assertIn("Must-dos (1)", results_view.options)
+
+    def test_rejected_activity_can_be_restored_to_shortlist(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        app.button(key="confirm-reject-rome_colosseum").click().run()
+        results_view = next(
+            group
+            for group in app.get("button_group")
+            if group.key == "results_view"
+        )
+        results_view.select("Rejected (1)").run()
+        self.assertTrue(
+            any(
+                "Rejected: Too expensive" in markdown.value
+                for markdown in app.markdown
+            )
+        )
+
+        app.button(key="restore-rejected-rome_colosseum").click().run()
+
+        self.assertNotIn(
+            "rome_colosseum",
+            app.session_state["rejected_activities"],
+        )
+        self.assertIn(
+            "rome_colosseum",
+            app.session_state["selected_activity_ids"],
+        )
+        self.assertNotIn(
+            "rome_colosseum",
+            app.session_state["dismissed_must_do_ids"],
+        )
+        self.assertIsNone(app.session_state["itinerary_plan"])
+
+    def test_last_replacement_can_be_undone(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        before = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        ).model_dump(mode="json")
+        app.button(key="confirm-reject-rome_colosseum").click().run()
+
+        app.button(key="undo-itinerary-replacement").click().run()
+
+        self.assertFalse(app.session_state["rejected_activities"])
+        self.assertEqual(
+            ItineraryPlan.model_validate(
+                app.session_state["itinerary_plan"]
+            ).model_dump(mode="json"),
+            before,
+        )
+        self.assertIn(
+            "rome_colosseum",
+            app.session_state["selected_activity_ids"],
+        )
 
 
 if __name__ == "__main__":

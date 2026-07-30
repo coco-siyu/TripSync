@@ -47,6 +47,16 @@ class ItinerarySource(str, Enum):
     RECOMMENDATION = "recommendation"
 
 
+class RejectionReason(str, Enum):
+    """Organizer feedback recorded when replacing an activity."""
+
+    TOO_EXPENSIVE = "Too expensive"
+    TOO_MUCH_WALKING = "Too much walking"
+    NOT_INTERESTING = "Not interesting"
+    TIMING_CONCERN = "Timing concern"
+    OTHER = "Other"
+
+
 class TripSyncModel(BaseModel):
     """Shared validation behavior for public TripSync models."""
 
@@ -209,6 +219,16 @@ class UnscheduledActivity(TripSyncModel):
     activity_id: str = Field(min_length=1, max_length=200)
     activity_name: str = Field(min_length=1, max_length=160)
     reason: str = Field(min_length=1, max_length=300)
+
+
+class RejectedActivity(TripSyncModel):
+    """An activity removed by the organizer and retained for reconsideration."""
+
+    activity_id: str = Field(pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
+    activity_name: str = Field(min_length=1, max_length=160)
+    reason: RejectionReason
+    note: str | None = Field(default=None, max_length=300)
+    day_number: int = Field(ge=1, le=5)
 
 
 class ItineraryPlan(TripSyncModel):
