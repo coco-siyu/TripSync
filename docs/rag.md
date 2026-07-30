@@ -80,3 +80,17 @@ explanation. Rebuilding, editing, or replacing an itinerary activity clears its
 story; undo restores the story that matched the restored plan. Configuration,
 quota, and API errors remain visible as a friendly message without affecting the
 underlying itinerary.
+
+## Organizer-approved adjustments
+
+The itinerary screen also accepts a plain-language adjustment request such as
+“make Day 2 calmer” or “add more food.” The LLM may return at most three
+structured options. Each option can only replace one activity on the same day
+with an eligible retrieved catalog activity, or remove that activity and leave
+time open. The LLM cannot apply a proposal.
+
+When the organizer chooses **Apply this suggestion**, TripSync checks the day,
+activity IDs, duplicate prevention, activity count, and pace capacity again in
+the deterministic planner. The outgoing activity is recorded as an intentional
+override, the replacement joins the shortlist, the prior plan remains available
+through Undo, and the old trip story is cleared.

@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from src.llm import (
     NarrationConfigurationError,
     NarrationGenerationError,
+    generate_itinerary_change_proposals,
     generate_itinerary_narrative,
 )
 from src.models import (
@@ -30,7 +31,17 @@ from src.narration import (
     NarrationGroundingError,
     validate_narrative_against_plan,
 )
-from src.planner import build_itinerary, replace_itinerary_activity
+from src.planner import (
+    apply_itinerary_change_proposal,
+    build_itinerary,
+    replace_itinerary_activity,
+)
+from src.proposals import (
+    ItineraryChangeProposal,
+    ItineraryChangeProposals,
+    ProposalGroundingError,
+    validate_proposals_against_plan,
+)
 from src.scoring import GroupFitResult, rank_activities
 from src.search import RetrievedActivity, retrieve_activities
 
@@ -184,6 +195,8 @@ def _initialize_state() -> None:
         "itinerary_notice": None,
         "itinerary_narrative": None,
         "itinerary_narration_error": None,
+        "itinerary_change_proposals": None,
+        "itinerary_change_error": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -201,6 +214,8 @@ def _reset_activity_selections() -> None:
     st.session_state.itinerary_notice = None
     st.session_state.itinerary_narrative = None
     st.session_state.itinerary_narration_error = None
+    st.session_state.itinerary_change_proposals = None
+    st.session_state.itinerary_change_error = None
 
 
 def _invalidate_itinerary() -> None:
@@ -211,6 +226,8 @@ def _invalidate_itinerary() -> None:
     st.session_state.itinerary_notice = None
     st.session_state.itinerary_narrative = None
     st.session_state.itinerary_narration_error = None
+    st.session_state.itinerary_change_proposals = None
+    st.session_state.itinerary_change_error = None
 
 
 def _apply_styles() -> None:
@@ -1250,6 +1267,241 @@ def _render_narration(
     return narrative
 
 
+def _load_change_proposals(
+    plan: ItineraryPlan,
+    eligible_activities: list[Activity],
+) -> ItineraryChangeProposals | None:
+    """Return saved options only when they still match this itinerary."""
+
+    payload = st.session_state.itinerary_change_proposals
+    if payload is None:
+        return None
+    try:
+        proposals = ItineraryChangeProposals.model_validate(payload)
+        return validate_proposals_against_plan(
+            proposals,
+            plan,
+            eligible_activities,
+        )
+    except (ValidationError, ProposalGroundingError):
+        st.session_state.itinerary_change_proposals = None
+        st.session_state.itinerary_change_error = (
+            "Those suggestions no longer match this itinerary. Ask again "
+            "after reviewing the updated plan."
+        )
+        return None
+
+
+def _apply_change_proposal(
+    plan: ItineraryPlan,
+    proposal: ItineraryChangeProposal,
+    candidate_activities: list[Activity],
+    ranked_results: list[GroupFitResult],
+    owners_by_activity_id: dict[str, tuple[str, ...]],
+) -> None:
+    """Apply an organizer-approved proposal and retain an undo snapshot."""
+
+    previous_state = {
+        "itinerary_plan": _json_copy(st.session_state.itinerary_plan),
+        "rejected_activities": _json_copy(
+            st.session_state.rejected_activities
+        ),
+        "selected_activity_ids": list(
+            st.session_state.selected_activity_ids
+        ),
+        "dismissed_must_do_ids": list(
+            st.session_state.dismissed_must_do_ids
+        ),
+        "itinerary_narrative": _json_copy(
+            st.session_state.itinerary_narrative
+        ),
+        "itinerary_narration_error": st.session_state.itinerary_narration_error,
+        "itinerary_change_proposals": _json_copy(
+            st.session_state.itinerary_change_proposals
+        ),
+        "itinerary_change_error": st.session_state.itinerary_change_error,
+    }
+    outcome = apply_itinerary_change_proposal(
+        plan,
+        proposal,
+        candidate_activities,
+        ranked_results,
+        must_do_owners_by_activity_id=owners_by_activity_id,
+    )
+    rejected = dict(st.session_state.rejected_activities)
+    rejected[outcome.removed_activity.activity_id] = RejectedActivity(
+        activity_id=outcome.removed_activity.activity_id,
+        activity_name=outcome.removed_activity.activity_name,
+        reason=RejectionReason.OTHER,
+        note=f"Organizer accepted suggestion: {proposal.title}",
+        day_number=outcome.day_number,
+    ).model_dump(mode="json")
+    st.session_state.itinerary_undo = previous_state
+    st.session_state.rejected_activities = rejected
+    st.session_state.selected_activity_ids = [
+        activity_id
+        for activity_id in st.session_state.selected_activity_ids
+        if activity_id != outcome.removed_activity.activity_id
+    ]
+    if (
+        owners_by_activity_id.get(outcome.removed_activity.activity_id)
+        and outcome.removed_activity.activity_id
+        not in st.session_state.dismissed_must_do_ids
+    ):
+        st.session_state.dismissed_must_do_ids = [
+            *st.session_state.dismissed_must_do_ids,
+            outcome.removed_activity.activity_id,
+        ]
+    if outcome.replacement_activity is not None:
+        if (
+            outcome.replacement_activity.activity_id
+            not in st.session_state.selected_activity_ids
+        ):
+            st.session_state.selected_activity_ids = [
+                *st.session_state.selected_activity_ids,
+                outcome.replacement_activity.activity_id,
+            ]
+    st.session_state.itinerary_plan = outcome.plan.model_dump(mode="json")
+    st.session_state.itinerary_narrative = None
+    st.session_state.itinerary_narration_error = None
+    st.session_state.itinerary_change_proposals = None
+    st.session_state.itinerary_change_error = None
+    if outcome.replacement_activity is None:
+        st.session_state.itinerary_notice = (
+            f"Removed {outcome.removed_activity.activity_name} from Day "
+            f"{outcome.day_number}; the time is now open."
+        )
+    else:
+        st.session_state.itinerary_notice = (
+            f"Replaced {outcome.removed_activity.activity_name} with "
+            f"{outcome.replacement_activity.activity_name} on Day "
+            f"{outcome.day_number}."
+        )
+
+
+def _render_change_proposals(
+    trip: TripRequest,
+    plan: ItineraryPlan,
+    candidate_activities: list[Activity],
+    ranked_results: list[GroupFitResult],
+    owners_by_activity_id: dict[str, tuple[str, ...]],
+) -> None:
+    """Render a request-and-review flow for grounded plan adjustments."""
+
+    scheduled_ids = {
+        activity.activity_id for day in plan.days for activity in day.activities
+    }
+    excluded_ids = set(_excluded_activity_ids())
+    eligible_activities = [
+        activity
+        for activity in candidate_activities
+        if activity.id not in scheduled_ids and activity.id not in excluded_ids
+    ]
+    proposals = _load_change_proposals(plan, eligible_activities)
+
+    with st.container(border=True):
+        st.markdown(
+            '<div class="ts-section-label">Fine-tune the plan</div>',
+            unsafe_allow_html=True,
+        )
+        st.subheader("What would you like to adjust?")
+        st.caption(
+            "Ask for a calmer day, less walking, more food, or a different "
+            "balance. Suggestions stay grounded in this catalog and require "
+            "your approval before they change anything."
+        )
+        with st.form("itinerary-change-request", border=False):
+            request = st.text_input(
+                "Adjustment request",
+                placeholder="For example: Make Day 2 calmer with more food.",
+                key="itinerary-change-request-text",
+                max_chars=500,
+            )
+            submitted = st.form_submit_button(
+                "Suggest adjustments",
+                icon=":material/tune:",
+                type="secondary",
+                width="stretch",
+            )
+        if submitted:
+            st.session_state.itinerary_change_error = None
+            try:
+                with st.status(
+                    "Finding grounded adjustment ideas…",
+                    expanded=True,
+                    state="running",
+                ) as status:
+                    st.write("Keeping the existing day structure and pace limits.")
+                    generated = generate_itinerary_change_proposals(
+                        trip,
+                        eligible_activities,
+                        plan,
+                        request,
+                    )
+                    st.session_state.itinerary_change_proposals = (
+                        generated.model_dump(mode="json")
+                    )
+                    status.update(
+                        label="Adjustment ideas ready",
+                        state="complete",
+                        expanded=False,
+                    )
+                st.rerun()
+            except (
+                NarrationConfigurationError,
+                NarrationGenerationError,
+            ) as error:
+                st.session_state.itinerary_change_error = str(error)
+                st.rerun()
+
+        if st.session_state.itinerary_change_error:
+            st.info(
+                st.session_state.itinerary_change_error,
+                icon=":material/info:",
+            )
+        if proposals is not None:
+            st.write(proposals.acknowledgement)
+            for index, proposal in enumerate(proposals.proposals, start=1):
+                with st.container(border=True):
+                    st.markdown(f"**Option {index}: {proposal.title}**")
+                    action = (
+                        "Leave time open after removing"
+                        if proposal.operation == "remove"
+                        else "Replace"
+                    )
+                    st.caption(
+                        f"Day {proposal.day_number} · {action} "
+                        f"`{proposal.remove_activity_id}`"
+                        + (
+                            f" with `{proposal.add_activity_id}`"
+                            if proposal.add_activity_id
+                            else ""
+                        )
+                    )
+                    st.write(proposal.rationale)
+                    for tradeoff in proposal.tradeoffs:
+                        st.caption(f"Trade-off: {tradeoff}")
+                    if st.button(
+                        "Apply this suggestion",
+                        key=f"apply-itinerary-proposal-{index}",
+                        icon=":material/check_circle:",
+                        type="primary",
+                        width="stretch",
+                    ):
+                        try:
+                            _apply_change_proposal(
+                                plan,
+                                proposal,
+                                candidate_activities,
+                                ranked_results,
+                                owners_by_activity_id,
+                            )
+                            st.toast("Applied your approved itinerary change.")
+                        except ValueError as error:
+                            st.session_state.itinerary_change_error = str(error)
+                        st.rerun()
+
+
 def _render_itinerary(
     trip: TripRequest,
     plan: ItineraryPlan,
@@ -1456,6 +1708,14 @@ def _render_itinerary(
                                     f"Day {day.day_number}."
                                 )
                                 st.rerun()
+
+        _render_change_proposals(
+            trip,
+            plan,
+            candidate_activities,
+            ranked_results,
+            owners_by_activity_id,
+        )
 
         if plan.unscheduled:
             st.warning(

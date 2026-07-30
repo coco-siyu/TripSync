@@ -293,6 +293,23 @@ class StreamlitInteractionTests(unittest.TestCase):
                 for day in plan.days
             )
         )
+
+    def test_itinerary_offers_a_grounded_adjustment_request(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+
+        self.assertTrue(
+            any(
+                text_input.key == "itinerary-change-request-text"
+                for text_input in app.text_input
+            )
+        )
+        self.assertTrue(
+            any(
+                button.label == "Suggest adjustments"
+                for button in app.button
+            )
+        )
         self.assertTrue(
             all(
                 f"Day {day_number}" in [

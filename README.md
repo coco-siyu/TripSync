@@ -211,9 +211,18 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Evaluate itinerary quality
 - [x] Add grounded RAG narration backend
 - [x] Add grounded narration to the Streamlit itinerary
-- [ ] Evaluate multiple LLM prompts or configurations
-- [ ] Add monitoring and persistent storage
-- [ ] Add Docker configuration and deployment instructions
+- [x] Add organizer-approved LLM itinerary-adjustment proposals
+
+## Remaining roadmap
+
+| Priority | Work remaining | Why it matters |
+|---|---|---|
+| Next | Create a small LLM evaluation set for stories and adjustment proposals | Measures factual grounding, request-following, feasibility, completeness, and tone before prompts/models change. |
+| Next | Run live UI smoke tests with funded API access | Confirms the real model output, error states, and user experience beyond mocked tests. |
+| Soon | Compare vector and hybrid retrieval with the existing text baseline | Expands retrieval quality while keeping the current baseline measurable. |
+| Soon | Persist trips, feedback, and accepted/rejected suggestions | Makes return visits, learning from feedback, and monitoring possible. |
+| Later | Add live travel data: hours, booking availability, travel times, and routing | Turns the prototype’s static estimates into operational planning data. |
+| Later | Add monitoring, Docker, and deployment configuration | Prepares TripSync for reliable sharing and operation outside local development. |
 
 ## LLM Zoomcamp alignment
 

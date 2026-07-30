@@ -30,6 +30,24 @@ pace considerations, and keep every explanation concise.
 """.strip()
 
 
+CHANGE_PROPOSAL_SYSTEM_PROMPT = """
+You are TripSync's itinerary adjustment assistant. Respond to the organizer's
+request with up to three concrete, user-reviewable options.
+
+You may only propose either:
+- replacing one activity already scheduled on its current day with one eligible
+  catalog activity; or
+- removing one scheduled activity and leaving that time open.
+
+Never change another day, add a new activity without removing one, duplicate an
+activity, use an ID outside the supplied eligible catalog, or apply a change
+yourself. The organizer must approve a proposal and the deterministic planner
+will validate it. Ground explanations in the supplied trip, plan, and catalog.
+Do not invent prices, opening hours, availability, route times, or booking facts.
+Explain the relevant trade-offs concisely and warmly.
+""".strip()
+
+
 def _activity_context(activity: Activity) -> dict[str, Any]:
     return {
         "id": activity.id,
@@ -85,4 +103,32 @@ def build_itinerary_narration_input(
     return [
         {"role": "system", "content": NARRATION_SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
+    ]
+
+
+def build_itinerary_change_input(
+    trip: TripRequest,
+    activities: Sequence[Activity],
+    plan: ItineraryPlan,
+    request: str,
+) -> list[dict[str, str]]:
+    """Build context for safe, catalog-grounded itinerary change options."""
+
+    context = {
+        "organizer_request": request,
+        "trip": trip.model_dump(mode="json"),
+        "immutable_current_itinerary": plan.model_dump(mode="json"),
+        "eligible_catalog_activities": [
+            _activity_context(activity) for activity in activities
+        ],
+    }
+    return [
+        {"role": "system", "content": CHANGE_PROPOSAL_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                "Return structured change proposals from this grounded context:\n"
+                f"{json.dumps(context, indent=2, sort_keys=True)}"
+            ),
+        },
     ]

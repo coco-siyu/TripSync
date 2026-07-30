@@ -15,6 +15,7 @@ from src.models import (
     TripRequest,
     UnscheduledActivity,
 )
+from src.proposals import ItineraryChangeProposal
 from src.scoring import GroupFitResult
 
 
@@ -421,6 +422,119 @@ def replace_itinerary_activity(
         }
     )
 
+    return ReplacementOutcome(
+        plan=updated_plan,
+        removed_activity=removed_activity,
+        replacement_activity=replacement,
+        day_number=target_day.day_number,
+    )
+
+
+def apply_itinerary_change_proposal(
+    plan: ItineraryPlan,
+    proposal: ItineraryChangeProposal,
+    activities: Sequence[Activity],
+    ranked_results: Sequence[GroupFitResult],
+    *,
+    must_do_owners_by_activity_id: Mapping[str, Sequence[str]] | None = None,
+) -> ReplacementOutcome:
+    """Apply one approved proposal after deterministic feasibility checks."""
+
+    activity_by_id = {activity.id: activity for activity in activities}
+    result_by_id = {result.activity_id: result for result in ranked_results}
+    owners_by_id = must_do_owners_by_activity_id or {}
+    target_day = next(
+        (day for day in plan.days if day.day_number == proposal.day_number),
+        None,
+    )
+    if target_day is None:
+        raise ValueError(f"Day {proposal.day_number} is not in the itinerary")
+
+    target_position = next(
+        (
+            position
+            for position, activity in enumerate(target_day.activities)
+            if activity.activity_id == proposal.remove_activity_id
+        ),
+        None,
+    )
+    if target_position is None:
+        raise ValueError(
+            f"{proposal.remove_activity_id} is not scheduled on Day "
+            f"{proposal.day_number}"
+        )
+    removed_activity = target_day.activities[target_position]
+    scheduled_ids = {
+        activity.activity_id
+        for day in plan.days
+        for activity in day.activities
+    }
+
+    replacement: ScheduledActivity | None = None
+    if proposal.add_activity_id is not None:
+        if proposal.add_activity_id not in activity_by_id:
+            raise ValueError("The suggested replacement is not in the catalog")
+        if proposal.add_activity_id in scheduled_ids:
+            raise ValueError("The suggested replacement is already scheduled")
+        candidate = activity_by_id[proposal.add_activity_id]
+        replacement = _scheduled_activity(
+            candidate,
+            source=ItinerarySource.RECOMMENDATION,
+            must_do_owners=owners_by_id.get(candidate.id, ()),
+            result=result_by_id.get(candidate.id),
+        ).model_copy(
+            update={
+                "reason": "Applied from an organizer-approved TripSync suggestion."
+            }
+        )
+
+    updated_activities = [
+        activity
+        for activity in target_day.activities
+        if activity.activity_id != proposal.remove_activity_id
+    ]
+    if replacement is not None:
+        updated_activities.insert(target_position, replacement)
+
+    rule = PACE_RULES[plan.pace]
+    activity_hours = round(
+        sum(activity.duration_hours for activity in updated_activities),
+        2,
+    )
+    transition_hours = round(
+        TRANSITION_HOURS * max(0, len(updated_activities) - 1),
+        2,
+    )
+    planned_hours = round(activity_hours + transition_hours, 2)
+    if (
+        len(updated_activities) > rule.max_activities
+        or planned_hours > target_day.capacity_hours + 0.01
+    ):
+        raise ValueError(
+            "The suggested change does not fit this day's pace limits."
+        )
+
+    updated_day = ItineraryDay(
+        day_number=target_day.day_number,
+        activities=updated_activities,
+        activity_hours=activity_hours,
+        transition_hours=transition_hours,
+        planned_hours=planned_hours,
+        capacity_hours=target_day.capacity_hours,
+    )
+    updated_plan = ItineraryPlan.model_validate(
+        {
+            **plan.model_dump(mode="json"),
+            "days": [
+                (
+                    updated_day.model_dump(mode="json")
+                    if day.day_number == target_day.day_number
+                    else day.model_dump(mode="json")
+                )
+                for day in plan.days
+            ],
+        }
+    )
     return ReplacementOutcome(
         plan=updated_plan,
         removed_activity=removed_activity,
