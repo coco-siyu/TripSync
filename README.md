@@ -4,11 +4,10 @@
 
 ## Project status
 
-TripSync now has a working **preference, retrieval, and recommendation flow**. It
-collects validated group preferences, retrieves grounded destination activities,
-ranks them with an explainable group-fit formula, identifies must-dos, and lets the
-organizer maintain a shortlist. Itinerary generation is the next major product
-phase.
+TripSync now has a working **preference, retrieval, recommendation, and itinerary
+flow**. It collects validated group preferences, retrieves grounded destination
+activities, ranks them with an explainable group-fit formula, identifies must-dos,
+maintains a shortlist, and builds a pace-aware multi-day itinerary.
 
 ## The problem
 
@@ -68,7 +67,8 @@ For each candidate activity, the application will consider:
 The UI will display both a group-fit score and a traveler coverage explanation.
 The initial deterministic formula is documented in
 [docs/scoring.md](docs/scoring.md), and the text-retrieval boundary is documented in
-[docs/retrieval.md](docs/retrieval.md).
+[docs/retrieval.md](docs/retrieval.md). Itinerary constraints and pace limits are
+documented in [docs/itinerary.md](docs/itinerary.md).
 
 ## Initial technical approach
 
@@ -80,7 +80,7 @@ The initial deterministic formula is documented in
 | Activity data | Structured JSON |
 | Retrieval | Text search first; vector and hybrid search later |
 | Group-fit ranking | Rule-based scoring |
-| Itinerary generation | OpenAI API |
+| Itinerary planning | Deterministic scheduler first; OpenAI narrative later |
 | Evaluation | Retrieval metrics and itinerary-quality checks |
 | Feedback | Local structured log first; database later |
 
@@ -199,7 +199,7 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Implement group-fit scoring
 - [x] Build the first Streamlit preference form
 - [x] Add text retrieval
-- [ ] Generate a grounded itinerary
+- [x] Generate a grounded itinerary
 - [ ] Add activity rejection and day regeneration
 - [ ] Evaluate retrieval approaches
 - [ ] Evaluate itinerary quality

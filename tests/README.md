@@ -8,6 +8,8 @@ The current suite covers:
   inclusion;
 - group-fit interest, walking, must-do, budget, and fairness rules;
 - deterministic activity ranking;
+- deterministic itinerary pacing, shortlist priority, automatic filling,
+  deduplication, and unscheduled explanations;
 - Streamlit preference, retrieval, must-do, and shortlist interactions.
 
 Run all tests from the repository root:
@@ -16,4 +18,4 @@ Run all tests from the repository root:
 .venv/bin/python -m unittest -v
 ```
 
-Itinerary constraint checks will be added with the itinerary-generation component.
+The next phase will add activity rejection and individual-day regeneration checks.

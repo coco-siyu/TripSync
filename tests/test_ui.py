@@ -7,6 +7,7 @@ import unittest
 from pydantic import ValidationError
 from streamlit.testing.v1 import AppTest
 
+from src.models import ItineraryPlan, ItinerarySource
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -265,6 +266,63 @@ class StreamlitInteractionTests(unittest.TestCase):
             "rome_colosseum",
             app.session_state["dismissed_must_do_ids"],
         )
+
+    def test_build_itinerary_creates_three_guarded_days(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        plan = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        )
+
+        self.assertEqual(len(plan.days), 3)
+        self.assertGreater(
+            sum(len(day.activities) for day in plan.days),
+            2,
+        )
+        self.assertTrue(
+            all(
+                day.planned_hours <= day.capacity_hours
+                for day in plan.days
+            )
+        )
+        self.assertTrue(
+            all(
+                f"Day {day_number}" in [
+                    subheader.value for subheader in app.subheader
+                ]
+                for day_number in range(1, 4)
+            )
+        )
+
+    def test_itinerary_can_use_only_the_shortlist(self) -> None:
+        app = self._sample_results_app()
+        app.toggle(key="itinerary_auto_fill").set_value(False).run()
+        app.button(key="build-itinerary").click().run()
+        plan = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        )
+        scheduled = [
+            activity
+            for day in plan.days
+            for activity in day.activities
+        ]
+
+        self.assertEqual(len(scheduled), 2)
+        self.assertTrue(
+            all(
+                activity.source == ItinerarySource.SHORTLIST
+                for activity in scheduled
+            )
+        )
+
+    def test_shortlist_change_invalidates_generated_itinerary(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        self.assertIsNotNone(app.session_state["itinerary_plan"])
+
+        app.button(key="shortlist-remove-rome_colosseum").click().run()
+
+        self.assertIsNone(app.session_state["itinerary_plan"])
 
 
 if __name__ == "__main__":

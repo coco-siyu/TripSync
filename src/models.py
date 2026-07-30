@@ -40,6 +40,13 @@ class TripPace(str, Enum):
     PACKED = "packed"
 
 
+class ItinerarySource(str, Enum):
+    """Why an activity was added to a generated itinerary."""
+
+    SHORTLIST = "shortlist"
+    RECOMMENDATION = "recommendation"
+
+
 class TripSyncModel(BaseModel):
     """Shared validation behavior for public TripSync models."""
 
@@ -151,3 +158,81 @@ class Activity(TripSyncModel):
         if any(not interest for interest in value):
             raise ValueError("interests must not be blank")
         return value
+
+
+class ScheduledActivity(TripSyncModel):
+    """A grounded activity placed on one itinerary day."""
+
+    activity_id: str = Field(pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
+    activity_name: str = Field(min_length=1, max_length=160)
+    duration_hours: float = Field(gt=0, le=12)
+    source: ItinerarySource
+    must_do_owners: list[str] = Field(default_factory=list, max_length=6)
+    traveler_names: list[str] = Field(default_factory=list, max_length=6)
+    reason: str = Field(min_length=1, max_length=300)
+
+
+class ItineraryDay(TripSyncModel):
+    """One day with validated capacity and transition estimates."""
+
+    day_number: int = Field(ge=1, le=5)
+    activities: list[ScheduledActivity] = Field(default_factory=list, max_length=6)
+    activity_hours: float = Field(ge=0, le=24)
+    transition_hours: float = Field(ge=0, le=12)
+    planned_hours: float = Field(ge=0, le=24)
+    capacity_hours: float = Field(gt=0, le=12)
+
+    @model_validator(mode="after")
+    def validate_daily_totals(self) -> ItineraryDay:
+        activity_total = round(
+            sum(activity.duration_hours for activity in self.activities),
+            2,
+        )
+        if abs(activity_total - self.activity_hours) > 0.01:
+            raise ValueError("activity hours must equal scheduled durations")
+        if abs(
+            self.activity_hours
+            + self.transition_hours
+            - self.planned_hours
+        ) > 0.01:
+            raise ValueError(
+                "planned hours must include activities and transitions"
+            )
+        if self.planned_hours > self.capacity_hours + 0.01:
+            raise ValueError("planned hours exceed daily capacity")
+        return self
+
+
+class UnscheduledActivity(TripSyncModel):
+    """A shortlisted activity that could not fit the itinerary."""
+
+    activity_id: str = Field(min_length=1, max_length=200)
+    activity_name: str = Field(min_length=1, max_length=160)
+    reason: str = Field(min_length=1, max_length=300)
+
+
+class ItineraryPlan(TripSyncModel):
+    """A deterministic, catalog-grounded multi-day itinerary."""
+
+    destination: str = Field(min_length=1, max_length=120)
+    country: str = Field(min_length=1, max_length=80)
+    pace: TripPace
+    auto_fill: bool
+    days: list[ItineraryDay] = Field(min_length=1, max_length=5)
+    unscheduled: list[UnscheduledActivity] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_day_sequence_and_unique_activities(self) -> ItineraryPlan:
+        expected_days = list(range(1, len(self.days) + 1))
+        actual_days = [day.day_number for day in self.days]
+        if actual_days != expected_days:
+            raise ValueError("itinerary days must be sequential")
+
+        activity_ids = [
+            activity.activity_id
+            for day in self.days
+            for activity in day.activities
+        ]
+        if len(activity_ids) != len(set(activity_ids)):
+            raise ValueError("an activity may only be scheduled once")
+        return self

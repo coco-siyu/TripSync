@@ -10,8 +10,15 @@ from typing import Any
 import streamlit as st
 from pydantic import ValidationError
 
-from src.models import Activity, TravelerProfile, TripRequest
+from src.models import (
+    Activity,
+    ItineraryPlan,
+    ItinerarySource,
+    TravelerProfile,
+    TripRequest,
+)
 from src.must_dos import UnmatchedMustDo, resolve_must_dos
+from src.planner import build_itinerary
 from src.scoring import GroupFitResult, rank_activities
 from src.search import RetrievedActivity, retrieve_activities
 
@@ -159,6 +166,7 @@ def _initialize_state() -> None:
         "trip_request": None,
         "selected_activity_ids": [],
         "dismissed_must_do_ids": [],
+        "itinerary_plan": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -170,6 +178,13 @@ def _reset_activity_selections() -> None:
 
     st.session_state.selected_activity_ids = []
     st.session_state.dismissed_must_do_ids = []
+    st.session_state.itinerary_plan = None
+
+
+def _invalidate_itinerary() -> None:
+    """Discard a generated plan after its inputs change."""
+
+    st.session_state.itinerary_plan = None
 
 
 def _apply_styles() -> None:
@@ -321,6 +336,20 @@ def _apply_styles() -> None:
             background: linear-gradient(125deg, #FFFFFF 0%, #E9FBF9 100%);
             border-color: rgba(0, 169, 157, 0.28);
             margin-top: 1.5rem;
+        }
+
+        .st-key-itinerary-shell {
+            margin-top: 2.25rem;
+        }
+
+        div[class*="st-key-itinerary-day-"] {
+            background: rgba(255,255,255,0.94);
+            border: 1px solid rgba(23, 107, 255, 0.18);
+            border-left: 5px solid var(--ocean-blue);
+            border-radius: 1.15rem;
+            box-shadow: 0 14px 32px rgba(21, 50, 74, 0.08);
+            margin: 0.8rem 0;
+            padding: 0.45rem 0.85rem;
         }
 
         div[class*="st-key-traveler-card-"] {
@@ -778,6 +807,7 @@ def _add_activity_to_shortlist(activity_id: str) -> None:
         for dismissed_id in st.session_state.dismissed_must_do_ids
         if dismissed_id != activity_id
     ]
+    _invalidate_itinerary()
 
 
 def _remove_activity_from_shortlist(
@@ -798,6 +828,7 @@ def _remove_activity_from_shortlist(
             *st.session_state.dismissed_must_do_ids,
             activity_id,
         ]
+    _invalidate_itinerary()
 
 
 def _render_unmatched_must_do(entry: UnmatchedMustDo) -> None:
@@ -929,7 +960,131 @@ def _render_result_card(
             )
 
 
+def _itinerary_slot_label(position: int, total: int) -> str:
+    if total == 1:
+        return "Flexible highlight"
+    labels = {
+        2: ("Morning", "Afternoon"),
+        3: ("Morning", "Midday", "Afternoon"),
+        4: ("Morning", "Late morning", "Afternoon", "Evening"),
+    }
+    day_labels = labels.get(total, ())
+    if position < len(day_labels):
+        return day_labels[position]
+    return f"Stop {position + 1}"
+
+
+def _render_itinerary(
+    plan: ItineraryPlan,
+    activity_by_id: dict[str, Activity],
+) -> None:
+    scheduled = [
+        activity
+        for day in plan.days
+        for activity in day.activities
+    ]
+    total_activity_hours = sum(day.activity_hours for day in plan.days)
+    traveler_names = {
+        traveler_name
+        for activity in scheduled
+        for traveler_name in activity.traveler_names
+    }
+
+    with st.container(key="itinerary-shell"):
+        st.markdown(
+            '<div class="ts-section-label">Ready to explore</div>',
+            unsafe_allow_html=True,
+        )
+        st.header(f"Your {len(plan.days)}-day itinerary")
+        summary_labels = [
+            f"{len(scheduled)} activities",
+            f"{format_duration(total_activity_hours)} of activities",
+            f"{plan.pace.value} pace",
+        ]
+        if traveler_names:
+            summary_labels.append(
+                f"{len(traveler_names)} travelers represented"
+            )
+        st.markdown(_chip_row(summary_labels), unsafe_allow_html=True)
+        st.caption(
+            "Daily timing includes a 30-minute transition estimate between "
+            "activities. Opening hours and route optimization are not live yet."
+        )
+
+        for day in plan.days:
+            with st.container(
+                key=f"itinerary-day-{day.day_number}",
+                border=True,
+            ):
+                title_col, timing_col = st.columns(
+                    [3, 2],
+                    vertical_alignment="center",
+                )
+                title_col.subheader(f"Day {day.day_number}")
+                timing_col.caption(
+                    f"{day.planned_hours:g} of "
+                    f"{day.capacity_hours:g} hours planned"
+                )
+
+                if not day.activities:
+                    st.caption(
+                        "Keep this day open for rest, wandering, or something "
+                        "spontaneous."
+                    )
+                    continue
+
+                for position, scheduled_activity in enumerate(day.activities):
+                    activity = activity_by_id.get(
+                        scheduled_activity.activity_id
+                    )
+                    icon = (
+                        CATEGORY_ICONS.get(activity.category, "🧭")
+                        if activity is not None
+                        else "🧭"
+                    )
+                    slot = _itinerary_slot_label(
+                        position,
+                        len(day.activities),
+                    )
+                    st.markdown(
+                        f"**{slot} · {icon} "
+                        f"{scheduled_activity.activity_name}**"
+                    )
+                    source_label = (
+                        "Your shortlist"
+                        if scheduled_activity.source
+                        == ItinerarySource.SHORTLIST
+                        else "Group recommendation"
+                    )
+                    details = [
+                        format_duration(scheduled_activity.duration_hours),
+                        source_label,
+                    ]
+                    if scheduled_activity.traveler_names:
+                        details.append(
+                            "Serves "
+                            + " + ".join(
+                                scheduled_activity.traveler_names
+                            )
+                        )
+                    st.caption(" · ".join(details))
+                    st.caption(scheduled_activity.reason)
+
+        if plan.unscheduled:
+            st.warning(
+                f"{len(plan.unscheduled)} shortlisted "
+                f"{'activity could' if len(plan.unscheduled) == 1 else 'activities could'} "
+                "not fit within the selected pace.",
+                icon=":material/event_busy:",
+            )
+            for item in plan.unscheduled:
+                st.markdown(f"**{item.activity_name}** — {item.reason}")
+
+
 def _render_shortlist(
+    trip: TripRequest,
+    candidate_activities: list[Activity],
+    ranked_results: list[GroupFitResult],
     activity_by_id: dict[str, Activity],
     owners_by_activity_id: dict[str, tuple[str, ...]],
 ) -> None:
@@ -951,54 +1106,105 @@ def _render_shortlist(
                 "Add activities from any view. Your choices stay here while "
                 "you compare the results."
             )
-            return
-
-        total_duration = sum(
-            activity_by_id[activity_id].duration_hours
-            for activity_id in selected_ids
-        )
-        st.markdown(
-            _chip_row(
-                [
-                    f"{len(selected_ids)} activities",
-                    f"{format_duration(total_duration)} total",
-                ]
-            ),
-            unsafe_allow_html=True,
-        )
-
-        for activity_id in selected_ids:
-            activity = activity_by_id[activity_id]
-            owners = owners_by_activity_id.get(activity_id, ())
-            detail_col, action_col = st.columns(
-                [4, 1],
-                vertical_alignment="center",
+        else:
+            total_duration = sum(
+                activity_by_id[activity_id].duration_hours
+                for activity_id in selected_ids
             )
-            icon = CATEGORY_ICONS.get(activity.category, "🧭")
-            detail_col.markdown(f"**{icon} {activity.name}**")
-            if owners:
-                detail = f"Must-do for {_owner_names(owners)}"
-            else:
-                detail = "Added from group recommendations"
-            detail_col.markdown(
-                '<div class="ts-shortlist-meta">'
-                f"{escape(detail)} · {format_duration(activity.duration_hours)}"
-                "</div>",
+            st.markdown(
+                _chip_row(
+                    [
+                        f"{len(selected_ids)} activities",
+                        f"{format_duration(total_duration)} total",
+                    ]
+                ),
                 unsafe_allow_html=True,
             )
-            if action_col.button(
-                "Remove",
-                key=f"shortlist-remove-{activity_id}",
-                icon=":material/close:",
-                type="tertiary",
-                width="stretch",
-            ):
-                _remove_activity_from_shortlist(
-                    activity_id,
-                    is_must_do=bool(owners),
+
+            for activity_id in selected_ids:
+                activity = activity_by_id[activity_id]
+                owners = owners_by_activity_id.get(activity_id, ())
+                detail_col, action_col = st.columns(
+                    [4, 1],
+                    vertical_alignment="center",
                 )
-                st.toast(f"Removed {activity.name} from your trip.")
-                st.rerun()
+                icon = CATEGORY_ICONS.get(activity.category, "🧭")
+                detail_col.markdown(f"**{icon} {activity.name}**")
+                if owners:
+                    detail = f"Must-do for {_owner_names(owners)}"
+                else:
+                    detail = "Added from group recommendations"
+                detail_col.markdown(
+                    '<div class="ts-shortlist-meta">'
+                    f"{escape(detail)} · "
+                    f"{format_duration(activity.duration_hours)}"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+                if action_col.button(
+                    "Remove",
+                    key=f"shortlist-remove-{activity_id}",
+                    icon=":material/close:",
+                    type="tertiary",
+                    width="stretch",
+                ):
+                    _remove_activity_from_shortlist(
+                        activity_id,
+                        is_must_do=bool(owners),
+                    )
+                    st.toast(f"Removed {activity.name} from your trip.")
+                    st.rerun()
+
+        st.space("small")
+        auto_fill = st.toggle(
+            "Fill open time with group recommendations",
+            value=True,
+            key="itinerary_auto_fill",
+            help=(
+                "TripSync keeps your shortlist first, then uses the existing "
+                "group-fit ranking to fill remaining daily capacity."
+            ),
+            on_change=_invalidate_itinerary,
+        )
+        st.caption(
+            "The planner respects your trip length and pace. Must-dos are "
+            "prioritized only while they remain in this shortlist."
+        )
+        can_build = bool(candidate_activities) and bool(
+            selected_ids or auto_fill
+        )
+        button_label = (
+            "Rebuild our itinerary"
+            if st.session_state.itinerary_plan
+            else "Build our itinerary"
+        )
+        if st.button(
+            button_label,
+            key="build-itinerary",
+            icon=":material/calendar_month:",
+            type="primary",
+            width="stretch",
+            disabled=not can_build,
+        ):
+            plan = build_itinerary(
+                trip,
+                candidate_activities,
+                ranked_results,
+                selected_ids,
+                must_do_owners_by_activity_id=owners_by_activity_id,
+                auto_fill=auto_fill,
+            )
+            st.session_state.itinerary_plan = plan.model_dump(mode="json")
+            st.toast("Your itinerary is ready.")
+            st.rerun()
+
+    if st.session_state.itinerary_plan:
+        _render_itinerary(
+            ItineraryPlan.model_validate(
+                st.session_state.itinerary_plan
+            ),
+            activity_by_id,
+        )
 
 
 def _render_results_step() -> None:
@@ -1051,7 +1257,13 @@ def _render_results_step() -> None:
             "the prototype catalog expands.",
             icon=":material/location_off:",
         )
-        _render_shortlist(activity_by_id, owners_by_activity_id)
+        _render_shortlist(
+            trip,
+            retrieved_activities,
+            results,
+            activity_by_id,
+            owners_by_activity_id,
+        )
         return
 
     st.caption(
@@ -1107,7 +1319,13 @@ def _render_results_step() -> None:
             owners_by_activity_id.get(result.activity_id, ()),
         )
 
-    _render_shortlist(activity_by_id, owners_by_activity_id)
+    _render_shortlist(
+        trip,
+        retrieved_activities,
+        results,
+        activity_by_id,
+        owners_by_activity_id,
+    )
 
 
 def render_app() -> None:
