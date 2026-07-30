@@ -10,6 +10,11 @@ from typing import Any
 import streamlit as st
 from pydantic import ValidationError
 
+from src.llm import (
+    NarrationConfigurationError,
+    NarrationGenerationError,
+    generate_itinerary_narrative,
+)
 from src.models import (
     Activity,
     ItineraryPlan,
@@ -20,6 +25,11 @@ from src.models import (
     TripRequest,
 )
 from src.must_dos import UnmatchedMustDo, resolve_must_dos
+from src.narration import (
+    ItineraryNarrative,
+    NarrationGroundingError,
+    validate_narrative_against_plan,
+)
 from src.planner import build_itinerary, replace_itinerary_activity
 from src.scoring import GroupFitResult, rank_activities
 from src.search import RetrievedActivity, retrieve_activities
@@ -172,6 +182,8 @@ def _initialize_state() -> None:
         "rejected_activities": {},
         "itinerary_undo": None,
         "itinerary_notice": None,
+        "itinerary_narrative": None,
+        "itinerary_narration_error": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -187,6 +199,8 @@ def _reset_activity_selections() -> None:
     st.session_state.rejected_activities = {}
     st.session_state.itinerary_undo = None
     st.session_state.itinerary_notice = None
+    st.session_state.itinerary_narrative = None
+    st.session_state.itinerary_narration_error = None
 
 
 def _invalidate_itinerary() -> None:
@@ -195,6 +209,8 @@ def _invalidate_itinerary() -> None:
     st.session_state.itinerary_plan = None
     st.session_state.itinerary_undo = None
     st.session_state.itinerary_notice = None
+    st.session_state.itinerary_narrative = None
+    st.session_state.itinerary_narration_error = None
 
 
 def _apply_styles() -> None:
@@ -1075,6 +1091,10 @@ def _reject_and_replace_activity(
         "dismissed_must_do_ids": list(
             st.session_state.dismissed_must_do_ids
         ),
+        "itinerary_narrative": _json_copy(
+            st.session_state.itinerary_narrative
+        ),
+        "itinerary_narration_error": st.session_state.itinerary_narration_error,
     }
     outcome = replace_itinerary_activity(
         plan,
@@ -1113,6 +1133,8 @@ def _reject_and_replace_activity(
             activity.id,
         ]
     st.session_state.itinerary_plan = outcome.plan.model_dump(mode="json")
+    st.session_state.itinerary_narrative = None
+    st.session_state.itinerary_narration_error = None
 
     if outcome.replacement_activity is None:
         st.session_state.itinerary_notice = (
@@ -1138,7 +1160,98 @@ def _undo_last_replacement() -> None:
     st.session_state.itinerary_notice = "The last replacement was undone."
 
 
+def _load_grounded_narrative(
+    plan: ItineraryPlan,
+) -> ItineraryNarrative | None:
+    """Return the saved story only when it still matches this plan."""
+
+    payload = st.session_state.itinerary_narrative
+    if payload is None:
+        return None
+
+    try:
+        narrative = ItineraryNarrative.model_validate(payload)
+        return validate_narrative_against_plan(narrative, plan)
+    except (ValidationError, NarrationGroundingError):
+        st.session_state.itinerary_narrative = None
+        st.session_state.itinerary_narration_error = (
+            "The saved trip story no longer matches this itinerary. "
+            "Generate it again after reviewing the schedule."
+        )
+        return None
+
+
+def _render_narration(
+    trip: TripRequest,
+    plan: ItineraryPlan,
+    activity_by_id: dict[str, Activity],
+) -> ItineraryNarrative | None:
+    """Render optional, grounded LLM narration for an immutable itinerary."""
+
+    narrative = _load_grounded_narrative(plan)
+    with st.container(border=True):
+        st.markdown(
+            '<div class="ts-section-label">Optional trip story</div>',
+            unsafe_allow_html=True,
+        )
+        st.subheader("Bring the itinerary to life")
+        st.caption(
+            "TripSync keeps the schedule fixed, then uses your selected "
+            "activities and preferences to explain why it fits the group."
+        )
+        if st.button(
+            "Generate trip story",
+            key="generate-itinerary-narrative",
+            icon=":material/auto_awesome:",
+            type="secondary",
+            width="stretch",
+        ):
+            st.session_state.itinerary_narration_error = None
+            try:
+                with st.status(
+                    "Writing a grounded trip story…",
+                    expanded=True,
+                    state="running",
+                ) as status:
+                    st.write("Using only the activities already scheduled.")
+                    generated = generate_itinerary_narrative(
+                        trip,
+                        list(activity_by_id.values()),
+                        plan,
+                    )
+                    st.session_state.itinerary_narrative = generated.model_dump(
+                        mode="json"
+                    )
+                    status.update(
+                        label="Trip story ready",
+                        state="complete",
+                        expanded=False,
+                    )
+                st.rerun()
+            except (
+                NarrationConfigurationError,
+                NarrationGenerationError,
+            ) as error:
+                st.session_state.itinerary_narration_error = str(error)
+                st.rerun()
+
+        if st.session_state.itinerary_narration_error:
+            st.info(
+                st.session_state.itinerary_narration_error,
+                icon=":material/info:",
+            )
+
+        if narrative is not None:
+            st.write(narrative.trip_summary)
+            if narrative.overall_tradeoffs:
+                with st.expander("Planning notes", expanded=False):
+                    for tradeoff in narrative.overall_tradeoffs:
+                        st.markdown(f"- {tradeoff}")
+    return narrative
+
+
 def _render_itinerary(
+    trip: TripRequest,
     plan: ItineraryPlan,
     activity_by_id: dict[str, Activity],
     candidate_activities: list[Activity],
@@ -1156,6 +1269,16 @@ def _render_itinerary(
         for activity in scheduled
         for traveler_name in activity.traveler_names
     }
+    narrative = _load_grounded_narrative(plan)
+    narrative_by_activity_id = (
+        {
+            activity.activity_id: activity
+            for day in narrative.days
+            for activity in day.activities
+        }
+        if narrative is not None
+        else {}
+    )
 
     with st.container(key="itinerary-shell"):
         st.markdown(
@@ -1192,6 +1315,14 @@ def _render_itinerary(
                 _undo_last_replacement()
                 st.toast("The previous itinerary is back.")
                 st.rerun()
+
+        narrative = _render_narration(trip, plan, activity_by_id)
+        if narrative is not None:
+            narrative_by_activity_id = {
+                activity.activity_id: activity
+                for day in narrative.days
+                for activity in day.activities
+            }
 
         for day in plan.days:
             with st.container(
@@ -1251,6 +1382,15 @@ def _render_itinerary(
                         )
                     st.caption(" · ".join(details))
                     st.caption(scheduled_activity.reason)
+                    activity_story = narrative_by_activity_id.get(
+                        scheduled_activity.activity_id
+                    )
+                    if activity_story is not None:
+                        st.markdown(
+                            f"**Why it fits:** {activity_story.why_it_fits}"
+                        )
+                        if activity_story.practical_note:
+                            st.caption(activity_story.practical_note)
                     if activity is not None:
                         with st.popover(
                             "Replace activity",
@@ -1445,11 +1585,14 @@ def _render_shortlist(
             st.session_state.itinerary_plan = plan.model_dump(mode="json")
             st.session_state.itinerary_undo = None
             st.session_state.itinerary_notice = None
+            st.session_state.itinerary_narrative = None
+            st.session_state.itinerary_narration_error = None
             st.toast("Your itinerary is ready.")
             st.rerun()
 
     if st.session_state.itinerary_plan:
         _render_itinerary(
+            trip,
             ItineraryPlan.model_validate(
                 st.session_state.itinerary_plan
             ),

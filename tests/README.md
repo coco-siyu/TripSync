@@ -15,6 +15,8 @@ The current suite covers:
 - deterministic same-day replacement, rejection exclusions, and no-fit open slots;
 - itinerary constraint, grounding, coverage, fairness, utilization, and
   reproducibility metrics;
+- grounded narration prompts, structured OpenAI responses, configuration errors,
+  and protection against invented or moved activities;
 - Streamlit preference, retrieval, must-do, shortlist, rejected-activity restore,
   and replacement-undo interactions.
 
@@ -24,5 +26,5 @@ Run all tests from the repository root:
 .venv/bin/python -m unittest -v
 ```
 
-The next phase will add itinerary-quality evaluation and persistent feedback
-storage.
+The next phase will add the grounded narration to Streamlit and compare multiple
+LLM prompt or model configurations.

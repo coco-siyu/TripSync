@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from pydantic import ValidationError
 from streamlit.testing.v1 import AppTest
 
 from src.models import ItineraryPlan, ItinerarySource
+from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay
+from src.llm import NarrationGenerationError
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -324,10 +327,71 @@ class StreamlitInteractionTests(unittest.TestCase):
         app = self._sample_results_app()
         app.button(key="build-itinerary").click().run()
         self.assertIsNotNone(app.session_state["itinerary_plan"])
+        app.session_state["itinerary_narrative"] = {"saved": "story"}
 
         app.button(key="shortlist-remove-rome_colosseum").click().run()
 
         self.assertIsNone(app.session_state["itinerary_plan"])
+        self.assertIsNone(app.session_state["itinerary_narrative"])
+
+    def test_itinerary_shows_a_grounded_trip_story_when_available(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        plan = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        )
+        narrative = ItineraryNarrative(
+            trip_summary="A Rome story built around shared interests.",
+            days=[
+                NarratedDay(
+                    day_number=day.day_number,
+                    summary=f"Day {day.day_number} has a clear rhythm.",
+                    activities=[
+                        NarratedActivity(
+                            activity_id=activity.activity_id,
+                            why_it_fits="It reflects the group's preferences.",
+                        )
+                        for activity in day.activities
+                    ],
+                )
+                for day in plan.days
+            ],
+        )
+        app.session_state["itinerary_narrative"] = narrative.model_dump(
+            mode="json"
+        )
+        app.run()
+
+        self.assertTrue(
+            any(
+                button.key == "generate-itinerary-narrative"
+                for button in app.button
+            )
+        )
+        self.assertTrue(
+            any(
+                markdown.value
+                == "**Why it fits:** It reflects the group's preferences."
+                for markdown in app.markdown
+            )
+        )
+
+    def test_trip_story_shows_a_friendly_api_error(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+
+        with patch(
+            "src.ui.generate_itinerary_narrative",
+            side_effect=NarrationGenerationError(
+                "OpenAI quota or rate limit reached."
+            ),
+        ):
+            app.button(key="generate-itinerary-narrative").click().run()
+
+        self.assertEqual(
+            app.session_state["itinerary_narration_error"],
+            "OpenAI quota or rate limit reached.",
+        )
 
     def test_rejected_activity_moves_to_history_and_is_replaced(self) -> None:
         app = self._sample_results_app()

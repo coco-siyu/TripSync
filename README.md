@@ -8,7 +8,9 @@ TripSync now has a working **preference, retrieval, recommendation, and itinerar
 flow**. It collects validated group preferences, retrieves grounded destination
 activities, ranks them with an explainable group-fit formula, identifies must-dos,
 maintains a shortlist, builds a pace-aware multi-day itinerary, and uses structured
-rejection feedback to replace an activity without changing the other days.
+rejection feedback to replace an activity without changing the other days. A
+grounded OpenAI narration backend can now turn the validated plan into structured
+trip explanations without changing its days or activities.
 
 ## The problem
 
@@ -70,6 +72,8 @@ The initial deterministic formula is documented in
 [docs/scoring.md](docs/scoring.md), and the text-retrieval boundary is documented in
 [docs/retrieval.md](docs/retrieval.md). Itinerary constraints and pace limits are
 documented in [docs/itinerary.md](docs/itinerary.md).
+The RAG prompt, structured output, and grounding boundary are documented in
+[docs/rag.md](docs/rag.md).
 
 ## Initial technical approach
 
@@ -81,7 +85,7 @@ documented in [docs/itinerary.md](docs/itinerary.md).
 | Activity data | Structured JSON |
 | Retrieval | Text search first; vector and hybrid search later |
 | Group-fit ranking | Rule-based scoring |
-| Itinerary planning | Deterministic scheduler first; OpenAI narrative later |
+| Itinerary planning | Deterministic scheduler with grounded OpenAI narration |
 | Evaluation | Retrieval metrics and itinerary-quality checks |
 | Feedback | Local structured log first; database later |
 
@@ -205,6 +209,9 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Establish a reproducible retrieval-evaluation baseline
 - [ ] Compare vector and hybrid retrieval
 - [x] Evaluate itinerary quality
+- [x] Add grounded RAG narration backend
+- [x] Add grounded narration to the Streamlit itinerary
+- [ ] Evaluate multiple LLM prompts or configurations
 - [ ] Add monitoring and persistent storage
 - [ ] Add Docker configuration and deployment instructions
 
