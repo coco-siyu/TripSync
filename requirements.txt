@@ -2,4 +2,5 @@ openai>=2.50,<3
 pandas
 pydantic>=2.7,<3
 python-dotenv
+sentence-transformers>=5,<6
 streamlit

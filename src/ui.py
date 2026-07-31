@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -50,11 +51,17 @@ from src.proposals import (
     validate_proposals_against_plan,
 )
 from src.scoring import GroupFitResult, rank_activities
-from src.search import RetrievedActivity, retrieve_activities
+from src.search import RetrievalMode, RetrievedActivity, retrieve_activities
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_DATA_PATH = REPOSITORY_ROOT / "data" / "sample_activities.json"
+RETRIEVAL_MODE: RetrievalMode = (
+    os.getenv("TRIPSYNC_RETRIEVAL_MODE", "hybrid").strip().lower()
+    if os.getenv("TRIPSYNC_RETRIEVAL_MODE", "hybrid").strip().lower()
+    in {"text", "vector", "hybrid"}
+    else "hybrid"
+)
 
 INTEREST_OPTIONS = [
     "ancient rome",
@@ -2009,7 +2016,11 @@ def _render_results_step() -> None:
     trip = TripRequest.model_validate(st.session_state.trip_request)
     activities = load_sample_activities()
     activity_by_id = _activity_lookup(activities)
-    retrieval_response = retrieve_activities(activities, trip)
+    retrieval_response = retrieve_activities(
+        activities,
+        trip,
+        mode=RETRIEVAL_MODE,
+    )
     retrieval_by_activity_id = {
         result.activity_id: result
         for result in retrieval_response.results
@@ -2073,7 +2084,7 @@ def _render_results_step() -> None:
         return
 
     st.caption(
-        f"Text retrieval found {len(retrieval_response.results)} relevant "
+        f"{RETRIEVAL_MODE.title()} retrieval found {len(retrieval_response.results)} relevant "
         f"activities from {len(retrieval_response.destination_activity_ids)} "
         "destination records."
     )

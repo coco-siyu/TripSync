@@ -4,9 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import lru_cache
+from typing import Literal, Protocol
+
+import numpy as np
 
 from src.models import Activity, TripRequest
 from src.must_dos import canonicalize_activity_key, matches_must_do
+
+
+RetrievalMode = Literal["text", "vector", "hybrid"]
+DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
+
+class EmbeddingModel(Protocol):
+    def encode(self, sentences: Sequence[str], *, normalize_embeddings: bool) -> object: ...
 
 
 @dataclass(frozen=True)
@@ -55,6 +67,23 @@ def _activity_document(activity: Activity) -> str:
         activity.description,
     ]
     return normalize_search_text(" ".join(fields))
+
+
+def _trip_query(trip: TripRequest) -> str:
+    terms = [
+        *[interest for traveler in trip.travelers for interest in traveler.interests],
+        *[must_do for traveler in trip.travelers for must_do in traveler.must_do_activities],
+    ]
+    return normalize_search_text(" ".join(terms))
+
+
+@lru_cache(maxsize=1)
+def _embedding_model() -> EmbeddingModel:
+    """Load the local semantic model only when vector retrieval is selected."""
+
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(DEFAULT_EMBEDDING_MODEL, local_files_only=True)
 
 
 def _destination_matches(activity: Activity, trip: TripRequest) -> bool:
@@ -155,6 +184,8 @@ def retrieve_activities(
     trip: TripRequest,
     *,
     limit: int | None = None,
+    mode: RetrievalMode = "text",
+    embedding_model: EmbeddingModel | None = None,
 ) -> RetrievalResponse:
     """Retrieve destination activities from group interests and must-dos.
 
@@ -165,6 +196,8 @@ def retrieve_activities(
 
     if limit is not None and limit < 1:
         raise ValueError("retrieval limit must be at least 1")
+    if mode not in {"text", "vector", "hybrid"}:
+        raise ValueError("mode must be text, vector, or hybrid")
 
     destination_activities = _unique_destination_activities(activities, trip)
     destination_ids = tuple(
@@ -190,6 +223,38 @@ def retrieve_activities(
             result.activity_id,
         )
     )
+
+    if mode in {"vector", "hybrid"} and destination_activities:
+        query = _trip_query(trip)
+        if query:
+            model = embedding_model or _embedding_model()
+            vectors = np.asarray(
+                model.encode(
+                    [query, *[_activity_document(activity) for activity in destination_activities]],
+                    normalize_embeddings=True,
+                )
+            )
+            semantic_scores = {
+                activity.id: float(np.dot(vectors[0], vectors[index]))
+                for index, activity in enumerate(destination_activities, start=1)
+            }
+            text_by_id = {result.activity_id: result for result in retrieved}
+            retrieved = []
+            for activity in destination_activities:
+                text_result = text_by_id.get(activity.id)
+                must_do_owners = text_result.must_do_owners if text_result else ()
+                text_score = text_result.relevance_score if text_result else 0
+                score = semantic_scores[activity.id]
+                relevance_score = score if mode == "vector" else score + text_score / 100
+                reasons = list(text_result.reasons if text_result else ())
+                reasons.append(f"Semantic similarity: {score:.2f}")
+                retrieved.append(RetrievedActivity(
+                    activity_id=activity.id, relevance_score=relevance_score,
+                    matched_terms=text_result.matched_terms if text_result else (),
+                    matched_travelers=text_result.matched_travelers if text_result else (),
+                    must_do_owners=must_do_owners, reasons=tuple(reasons),
+                ))
+            retrieved.sort(key=lambda result: (-result.relevance_score, result.activity_id))
 
     used_fallback = False
     if not retrieved and destination_activities:

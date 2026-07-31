@@ -189,14 +189,14 @@ class StreamlitInteractionTests(unittest.TestCase):
             )
         )
 
-    def test_results_explain_the_text_retrieval_stage(self) -> None:
+    def test_results_explain_the_hybrid_retrieval_stage(self) -> None:
         app = self._sample_results_app()
 
         self.assertTrue(
             any(
                 caption.value
                 == (
-                    "Text retrieval found 12 relevant activities from 12 "
+                    "Hybrid retrieval found 12 relevant activities from 12 "
                     "destination records."
                 )
                 for caption in app.caption

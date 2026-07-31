@@ -8,6 +8,11 @@ from src.models import Activity, TravelerProfile, TripRequest
 from src.search import normalize_search_text, retrieve_activities
 
 
+class _FakeEmbeddingModel:
+    def encode(self, sentences, *, normalize_embeddings):
+        return [[1.0, 0.0], *[[0.9 if "art" in sentence else 0.1, 0.0] for sentence in sentences[1:]]]
+
+
 def make_activity(
     activity_id: str,
     name: str,
@@ -67,6 +72,13 @@ def make_trip(
 
 
 class TextRetrievalTests(unittest.TestCase):
+    def test_vector_and_hybrid_rank_semantic_matches_without_downloading_a_model(self) -> None:
+        art = make_activity("rome_art", "Gallery", interests=["art"])
+        food = make_activity("rome_food", "Market", interests=["food"])
+        trip = make_trip(interests=["art"])
+        for mode in ("vector", "hybrid"):
+            response = retrieve_activities([food, art], trip, mode=mode, embedding_model=_FakeEmbeddingModel())
+            self.assertEqual(response.results[0].activity_id, "rome_art")
     def test_normalization_ignores_case_and_punctuation(self) -> None:
         self.assertEqual(
             normalize_search_text("Ancient-Rome & ART"),

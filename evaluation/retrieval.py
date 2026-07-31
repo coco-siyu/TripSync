@@ -12,7 +12,7 @@ from typing import Any
 from pydantic import Field
 
 from src.models import Activity, TripRequest, TripSyncModel
-from src.search import retrieve_activities
+from src.search import RetrievalMode, retrieve_activities
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +118,7 @@ def evaluate_retrieval(
     cases: Sequence[RetrievalEvaluationCase],
     *,
     k: int = 5,
+    mode: RetrievalMode = "text",
 ) -> RetrievalEvaluationReport:
     """Run deterministic text retrieval over every labeled case."""
 
@@ -137,7 +138,7 @@ def evaluate_retrieval(
                 f"{unknown_list}"
             )
 
-        response = retrieve_activities(activities, case.trip, limit=k)
+        response = retrieve_activities(activities, case.trip, limit=k, mode=mode)
         ranked_ids = [result.activity_id for result in response.results]
         metrics = score_ranked_ids(
             ranked_ids,
@@ -179,7 +180,7 @@ def format_report(report: RetrievalEvaluationReport) -> str:
     """Render a compact, human-readable benchmark report."""
 
     lines = [
-        f"TripSync text retrieval baseline (k={report.k})",
+        f"TripSync retrieval evaluation (k={report.k})",
         f"Cases: {report.case_count}",
         f"Hit Rate@{report.k}: {report.hit_rate:.3f}",
         f"MRR@{report.k}: {report.mean_reciprocal_rank:.3f}",
@@ -206,6 +207,7 @@ def main() -> None:
         default=5,
         help="Evaluate the first K retrieved activities (default: 5).",
     )
+    parser.add_argument("--mode", choices=["text", "vector", "hybrid"], default="text")
     parser.add_argument(
         "--json",
         action="store_true",
@@ -217,6 +219,7 @@ def main() -> None:
         load_activities(),
         load_retrieval_cases(),
         k=args.k,
+        mode=args.mode,
     )
     if args.json:
         print(json.dumps(report_as_dict(report), indent=2))

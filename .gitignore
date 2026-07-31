@@ -62,6 +62,8 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+data/tripsync_feedback.db
+data/tripsync_feedback.db-journal
 
 # Flask stuff:
 instance/
