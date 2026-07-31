@@ -22,5 +22,10 @@ showSidebarBorder = false
 [browser]
 gatherUsageStats = false
 
+[server]
+# Avoid Streamlit probing optional vision modules inside Transformers. Polling
+# still reloads this small local app when project files change.
+fileWatcherType = "poll"
+
 [client]
 toolbarMode = "minimal"
