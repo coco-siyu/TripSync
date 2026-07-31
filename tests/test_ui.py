@@ -318,6 +318,12 @@ class StreamlitInteractionTests(unittest.TestCase):
                 for day_number in range(1, 4)
             )
         )
+        self.assertTrue(
+            any(
+                text_area.label == "Optional overall feedback"
+                for text_area in app.text_area
+            )
+        )
 
     def test_itinerary_can_use_only_the_shortlist(self) -> None:
         app = self._sample_results_app()
@@ -390,6 +396,12 @@ class StreamlitInteractionTests(unittest.TestCase):
                 markdown.value
                 == "**Why it fits:** It reflects the group's preferences."
                 for markdown in app.markdown
+            )
+        )
+        self.assertTrue(
+            any(
+                text_area.label == "Optional feedback comment"
+                for text_area in app.text_area
             )
         )
 

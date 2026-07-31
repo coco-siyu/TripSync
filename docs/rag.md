@@ -95,3 +95,18 @@ activity IDs, duplicate prevention, activity count, and pace capacity again in
 the deterministic planner. The outgoing activity is recorded as an intentional
 override, the replacement joins the shortlist, the prior plan remains available
 through Undo, and the old trip story is cleared.
+
+## Local feedback
+
+Every generated trip story and every adjustment option has a Helpful / Not useful
+control plus an optional comment. Separately, the end of an itinerary has a
+three-question overall-experience rubric: helpfulness for planning, clarity, and
+fit for the group, each rated from 1 to 5, plus an optional comment. Feedback is
+stored locally in the ignored `data/tripsync_feedback.db` SQLite file. Rows contain
+an anonymous per-browser session ID, a hash-based generated-item or itinerary ID,
+ratings, optional comment, and timestamp. They do not store the prompt, itinerary,
+traveler names, or generated LLM text.
+
+This is product feedback, not automatic model training. Review grouped comments
+and ratings with a human rubric before deciding on any planner, catalog, or prompt
+change.

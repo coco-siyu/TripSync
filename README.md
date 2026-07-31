@@ -87,7 +87,7 @@ The RAG prompt, structured output, and grounding boundary are documented in
 | Group-fit ranking | Rule-based scoring |
 | Itinerary planning | Deterministic scheduler with grounded OpenAI narration |
 | Evaluation | Retrieval metrics and itinerary-quality checks |
-| Feedback | Local structured log first; database later |
+| Feedback | Local SQLite database for LLM-output ratings and comments |
 
 The tools may change as the project develops. The initial goal is to validate the
 complete planning flow before adding infrastructure.
@@ -213,12 +213,13 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Add grounded narration to the Streamlit itinerary
 - [x] Add organizer-approved LLM itinerary-adjustment proposals
 - [x] Establish a 20-case LLM contract-evaluation baseline
+- [x] Add in-app thumbs feedback for LLM stories and adjustment suggestions
 
 ## Remaining roadmap
 
 | Priority | Work remaining | Why it matters |
 |---|---|---|
-| Next | Run the 20-case live LLM evaluation and record its report | Validates the real model's schema, grounding, completeness, and proposal feasibility against the fixed contract set. |
+| Next | Review local LLM feedback with a small human-quality rubric | Measures helpfulness and travel-writing quality that contract checks cannot detect. |
 | Next | Run live UI smoke tests with funded API access | Confirms the real model output, error states, and user experience beyond mocked tests. |
 | Soon | Compare vector and hybrid retrieval with the existing text baseline | Expands retrieval quality while keeping the current baseline measurable. |
 | Soon | Persist trips, feedback, and accepted/rejected suggestions | Makes return visits, learning from feedback, and monitoring possible. |

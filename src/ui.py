@@ -6,10 +6,17 @@ import json
 from html import escape
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import streamlit as st
 from pydantic import ValidationError
 
+from src.feedback import (
+    FeedbackTargetType,
+    feedback_target_id,
+    record_feedback,
+    record_overall_experience_feedback,
+)
 from src.llm import (
     NarrationConfigurationError,
     NarrationGenerationError,
@@ -197,6 +204,7 @@ def _initialize_state() -> None:
         "itinerary_narration_error": None,
         "itinerary_change_proposals": None,
         "itinerary_change_error": None,
+        "feedback_session_id": uuid4().hex,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -1264,7 +1272,131 @@ def _render_narration(
                 with st.expander("Planning notes", expanded=False):
                     for tradeoff in narrative.overall_tradeoffs:
                         st.markdown(f"- {tradeoff}")
+            _render_llm_feedback(
+                target_type="trip_story",
+                payload=narrative.model_dump(mode="json"),
+            )
     return narrative
+
+
+def _render_llm_feedback(
+    *,
+    target_type: FeedbackTargetType,
+    payload: dict[str, Any],
+) -> None:
+    """Render local thumbs feedback without storing trip data or LLM output."""
+
+    target_id = feedback_target_id(target_type, payload)
+    st.caption(
+        "Saved locally on this computer. Please do not include private details."
+    )
+    with st.form(f"feedback-form-{target_id}", border=False):
+        rating = st.segmented_control(
+            "Was this helpful?",
+            ["👍 Helpful", "👎 Not useful"],
+            selection_mode="single",
+            key=f"feedback-rating-{target_id}",
+            width="stretch",
+        )
+        comment = st.text_area(
+            "Optional feedback comment",
+            placeholder="What worked or what should change?",
+            max_chars=1_000,
+            key=f"feedback-comment-{target_id}",
+        )
+        submitted = st.form_submit_button(
+            "Send feedback",
+            icon=":material/rate_review:",
+            type="tertiary",
+            width="stretch",
+        )
+    if submitted:
+        if rating is None:
+            st.warning("Choose Helpful or Not useful before sending feedback.")
+            return
+        record_feedback(
+            session_id=st.session_state.feedback_session_id,
+            target_type=target_type,
+            target_id=target_id,
+            rating="up" if rating == "👍 Helpful" else "down",
+            comment=comment,
+        )
+        st.toast("Thanks — your feedback was saved locally.")
+
+
+def _render_overall_experience_feedback(
+    trip: TripRequest,
+    plan: ItineraryPlan,
+) -> None:
+    """Render the compact human-quality rubric for a completed itinerary."""
+
+    itinerary_id = feedback_target_id(
+        "overall_experience",
+        {
+            "trip": trip.model_dump(mode="json"),
+            "plan": plan.model_dump(mode="json"),
+        },
+    )
+    with st.container(border=True):
+        st.markdown(
+            '<div class="ts-section-label">Overall experience</div>',
+            unsafe_allow_html=True,
+        )
+        st.subheader("How did TripSync do?")
+        st.caption(
+            "Three quick ratings help us improve the experience. "
+            "Saved locally on this computer."
+        )
+        with st.form(f"overall-feedback-form-{itinerary_id}", border=False):
+            helpfulness = st.segmented_control(
+                "Helpful for planning",
+                range(1, 6),
+                format_func=lambda score: f"{score} ★",
+                selection_mode="single",
+                key=f"overall-feedback-helpfulness-{itinerary_id}",
+                width="stretch",
+            )
+            clarity = st.segmented_control(
+                "Clear and easy to use",
+                range(1, 6),
+                format_func=lambda score: f"{score} ★",
+                selection_mode="single",
+                key=f"overall-feedback-clarity-{itinerary_id}",
+                width="stretch",
+            )
+            group_fit = st.segmented_control(
+                "Fits your group",
+                range(1, 6),
+                format_func=lambda score: f"{score} ★",
+                selection_mode="single",
+                key=f"overall-feedback-group-fit-{itinerary_id}",
+                width="stretch",
+            )
+            comment = st.text_area(
+                "Optional overall feedback",
+                placeholder="Anything we could improve?",
+                max_chars=1_000,
+                key=f"overall-feedback-comment-{itinerary_id}",
+            )
+            submitted = st.form_submit_button(
+                "Save overall feedback",
+                icon=":material/rate_review:",
+                type="secondary",
+                width="stretch",
+            )
+        if submitted:
+            if None in (helpfulness, clarity, group_fit):
+                st.warning("Choose a 1–5 rating for all three questions.")
+                return
+            record_overall_experience_feedback(
+                session_id=st.session_state.feedback_session_id,
+                itinerary_id=itinerary_id,
+                helpfulness=helpfulness,
+                clarity=clarity,
+                group_fit=group_fit,
+                comment=comment,
+            )
+            st.toast("Thanks — your overall feedback was saved locally.")
 
 
 def _load_change_proposals(
@@ -1481,6 +1613,10 @@ def _render_change_proposals(
                     st.write(proposal.rationale)
                     for tradeoff in proposal.tradeoffs:
                         st.caption(f"Trade-off: {tradeoff}")
+                    _render_llm_feedback(
+                        target_type="adjustment_proposal",
+                        payload=proposal.model_dump(mode="json"),
+                    )
                     if st.button(
                         "Apply this suggestion",
                         key=f"apply-itinerary-proposal-{index}",
@@ -1726,6 +1862,8 @@ def _render_itinerary(
             )
             for item in plan.unscheduled:
                 st.markdown(f"**{item.activity_name}** — {item.reason}")
+
+        _render_overall_experience_feedback(trip, plan)
 
 
 def _render_shortlist(
