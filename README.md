@@ -214,6 +214,7 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Add organizer-approved LLM itinerary-adjustment proposals
 - [x] Establish a 20-case LLM contract-evaluation baseline
 - [x] Add in-app thumbs feedback for LLM stories and adjustment suggestions
+- [x] Add a four-city, review-only Wikidata candidate importer
 
 ## Remaining roadmap
 
