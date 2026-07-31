@@ -106,10 +106,10 @@ class ChangeProposalTests(unittest.TestCase):
             tradeoffs=["It changes one planned highlight."],
         )
 
-    def test_prompt_includes_request_plan_and_eligible_catalog(self) -> None:
+    def test_prompt_excludes_scheduled_ids_from_replacement_catalog(self) -> None:
         messages = build_itinerary_change_input(
             self.trip,
-            self.eligible,
+            self.activities,
             self.plan,
             "Make Day 1 calmer.",
         )
@@ -117,6 +117,14 @@ class ChangeProposalTests(unittest.TestCase):
         self.assertIn("Make Day 1 calmer.", messages[1]["content"])
         self.assertIn(self.added_id, messages[1]["content"])
         self.assertIn(self.removed_id, messages[1]["content"])
+        context = json.loads(
+            messages[1]["content"].split("grounded context:\n", maxsplit=1)[1]
+        )
+        replacement_ids = {
+            activity["id"] for activity in context["eligible_replacement_activities"]
+        }
+        self.assertNotIn(self.removed_id, replacement_ids)
+        self.assertTrue(replacement_ids.isdisjoint(self.scheduled_ids))
 
     def test_validation_rejects_a_change_on_the_wrong_day(self) -> None:
         invalid = self._proposal().model_copy(

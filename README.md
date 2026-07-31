@@ -212,12 +212,13 @@ Add your API key to `.env`. Never commit the `.env` file.
 - [x] Add grounded RAG narration backend
 - [x] Add grounded narration to the Streamlit itinerary
 - [x] Add organizer-approved LLM itinerary-adjustment proposals
+- [x] Establish a 20-case LLM contract-evaluation baseline
 
 ## Remaining roadmap
 
 | Priority | Work remaining | Why it matters |
 |---|---|---|
-| Next | Create a small LLM evaluation set for stories and adjustment proposals | Measures factual grounding, request-following, feasibility, completeness, and tone before prompts/models change. |
+| Next | Run the 20-case live LLM evaluation and record its report | Validates the real model's schema, grounding, completeness, and proposal feasibility against the fixed contract set. |
 | Next | Run live UI smoke tests with funded API access | Confirms the real model output, error states, and user experience beyond mocked tests. |
 | Soon | Compare vector and hybrid retrieval with the existing text baseline | Expands retrieval quality while keeping the current baseline measurable. |
 | Soon | Persist trips, feedback, and accepted/rejected suggestions | Makes return visits, learning from feedback, and monitoring possible. |

@@ -97,3 +97,65 @@ The fairness result is intentionally reported rather than hidden behind the perf
 guardrail scores. For example, the relaxed nature case serves one traveler with
 four matching activities and the other with one, producing fairness `0.250`. This
 baseline identifies group balancing as the next planner-quality improvement.
+
+## LLM contract baseline
+
+`llm_cases.json` contains 20 fixed scenarios: 10 itinerary-narration cases and
+10 plain-language adjustment requests. These are curated ground-truth cases for
+the application's **hard behavioral contract**, rather than ground truth for one
+specific piece of travel prose.
+
+The free fixture run verifies that every reference response:
+
+- conforms to the Pydantic structured-output schema;
+- preserves the exact itinerary activities and day ordering for narration;
+- returns complete narration for every day and scheduled activity; and
+- offers at least one adjustment that the deterministic planner can apply within
+  the same day's constraints.
+
+Run the reproducible fixture baseline:
+
+```bash
+.venv/bin/python -m evaluation.llm
+```
+
+Run the optional live version after reviewing API cost. It sends 20 real requests
+to the configured OpenAI model and reports the same contract metrics:
+
+```bash
+.venv/bin/python -m evaluation.llm --live
+```
+
+Use `--json` with either mode for a machine-readable report. A live pass proves
+contract compliance for that run; human review is still needed to assess creative
+quality, factual nuance, and whether an option is genuinely useful to travelers.
+The normal text report also lists every case that needs review, including the
+individual check results and any captured error message.
+
+## Held-out LLM robustness baseline
+
+`llm_holdout_cases.json` is kept separate from the 20-case contract suite. It has
+12 cases with unfamiliar, informal, ambiguous, conflicting, and unsupported
+requests. It deliberately reuses only valid catalog-grounded Rome itinerary plans:
+the benchmark tests whether the model stays within TripSync's constraints, rather
+than whether it can invent activities for another city.
+
+Run its free structural check:
+
+```bash
+.venv/bin/python -m evaluation.llm --cases evaluation/llm_holdout_cases.json
+```
+
+Run the paid live robustness check separately:
+
+```bash
+.venv/bin/python -m evaluation.llm --cases evaluation/llm_holdout_cases.json --live
+```
+
+Do not revise the prompt to fix individual held-out failures. Record the results
+separately from the development contract baseline, then use recurring patterns to
+decide whether a broader product change is needed.
+
+For example, repeated suggestions that duplicate an already scheduled activity
+are addressed by passing the model only `eligible_replacement_activities`, while
+the deterministic grounding validator remains the final safeguard.

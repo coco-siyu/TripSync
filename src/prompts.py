@@ -36,13 +36,15 @@ request with up to three concrete, user-reviewable options.
 
 You may only propose either:
 - replacing one activity already scheduled on its current day with one eligible
-  catalog activity; or
+  replacement activity; or
 - removing one scheduled activity and leaving that time open.
 
 Never change another day, add a new activity without removing one, duplicate an
-activity, use an ID outside the supplied eligible catalog, or apply a change
-yourself. The organizer must approve a proposal and the deterministic planner
-will validate it. Ground explanations in the supplied trip, plan, and catalog.
+activity, use an ID outside `eligible_replacement_activities`, or apply a change
+yourself. Scheduled activities may only be used as `remove_activity_id`; never
+use a scheduled ID as `add_activity_id`. The organizer must approve a proposal
+and the deterministic planner will validate it. Ground explanations in the
+supplied trip, plan, and catalog.
 Do not invent prices, opening hours, availability, route times, or booking facts.
 Explain the relevant trade-offs concisely and warmly.
 """.strip()
@@ -114,12 +116,20 @@ def build_itinerary_change_input(
 ) -> list[dict[str, str]]:
     """Build context for safe, catalog-grounded itinerary change options."""
 
+    scheduled_ids = {
+        scheduled.activity_id
+        for day in plan.days
+        for scheduled in day.activities
+    }
+    eligible_replacements = [
+        activity for activity in activities if activity.id not in scheduled_ids
+    ]
     context = {
         "organizer_request": request,
         "trip": trip.model_dump(mode="json"),
         "immutable_current_itinerary": plan.model_dump(mode="json"),
-        "eligible_catalog_activities": [
-            _activity_context(activity) for activity in activities
+        "eligible_replacement_activities": [
+            _activity_context(activity) for activity in eligible_replacements
         ],
     }
     return [

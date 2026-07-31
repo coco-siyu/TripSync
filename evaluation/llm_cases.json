@@ -1,0 +1,22 @@
+[
+  {"case_id":"narrate_balanced_must_dos","kind":"narration","itinerary_case_id":"balanced_group_must_dos","description":"Explain a balanced group plan with two must-dos."},
+  {"case_id":"narrate_relaxed_nature","kind":"narration","itinerary_case_id":"relaxed_nature_trip","description":"Explain a low-intensity nature and food plan."},
+  {"case_id":"narrate_packed_ancient","kind":"narration","itinerary_case_id":"packed_ancient_rome","description":"Explain a packed ancient-Rome itinerary."},
+  {"case_id":"narrate_shortlist_only","kind":"narration","itinerary_case_id":"shortlist_only_food_and_photos","description":"Explain a shortlist-only food and photography plan."},
+  {"case_id":"narrate_rejected_must_do","kind":"narration","itinerary_case_id":"rejected_must_do_override","description":"Explain an itinerary with an intentionally excluded must-do."},
+  {"case_id":"narrate_compact_vatican","kind":"narration","itinerary_case_id":"compact_vatican_must_do","description":"Explain a compact must-do spelling-normalization plan."},
+  {"case_id":"narrate_balanced_tradeoffs","kind":"narration","itinerary_case_id":"balanced_group_must_dos","description":"Explain the balance between art, history, and pace."},
+  {"case_id":"narrate_relaxed_capacity","kind":"narration","itinerary_case_id":"relaxed_nature_trip","description":"Explain a relaxed plan while acknowledging open time."},
+  {"case_id":"narrate_packed_coverage","kind":"narration","itinerary_case_id":"packed_ancient_rome","description":"Explain how a packed plan covers both travelers."},
+  {"case_id":"narrate_shortlist_agency","kind":"narration","itinerary_case_id":"shortlist_only_food_and_photos","description":"Explain how the organizer shortlist shaped the trip."},
+  {"case_id":"adjust_balanced_calmer","kind":"proposal","itinerary_case_id":"balanced_group_must_dos","request":"Make Day 2 calmer.","description":"Offer a calmer alternative for a balanced group."},
+  {"case_id":"adjust_relaxed_more_food","kind":"proposal","itinerary_case_id":"relaxed_nature_trip","request":"Can we make one day more food-focused?","description":"Offer a food-focused adjustment without breaking a relaxed pace."},
+  {"case_id":"adjust_packed_less_walking","kind":"proposal","itinerary_case_id":"packed_ancient_rome","request":"Reduce walking on the busiest day.","description":"Offer a lower-walking option in a packed history plan."},
+  {"case_id":"adjust_shortlist_open_time","kind":"proposal","itinerary_case_id":"shortlist_only_food_and_photos","request":"Leave more time to wander.","description":"Offer an intentional open slot for a shortlist-only plan."},
+  {"case_id":"adjust_rejected_override","kind":"proposal","itinerary_case_id":"rejected_must_do_override","request":"Suggest an alternative to one planned stop, but do not bring back the rejected must-do.","description":"Keep an intentional must-do override respected."},
+  {"case_id":"adjust_vatican_slow_down","kind":"proposal","itinerary_case_id":"compact_vatican_must_do","request":"Make the Vatican day feel less rushed.","description":"Offer a calmer option around a recognized compact must-do."},
+  {"case_id":"adjust_balanced_more_art","kind":"proposal","itinerary_case_id":"balanced_group_must_dos","request":"Can we add more art by changing one stop?","description":"Offer a catalog-grounded art-focused replacement."},
+  {"case_id":"adjust_relaxed_photo_time","kind":"proposal","itinerary_case_id":"relaxed_nature_trip","request":"Create more time for photography.","description":"Offer an open-time or lower-intensity adjustment."},
+  {"case_id":"adjust_packed_food_break","kind":"proposal","itinerary_case_id":"packed_ancient_rome","request":"Swap one historic stop for a food experience.","description":"Offer a food-focused trade-off in a packed plan."},
+  {"case_id":"adjust_shortlist_less_walking","kind":"proposal","itinerary_case_id":"shortlist_only_food_and_photos","request":"Make the plan easier on walking.","description":"Offer a same-day adjustment to a shortlist-only plan."}
+]

@@ -68,8 +68,9 @@ activity, or that changes the itinerary day sequence. The prompt also prohibits
 invented prices, opening hours, live availability, route times, and booking claims.
 
 Structural validation cannot prove that every sentence is factually perfect. The
-next LLM-evaluation phase will compare prompt versions for factual grounding,
-completeness, usefulness, and tone.
+20-case LLM contract baseline checks grounding, completeness, and adjustment
+feasibility; future prompt comparisons should add human review for usefulness and
+tone.
 
 ## Streamlit experience
 
