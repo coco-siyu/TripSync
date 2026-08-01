@@ -13,6 +13,11 @@ class _FakeEmbeddingModel:
         return [[1.0, 0.0], *[[0.9 if "art" in sentence else 0.1, 0.0] for sentence in sentences[1:]]]
 
 
+class _UnavailableEmbeddingModel:
+    def encode(self, sentences, *, normalize_embeddings):
+        raise OSError("embedding cache unavailable")
+
+
 def make_activity(
     activity_id: str,
     name: str,
@@ -79,6 +84,18 @@ class TextRetrievalTests(unittest.TestCase):
         for mode in ("vector", "hybrid"):
             response = retrieve_activities([food, art], trip, mode=mode, embedding_model=_FakeEmbeddingModel())
             self.assertEqual(response.results[0].activity_id, "rome_art")
+
+    def test_semantic_retrieval_falls_back_to_text_when_model_is_unavailable(self) -> None:
+        art = make_activity("rome_art", "Gallery", interests=["art"])
+        response = retrieve_activities(
+            [art],
+            make_trip(interests=["art"]),
+            mode="hybrid",
+            embedding_model=_UnavailableEmbeddingModel(),
+        )
+
+        self.assertTrue(response.semantic_fallback)
+        self.assertEqual([result.activity_id for result in response.results], ["rome_art"])
     def test_normalization_ignores_case_and_punctuation(self) -> None:
         self.assertEqual(
             normalize_search_text("Ancient-Rome & ART"),

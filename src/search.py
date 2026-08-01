@@ -40,6 +40,7 @@ class RetrievalResponse:
     results: tuple[RetrievedActivity, ...]
     destination_activity_ids: tuple[str, ...]
     used_fallback: bool = False
+    semantic_fallback: bool = False
 
 
 def normalize_search_text(value: str) -> str:
@@ -225,37 +226,54 @@ def retrieve_activities(
         )
     )
 
+    semantic_fallback = False
     if mode in {"vector", "hybrid"} and destination_activities:
         query = _trip_query(trip)
         if query:
-            model = embedding_model or _embedding_model()
-            vectors = np.asarray(
-                model.encode(
-                    [query, *[_activity_document(activity) for activity in destination_activities]],
-                    normalize_embeddings=True,
+            try:
+                model = embedding_model or _embedding_model()
+                vectors = np.asarray(
+                    model.encode(
+                        [
+                            query,
+                            *[
+                                _activity_document(activity)
+                                for activity in destination_activities
+                            ],
+                        ],
+                        normalize_embeddings=True,
+                    )
                 )
-            )
-            semantic_scores = {
-                activity.id: float(np.dot(vectors[0], vectors[index]))
-                for index, activity in enumerate(destination_activities, start=1)
-            }
-            text_by_id = {result.activity_id: result for result in retrieved}
-            retrieved = []
-            for activity in destination_activities:
-                text_result = text_by_id.get(activity.id)
-                must_do_owners = text_result.must_do_owners if text_result else ()
-                text_score = text_result.relevance_score if text_result else 0
-                score = semantic_scores[activity.id]
-                relevance_score = score if mode == "vector" else score + text_score / 100
-                reasons = list(text_result.reasons if text_result else ())
-                reasons.append(f"Semantic similarity: {score:.2f}")
-                retrieved.append(RetrievedActivity(
-                    activity_id=activity.id, relevance_score=relevance_score,
-                    matched_terms=text_result.matched_terms if text_result else (),
-                    matched_travelers=text_result.matched_travelers if text_result else (),
-                    must_do_owners=must_do_owners, reasons=tuple(reasons),
-                ))
-            retrieved.sort(key=lambda result: (-result.relevance_score, result.activity_id))
+            except (ImportError, OSError, RuntimeError):
+                # A fresh cloud instance may not have the optional model cache.
+                # Preserve the deterministic text results instead of failing the UI.
+                semantic_fallback = True
+            else:
+                semantic_scores = {
+                    activity.id: float(np.dot(vectors[0], vectors[index]))
+                    for index, activity in enumerate(destination_activities, start=1)
+                }
+                text_by_id = {result.activity_id: result for result in retrieved}
+                retrieved = []
+                for activity in destination_activities:
+                    text_result = text_by_id.get(activity.id)
+                    must_do_owners = text_result.must_do_owners if text_result else ()
+                    text_score = text_result.relevance_score if text_result else 0
+                    score = semantic_scores[activity.id]
+                    relevance_score = score if mode == "vector" else score + text_score / 100
+                    reasons = list(text_result.reasons if text_result else ())
+                    reasons.append(f"Semantic similarity: {score:.2f}")
+                    retrieved.append(RetrievedActivity(
+                        activity_id=activity.id,
+                        relevance_score=relevance_score,
+                        matched_terms=text_result.matched_terms if text_result else (),
+                        matched_travelers=text_result.matched_travelers if text_result else (),
+                        must_do_owners=must_do_owners,
+                        reasons=tuple(reasons),
+                    ))
+                retrieved.sort(
+                    key=lambda result: (-result.relevance_score, result.activity_id)
+                )
 
     used_fallback = False
     if not retrieved and destination_activities:
@@ -283,4 +301,5 @@ def retrieve_activities(
         results=tuple(retrieved),
         destination_activity_ids=destination_ids,
         used_fallback=used_fallback,
+        semantic_fallback=semantic_fallback,
     )

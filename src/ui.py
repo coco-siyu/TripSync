@@ -2201,6 +2201,12 @@ def _render_results_step() -> None:
             "showing the complete destination catalog.",
             icon=":material/travel_explore:",
         )
+    if retrieval_response.semantic_fallback:
+        st.info(
+            "Semantic retrieval is unavailable on this instance, so these "
+            "results are using deterministic text matching.",
+            icon=":material/offline_bolt:",
+        )
 
     for unmatched in must_do_resolution.unmatched:
         _render_unmatched_must_do(unmatched)
