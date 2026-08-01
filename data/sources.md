@@ -27,6 +27,11 @@ required activity field, especially:
 This prevents the importer from guessing planning constraints that affect group
 fit and itinerary feasibility.
 
+The importer filters airports and similar air-travel infrastructure. It does not
+automatically discard universities, libraries, stadiums, or standalone artworks:
+they may be worthwhile experiences, but their candidate records are flagged so a
+reviewer can check visitor access, tours, events, or the appropriate host venue.
+
 ## Future source: OpenStreetMap
 
 OpenStreetMap data may later add outdoor places, viewpoints, neighbourhoods,

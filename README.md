@@ -1,188 +1,53 @@
 # TripSync
 
-> An AI-powered group travel planner that balances traveler preferences, constraints, and interests.
+TripSync is an AI-assisted group travel planner. It turns a group's interests,
+walking comfort, budget, food needs, pace, and must-dos into explainable activity
+recommendations and a reviewable itinerary.
 
-## Project status
+It is built as an end-to-end LLM application for the LLM Zoomcamp project: a
+curated knowledge base is retrieved first, deterministic logic makes the planning
+decisions, and an LLM adds grounded narration and adjustment ideas under a strict
+structured-output contract.
 
-TripSync now has a working **preference, retrieval, recommendation, and itinerary
-flow**. It collects validated group preferences, retrieves grounded destination
-activities, ranks them with an explainable group-fit formula, identifies must-dos,
-maintains a shortlist, builds a pace-aware multi-day itinerary, and uses structured
-rejection feedback to replace an activity without changing the other days. A
-grounded OpenAI narration backend can now turn the validated plan into structured
-trip explanations without changing its days or activities.
+## What it does
 
-## The problem
+- Collects validated preferences for 2–6 travelers and trips of 1–5 days.
+- Retrieves from a curated catalog for Rome, Florence, Milan, and Naples using
+  text, vector, or hybrid retrieval.
+- Scores activities for shared interests, walking and budget fit, must-dos, and
+  fairness across the group.
+- Shows Top 5, must-do, all, and rejected activity views; users can manage a
+  shortlist before generating the itinerary.
+- Builds a deterministic itinerary with daily pace, duration, transition, and
+  duplicate-prevention rules.
+- Lets the organizer reject, replace, or add activities. Recommendations that
+  exceed the pace limit require explicit confirmation and remain visibly marked
+  as over pace.
+- Uses the OpenAI Responses API only for a grounded itinerary story and
+  organizer-approved adjustment options; the LLM cannot silently change a plan.
+- Stores local feedback and saved trips in SQLite, with a feedback-insights view
+  and privacy-safe feedback export.
 
-Planning a group trip is difficult because travelers often have different interests,
-budgets, mobility needs, food restrictions, and preferred travel pace. The organizer
-usually collects this information informally and then tries to create a plan that
-keeps everyone happy.
-
-TripSync aims to make that process more transparent. It will collect traveler
-preferences, retrieve suitable activities, measure how well each option fits the
-group, and generate an itinerary that explains its choices and trade-offs.
-
-## Version 1 scope
-
-The first version will allow an organizer to:
-
-1. Enter a destination, trip length, budget, and preferred pace.
-2. Add profiles for two to six travelers.
-3. Record interests, walking tolerance, food restrictions, and must-do activities.
-4. Retrieve and rank relevant activities for the destination.
-5. Generate a one-to-five-day itinerary.
-6. See why each activity was selected and which travelers it serves.
-7. Reject an activity as too expensive, too demanding, or uninteresting.
-8. Regenerate the affected day using that feedback.
-
-The MVP will not include booking, live prices, flight or hotel search, payments,
-real-time availability, or route optimization.
-
-## Planned user flow
+## How the system works
 
 ```mermaid
-flowchart TD
-    A["Trip details"] --> B["Traveler profiles"]
-    B --> C["Retrieve activities"]
-    C --> D["Calculate group fit"]
-    D --> E["Generate itinerary"]
-    E --> F["Review coverage and trade-offs"]
-    F --> G["Submit feedback"]
-    G --> D
+flowchart LR
+    A["Traveler preferences"] --> B["Retrieve city catalog"]
+    B --> C["Explainable group-fit scoring"]
+    C --> D["Deterministic itinerary planner"]
+    D --> E["Grounded LLM story / adjustment options"]
+    E --> F["Organizer review and explicit approval"]
+    F --> G["Saved trip and feedback"]
 ```
 
-## What makes TripSync different
-
-TripSync is designed around **group preference balancing**, rather than producing a
-generic list of popular attractions.
-
-For each candidate activity, the application will consider:
-
-- interest match across travelers;
-- walking and accessibility compatibility;
-- budget compatibility;
-- trip pace and time constraints;
-- food restrictions where relevant;
-- must-do preferences;
-- fairness, so one traveler does not dominate the itinerary.
-
-The UI will display both a group-fit score and a traveler coverage explanation.
-The initial deterministic formula is documented in
-[docs/scoring.md](docs/scoring.md), and the text-retrieval boundary is documented in
-[docs/retrieval.md](docs/retrieval.md). Itinerary constraints and pace limits are
-documented in [docs/itinerary.md](docs/itinerary.md).
-The RAG prompt, structured output, and grounding boundary are documented in
-[docs/rag.md](docs/rag.md).
-
-## Initial technical approach
-
-| Layer | Initial choice |
-|---|---|
-| User interface | Streamlit |
-| Application logic | Python |
-| Data validation | Pydantic |
-| Activity data | Structured JSON |
-| Retrieval | Text search first; vector and hybrid search later |
-| Group-fit ranking | Rule-based scoring |
-| Itinerary planning | Deterministic scheduler with grounded OpenAI narration |
-| Evaluation | Retrieval metrics and itinerary-quality checks |
-| Feedback | Local SQLite database for LLM-output ratings and comments |
-
-The tools may change as the project develops. The initial goal is to validate the
-complete planning flow before adding infrastructure.
-
-## Project structure
-
-```text
-TripSync/
-├── app.py
-├── README.md
-├── requirements.txt
-├── .env.example
-├── .gitignore
-├── data/
-│   └── README.md
-├── docs/
-│   └── data-schema.md
-├── evaluation/
-│   └── README.md
-├── monitoring/
-│   └── README.md
-├── notebooks/
-│   └── README.md
-├── src/
-│   ├── __init__.py
-│   ├── models.py
-│   ├── planner.py
-│   ├── prompts.py
-│   ├── scoring.py
-│   └── search.py
-└── tests/
-    └── README.md
-```
-
-## Data model
-
-The first dataset will contain structured activity records. Each record will include
-fields such as:
-
-```json
-{
-  "id": "rome_vatican_museums",
-  "name": "Vatican Museums",
-  "city": "Rome",
-  "country": "Italy",
-  "category": "museum",
-  "interests": ["art", "history", "religion"],
-  "walking_level": "high",
-  "budget_level": "moderate",
-  "duration_hours": 3.0,
-  "indoor": true,
-  "family_friendly": true,
-  "accessibility_notes": "A large venue with substantial walking.",
-  "reservation_required": true,
-  "description": "A major art and history museum complex.",
-  "source_url": "https://example.com"
-}
-```
-
-See [docs/data-schema.md](docs/data-schema.md) for the planned schema.
-
-## Evaluation plan
-
-### Retrieval evaluation
-
-TripSync will use a ground-truth dataset of travel requests and relevant activities.
-The project will compare:
-
-- text search;
-- vector search;
-- hybrid search;
-- optional reranking.
-
-The primary metrics will be Hit Rate and Mean Reciprocal Rank (MRR).
-
-### Itinerary evaluation
-
-Generated plans will be evaluated for:
-
-- hard-constraint compliance;
-- traveler preference coverage;
-- fairness across the group;
-- realistic daily pace;
-- grounding in retrieved activity data;
-- clarity of explanations and trade-offs.
-
-### Feedback and monitoring
-
-The application will record user feedback categories, response time, retrieval
-results, and itinerary-generation metadata. This will support later analysis of
-rejected recommendations and common planning failures.
+The LLM receives only the validated trip, eligible catalog records, and current
+plan. Pydantic schemas plus deterministic grounding validation reject invented
+activity IDs, duplicate stops, moved activities, and invalid output structures.
+Read the full RAG boundary in [docs/rag.md](docs/rag.md).
 
 ## Local setup
 
-These commands prepare the environment and start the working Streamlit application:
+Requires Python 3.12 or later.
 
 ```bash
 python -m venv .venv
@@ -192,48 +57,86 @@ cp .env.example .env
 streamlit run app.py
 ```
 
-Add your API key to `.env`. Never commit the `.env` file.
+Set `OPENAI_API_KEY` in `.env` to enable trip stories and LLM adjustment ideas.
+The deterministic recommendation and itinerary flow works without making an API
+call. Never commit `.env` or `.streamlit/secrets.toml`.
 
-## Development roadmap
+## Run with Docker
 
-- [x] Define the problem and MVP scope
-- [x] Create the initial repository structure
-- [x] Define the activity-data schema
-- [x] Create the first sample activity dataset
-- [x] Build traveler and trip input models
-- [x] Implement group-fit scoring
-- [x] Build the first Streamlit preference form
-- [x] Add text retrieval
-- [x] Generate a grounded itinerary
-- [x] Add activity rejection and day regeneration
-- [x] Establish a reproducible retrieval-evaluation baseline
-- [ ] Compare vector and hybrid retrieval
-- [x] Evaluate itinerary quality
-- [x] Add grounded RAG narration backend
-- [x] Add grounded narration to the Streamlit itinerary
-- [x] Add organizer-approved LLM itinerary-adjustment proposals
-- [x] Establish a 20-case LLM contract-evaluation baseline
-- [x] Add in-app thumbs feedback for LLM stories and adjustment suggestions
-- [x] Add a four-city, review-only Wikidata candidate importer
+Build the image (the semantic retrieval model is downloaded during the build):
 
-## Remaining roadmap
+```bash
+docker build -t tripsync .
+```
 
-| Priority | Work remaining | Why it matters |
-|---|---|---|
-| Next | Review local LLM feedback with a small human-quality rubric | Measures helpfulness and travel-writing quality that contract checks cannot detect. |
-| Next | Run live UI smoke tests with funded API access | Confirms the real model output, error states, and user experience beyond mocked tests. |
-| Soon | Compare vector and hybrid retrieval with the existing text baseline | Expands retrieval quality while keeping the current baseline measurable. |
-| Soon | Persist trips, feedback, and accepted/rejected suggestions | Makes return visits, learning from feedback, and monitoring possible. |
-| Later | Add live travel data: hours, booking availability, travel times, and routing | Turns the prototype’s static estimates into operational planning data. |
-| Later | Add monitoring, Docker, and deployment configuration | Prepares TripSync for reliable sharing and operation outside local development. |
+Run it with an OpenAI key and a named volume for local saved trips and feedback:
 
-## LLM Zoomcamp alignment
+```bash
+docker run --rm -p 8501:8501 \
+  -e OPENAI_API_KEY="your-api-key" \
+  -v tripsync-state:/app/state \
+  tripsync
+```
 
-TripSync is being developed as an end-to-end LLM application. The planned work
-includes a documented problem, a searchable knowledge source, retrieval and LLM
-evaluation, an interactive interface, user feedback, monitoring, and
-containerization.
+Open <http://localhost:8501>. The catalog is included in the image; the mounted
+`tripsync-state` volume stores only SQLite state. On a hosted platform, set
+`OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) through that platform's secrets
+manager, never in the repository.
+
+## Evaluation
+
+From an activated virtual environment:
+
+```bash
+# Retrieval: text, vector, and hybrid on the same labeled cases
+python -m evaluation.retrieval --compare
+
+# Deterministic itinerary constraints, grounding, coverage, and fairness
+python -m evaluation.itinerary
+
+# 20 LLM contract fixtures, with no API cost
+python -m evaluation.llm
+
+# Optional paid robustness run against held-out prompts
+python -m evaluation.llm --cases evaluation/llm_holdout_cases.json --live
+
+# Full test suite
+python -m unittest discover -s tests -q
+```
+
+The current retrieval and itinerary baseline results are documented in
+[evaluation/README.md](evaluation/README.md). The 20 contract cases and 12
+held-out LLM robustness cases measure schema compliance, grounding,
+completeness, and proposal applicability—not subjective travel-writing quality.
+
+## Data and curation
+
+`data/activities.json` is the canonical, validated activity catalog. Raw external
+candidate imports remain under `data/candidates/` for review. The curation rules
+are in [docs/curation-standard.md](docs/curation-standard.md), and retrieval
+behavior is in [docs/retrieval.md](docs/retrieval.md).
+
+## Project layout
+
+```text
+app.py                 Streamlit entry point and workspaces
+src/                   Validation, retrieval, scoring, planning, LLM, and UI logic
+data/activities.json   Curated activity knowledge base
+evaluation/            Retrieval, itinerary, and LLM evaluation suites
+tests/                 Unit and Streamlit interaction tests
+docs/                  RAG, retrieval, scoring, itinerary, and curation notes
+Dockerfile             Reproducible deployment image
+```
+
+## Current boundaries
+
+TripSync is a planning prototype, not a booking tool. It does not provide live
+opening hours, ticket availability, prices, routes, hotel or flight search, or
+payments. Duration and pace values are curated planning estimates. The default
+SQLite persistence is appropriate for local use or a single persistent deployment
+volume; a multi-user production version should move saved trips and feedback to a
+managed database.
 
 ## License
 
-A license has not been selected yet.
+No license has been selected yet.

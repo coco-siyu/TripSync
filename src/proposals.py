@@ -13,9 +13,12 @@ class ItineraryChangeProposal(TripSyncModel):
     """One user-reviewable change to an existing itinerary."""
 
     title: str = Field(min_length=1, max_length=120)
-    operation: Literal["replace", "remove"]
+    operation: Literal["add", "replace", "remove"]
     day_number: int = Field(ge=1, le=5)
-    remove_activity_id: str = Field(pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
+    remove_activity_id: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$",
+    )
     add_activity_id: str | None = Field(
         default=None,
         pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$",
@@ -24,12 +27,27 @@ class ItineraryChangeProposal(TripSyncModel):
     tradeoffs: list[str] = Field(default_factory=list, max_length=4)
 
     @model_validator(mode="after")
-    def require_a_replacement_only_when_needed(self) -> ItineraryChangeProposal:
-        if self.operation == "replace" and self.add_activity_id is None:
-            raise ValueError("replace proposals need an add_activity_id")
-        if self.operation == "remove" and self.add_activity_id is not None:
-            raise ValueError("remove proposals cannot add an activity")
-        if self.add_activity_id == self.remove_activity_id:
+    def require_operation_fields(self) -> ItineraryChangeProposal:
+        if self.operation == "add":
+            if self.add_activity_id is None:
+                raise ValueError("add proposals need an add_activity_id")
+            if self.remove_activity_id is not None:
+                raise ValueError("add proposals cannot remove an activity")
+        if self.operation == "replace":
+            if self.add_activity_id is None or self.remove_activity_id is None:
+                raise ValueError(
+                    "replace proposals need both add_activity_id and "
+                    "remove_activity_id"
+                )
+        if self.operation == "remove":
+            if self.remove_activity_id is None:
+                raise ValueError("remove proposals need a remove_activity_id")
+            if self.add_activity_id is not None:
+                raise ValueError("remove proposals cannot add an activity")
+        if (
+            self.add_activity_id is not None
+            and self.add_activity_id == self.remove_activity_id
+        ):
             raise ValueError("a proposal cannot replace an activity with itself")
         return self
 
@@ -67,9 +85,12 @@ def validate_proposals_against_plan(
     eligible_ids = {activity.id for activity in activities}
 
     for proposal in proposals.proposals:
-        if proposal.remove_activity_id not in scheduled_by_day.get(
-            proposal.day_number,
-            set(),
+        if (
+            proposal.remove_activity_id is not None
+            and proposal.remove_activity_id not in scheduled_by_day.get(
+                proposal.day_number,
+                set(),
+            )
         ):
             raise ProposalGroundingError(
                 f"{proposal.remove_activity_id} is not scheduled on Day "

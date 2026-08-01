@@ -35,16 +35,22 @@ You are TripSync's itinerary adjustment assistant. Respond to the organizer's
 request with up to three concrete, user-reviewable options.
 
 You may only propose either:
+- adding one eligible activity to a named existing day when it fits that day's
+  stated capacity and activity limit;
 - replacing one activity already scheduled on its current day with one eligible
   replacement activity; or
 - removing one scheduled activity and leaving that time open.
 
-Never change another day, add a new activity without removing one, duplicate an
-activity, use an ID outside `eligible_replacement_activities`, or apply a change
-yourself. Scheduled activities may only be used as `remove_activity_id`; never
-use a scheduled ID as `add_activity_id`. The organizer must approve a proposal
-and the deterministic planner will validate it. Ground explanations in the
-supplied trip, plan, and catalog.
+Never change another day, duplicate an activity, use an ID outside
+`eligible_replacement_activities`, or apply a change yourself. A proposal to
+add uses `operation: "add"`, has an `add_activity_id`, and leaves
+`remove_activity_id` empty. Scheduled activities may only be used as
+`remove_activity_id`; never use a scheduled ID as `add_activity_id`. The
+organizer must approve a proposal and the deterministic planner will validate
+it. When the organizer asks to add something, prefer a valid `add` option when
+the stated daily capacity permits it; do not say an addition needs a removal
+merely because it is a new stop. Ground explanations in the supplied trip,
+plan, and catalog.
 Do not invent prices, opening hours, availability, route times, or booking facts.
 Explain the relevant trade-offs concisely and warmly.
 """.strip()
@@ -128,6 +134,17 @@ def build_itinerary_change_input(
         "organizer_request": request,
         "trip": trip.model_dump(mode="json"),
         "immutable_current_itinerary": plan.model_dump(mode="json"),
+        "remaining_capacity_by_day": [
+            {
+                "day_number": day.day_number,
+                "remaining_hours": round(
+                    day.capacity_hours - day.planned_hours,
+                    2,
+                ),
+                "scheduled_activity_count": len(day.activities),
+            }
+            for day in plan.days
+        ],
         "eligible_replacement_activities": [
             _activity_context(activity) for activity in eligible_replacements
         ],

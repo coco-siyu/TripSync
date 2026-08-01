@@ -27,17 +27,20 @@ PAYLOAD = {
                 "item": {"value": "http://www.wikidata.org/entity/Q123"},
                 "itemLabel": {"value": "Example Museum"},
                 "coord": {"value": "Point(12.5 41.9)"},
+                "typeLabel": {"value": "museum"},
                 "article": {"value": "https://en.wikipedia.org/wiki/Example_Museum"},
             },
             {
                 "item": {"value": "http://www.wikidata.org/entity/Q123"},
                 "itemLabel": {"value": "Example Museum"},
                 "coord": {"value": "Point(12.5 41.9)"},
+                "typeLabel": {"value": "art museum"},
             },
             {
                 "item": {"value": "http://www.wikidata.org/entity/Q456"},
                 "itemLabel": {"value": "Example Park"},
                 "coord": {"value": "Point(12.6 42.0)"},
+                "typeLabel": {"value": "park"},
                 "image": {"value": "https://commons.wikimedia.org/example.jpg"},
             },
         ]
@@ -55,6 +58,7 @@ class CatalogImportTests(unittest.TestCase):
     def test_query_is_bounded_and_uses_the_city_entity(self) -> None:
         query = build_query(supported_city("Rome"), limit=24)
         self.assertIn("wdt:P131* wd:Q220", query)
+        self.assertIn("SELECT ?item ?coord ?sitelinks WHERE", query)
         self.assertIn("LIMIT 24", query)
         with self.assertRaises(ValueError):
             build_query(supported_city("Rome"), limit=251)
@@ -66,6 +70,33 @@ class CatalogImportTests(unittest.TestCase):
         self.assertEqual(candidates[0].longitude, 12.5)
         self.assertEqual(candidates[0].source_url, "https://www.wikidata.org/wiki/Q123")
         self.assertIsNone(candidates[1].wikipedia_url)
+        self.assertEqual(candidates[0].wikidata_types, ("art museum", "museum"))
+        self.assertEqual(candidates[0].review_flags, ())
+
+    def test_filters_airports_but_flags_context_dependent_places(self) -> None:
+        payload = {
+            "results": {
+                "bindings": [
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q1"},
+                        "itemLabel": {"value": "Example Airport"},
+                        "coord": {"value": "Point(12.5 41.9)"},
+                        "typeLabel": {"value": "airport"},
+                    },
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q2"},
+                        "itemLabel": {"value": "Example University"},
+                        "coord": {"value": "Point(12.6 42.0)"},
+                        "typeLabel": {"value": "university"},
+                    },
+                ]
+            }
+        }
+
+        candidates = parse_candidates(payload)
+
+        self.assertEqual([candidate.name for candidate in candidates], ["Example University"])
+        self.assertIn("verify visitor access", candidates[0].review_flags[0])
 
     def test_writes_review_only_document(self) -> None:
         city = supported_city("Rome")

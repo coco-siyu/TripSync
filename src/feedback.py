@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
@@ -13,7 +14,10 @@ from typing import Literal
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_FEEDBACK_DATABASE_PATH = REPOSITORY_ROOT / "data" / "tripsync_feedback.db"
+DEFAULT_STATE_DIRECTORY = Path(
+    os.getenv("TRIPSYNC_STATE_DIR", str(REPOSITORY_ROOT / "data"))
+)
+DEFAULT_FEEDBACK_DATABASE_PATH = DEFAULT_STATE_DIRECTORY / "tripsync_feedback.db"
 
 FeedbackTargetType = Literal[
     "trip_story",

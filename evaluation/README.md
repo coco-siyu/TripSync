@@ -2,9 +2,10 @@
 
 ## Retrieval baseline
 
-The first reproducible benchmark contains eight labeled Rome trip requests in
-`retrieval_cases.json`. Each case includes a validated `TripRequest` and one or more
-activity IDs considered relevant.
+The reproducible benchmark contains labeled Rome, Florence, and Milan trip
+requests in `retrieval_cases.json`. Each case follows the same validated
+`TripRequest` and relevant-activity-ID contract; only its destination-grounded
+labels change. See [`docs/curation-standard.md`](../docs/curation-standard.md).
 
 Run the text-retrieval baseline from the repository root:
 
@@ -18,6 +19,12 @@ Use `--k` to change the cutoff or `--json` for machine-readable output:
 .venv/bin/python -m evaluation.retrieval --k 3 --json
 ```
 
+Compare all three retrieval strategies on exactly the same cases and labels:
+
+```bash
+.venv/bin/python -m evaluation.retrieval --compare
+```
+
 The report includes:
 
 - **Hit Rate@K**: the share of cases with at least one relevant result in the first
@@ -27,18 +34,30 @@ The report includes:
   the first K positions;
 - per-case first-relevant ranks for debugging misses.
 
-The current deterministic text baseline at `K=5` produces:
+The current cross-city deterministic text baseline at `K=5` produces:
 
 | Metric | Score |
 |---|---:|
 | Hit Rate@5 | 1.000 |
-| MRR@5 | 0.938 |
-| Mean Recall@5 | 1.000 |
+| MRR@5 | 0.917 |
+| Mean Recall@5 | 0.819 |
 
-These results are a regression baseline for the current small, curated Rome
-catalog—not a claim about real-world retrieval quality. Future vector and hybrid
+These results are a regression baseline for the current small, curated catalog—not
+a claim about real-world retrieval quality. Future vector and hybrid
 approaches should run against the same labels, followed by a larger independently
 reviewed dataset.
+
+The current local-model comparison at `K=5` is:
+
+| Mode | Hit Rate@5 | MRR@5 | Mean Recall@5 |
+|---|---:|---:|---:|
+| Text | 1.000 | 0.917 | 0.819 |
+| Vector | 1.000 | 0.917 | 0.958 |
+| Hybrid | 1.000 | 0.958 | 0.875 |
+
+Hybrid puts a relevant result first more often; vector returns more of the
+benchmark's labeled relevant options in its first five. Keep both measurements as
+the catalog grows rather than declaring a winner from this small benchmark.
 
 Raw experiments belong in `notebooks/`; reusable metrics and benchmark runners stay
 in this directory.
@@ -89,8 +108,8 @@ The current six-case deterministic baseline is:
 | Must-do coverage | 1.000 |
 | Shortlist coverage | 1.000 |
 | Mean traveler coverage | 1.000 |
-| Mean fairness | 0.666 |
-| Mean capacity utilization | 0.724 |
+| Mean fairness | 0.704 |
+| Mean capacity utilization | 0.764 |
 | Deterministic stability | 1.000 |
 
 The fairness result is intentionally reported rather than hidden behind the perfect

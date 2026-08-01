@@ -5,11 +5,27 @@ from __future__ import annotations
 import unittest
 
 from evaluation.retrieval import (
+    compare_retrieval_modes,
     evaluate_retrieval,
+    format_comparison_report,
     load_activities,
     load_retrieval_cases,
     score_ranked_ids,
 )
+
+
+class FakeEmbeddingModel:
+    """Small deterministic embedding stand-in for comparison tests."""
+
+    def encode(self, sentences, *, normalize_embeddings):
+        vectors = []
+        for sentence in sentences:
+            lower = sentence.lower()
+            vectors.append([
+                float("art" in lower or "sculpture" in lower),
+                float("history" in lower or "architecture" in lower),
+            ])
+        return vectors
 
 
 class RankedRetrievalMetricTests(unittest.TestCase):
@@ -52,7 +68,7 @@ class RetrievalBenchmarkTests(unittest.TestCase):
         second_report = evaluate_retrieval(activities, cases, k=5)
 
         self.assertEqual(first_report, second_report)
-        self.assertEqual(first_report.case_count, 8)
+        self.assertEqual(first_report.case_count, 12)
         self.assertGreaterEqual(first_report.hit_rate, 0.9)
         self.assertGreaterEqual(first_report.mean_reciprocal_rank, 0.8)
         self.assertGreaterEqual(first_report.mean_recall, 0.8)
@@ -69,6 +85,24 @@ class RetrievalBenchmarkTests(unittest.TestCase):
             "references unknown activity IDs",
         ):
             evaluate_retrieval(activities, [invalid_case])
+
+    def test_comparison_uses_all_modes_with_identical_cases(self) -> None:
+        activities = load_activities()
+        cases = load_retrieval_cases()[:2]
+
+        comparison = compare_retrieval_modes(
+            activities,
+            cases,
+            k=5,
+            embedding_model=FakeEmbeddingModel(),
+        )
+
+        self.assertEqual(comparison.case_count, 2)
+        self.assertEqual(
+            [result.mode for result in comparison.results],
+            ["text", "vector", "hybrid"],
+        )
+        self.assertIn("Best MRR@5", format_comparison_report(comparison))
 
 
 if __name__ == "__main__":

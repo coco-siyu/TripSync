@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-01T02:02:43.380482+00:00",
+  "city": "Naples",
+  "country": "Italy",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q2634",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q897839",
+      "name": "Cappella Sansevero",
+      "latitude": 40.84919,
+      "longitude": 14.25488,
+      "source_url": "https://www.wikidata.org/wiki/Q897839",
+      "wikidata_types": [
+        "art museum",
+        "former church building",
+        "private museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Cappella_Sansevero",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Immagine%20d%27insieme%202%2C%20Cappella%20Sansevero.jpg"
+    },
+    {
+      "wikidata_id": "Q858940",
+      "name": "Castel Capuano",
+      "latitude": 40.853544,
+      "longitude": 14.264441,
+      "source_url": "https://www.wikidata.org/wiki/Q858940",
+      "wikidata_types": [
+        "castle"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Castel_Capuano",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Napoli%20-%20Castel%20Capuano.jpg"
+    },
+    {
+      "wikidata_id": "Q645041",
+      "name": "Castel dell'Ovo",
+      "latitude": 40.828315,
+      "longitude": 14.247656,
+      "source_url": "https://www.wikidata.org/wiki/Q645041",
+      "wikidata_types": [
+        "castle"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Castel_dell%27Ovo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Castel%20dell%27%20Ovo.jpg"
+    },
+    {
+      "wikidata_id": "Q781219",
+      "name": "Castel Nuovo",
+      "latitude": 40.838376,
+      "longitude": 14.253807,
+      "source_url": "https://www.wikidata.org/wiki/Q781219",
+      "wikidata_types": [
+        "castle"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Castel_Nuovo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Naples-Castel%20Nuovo.jpg"
+    },
+    {
+      "wikidata_id": "Q1048627",
+      "name": "Castel Sant'Elmo",
+      "latitude": 40.84362,
+      "longitude": 14.239329,
+      "source_url": "https://www.wikidata.org/wiki/Q1048627",
+      "wikidata_types": [
+        "castle"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Castel_Sant%27Elmo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Napoli%20s%20Elmo%20da%20Castel%20dell%27Ovo%201040688.JPG"
+    },
+    {
+      "wikidata_id": "Q859732",
+      "name": "Certosa di San Martino",
+      "latitude": 40.84341,
+      "longitude": 14.241129,
+      "source_url": "https://www.wikidata.org/wiki/Q859732",
+      "wikidata_types": [
+        "Carthusian monastery",
+        "monastery",
+        "museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Certosa_di_San_Martino",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Certosa%20di%20San%20Martino%20from%20Sant%27Elmo.jpg"
+    },
+    {
+      "wikidata_id": "Q581804",
+      "name": "Farnese Bull",
+      "latitude": 40.8534,
+      "longitude": 14.2505,
+      "source_url": "https://www.wikidata.org/wiki/Q581804",
+      "wikidata_types": [
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Farnese_Bull",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Farnese%20Bull%20MAN%20Napoli%20Inv6002%20n07.jpg"
+    },
+    {
+      "wikidata_id": "Q1007726",
+      "name": "Galleria Umberto I",
+      "latitude": 40.83844069,
+      "longitude": 14.24948215,
+      "source_url": "https://www.wikidata.org/wiki/Q1007726",
+      "wikidata_types": [
+        "commercial gallery"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Galleria_Umberto_I",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Galleria%20San%20Martino.%2001.JPG"
+    },
+    {
+      "wikidata_id": "Q832957",
+      "name": "Historic Centre of Naples",
+      "latitude": 40.85139,
+      "longitude": 14.26278,
+      "source_url": "https://www.wikidata.org/wiki/Q832957",
+      "wikidata_types": [
+        "neighborhood",
+        "urban area"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Historic_Centre_of_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/NapoliMaschioAngioinoIngresso.jpg"
+    },
+    {
+      "wikidata_id": "Q290549",
+      "name": "Museo di Capodimonte",
+      "latitude": 40.86699,
+      "longitude": 14.250346,
+      "source_url": "https://www.wikidata.org/wiki/Q290549",
+      "wikidata_types": [
+        "art museum",
+        "Istituto museale ad autonomia speciale",
+        "Italian national museum",
+        "museum of modern art",
+        "Museum of the Italian Ministry of Culture",
+        "national museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Museo_di_Capodimonte",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Reggia%20di%20Capodimonte%201.JPG"
+    },
+    {
+      "wikidata_id": "Q256486",
+      "name": "Naples Cathedral",
+      "latitude": 40.852606,
+      "longitude": 14.259528,
+      "source_url": "https://www.wikidata.org/wiki/Q256486",
+      "wikidata_types": [
+        "cathedral",
+        "church building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Naples_Cathedral",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Naples%20duomo%20facade.jpg"
+    },
+    {
+      "wikidata_id": "Q747184",
+      "name": "Naples Metro",
+      "latitude": 40.835833333,
+      "longitude": 14.248611111,
+      "source_url": "https://www.wikidata.org/wiki/Q747184",
+      "wikidata_types": [
+        "rapid transit"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Naples_Metro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Toledo%20%28Metropolitana%20di%20Napoli%20L1%29.jpg"
+    },
+    {
+      "wikidata_id": "Q637248",
+      "name": "Naples National Archaeological Museum",
+      "latitude": 40.853611111,
+      "longitude": 14.250555555,
+      "source_url": "https://www.wikidata.org/wiki/Q637248",
+      "wikidata_types": [
+        "archaeological museum",
+        "heritage site",
+        "Istituto museale ad autonomia speciale",
+        "Italian national museum",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/National_Archaeological_Museum,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Museo%20Archeologico%20Nazionale%20di%20Napoli%20-%20panoramio%20%281%29.jpg"
+    },
+    {
+      "wikidata_id": "Q801237",
+      "name": "Napoli Centrale railway station",
+      "latitude": 40.85230271,
+      "longitude": 14.2720929,
+      "source_url": "https://www.wikidata.org/wiki/Q801237",
+      "wikidata_types": [
+        "dead-end railway station",
+        "railway station"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Napoli_Centrale_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/I08%20489%20Bf%20Napoli%20C.jpg"
+    },
+    {
+      "wikidata_id": "Q1192720",
+      "name": "Nisida",
+      "latitude": 40.795277777,
+      "longitude": 14.163333333,
+      "source_url": "https://www.wikidata.org/wiki/Q1192720",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Nisida",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Nisida%20al%20tramonto.jpg"
+    },
+    {
+      "wikidata_id": "Q1047594",
+      "name": "piazza del Plebiscito",
+      "latitude": 40.8359,
+      "longitude": 14.2488,
+      "source_url": "https://www.wikidata.org/wiki/Q1047594",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_del_Plebiscito",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20reale%20pontificia%20di%20San%20Francesco%20di%20Paola%20Piazza%20del%20Plebiscito%20Napoli%20Neapel%20Italy%20Foto%20Wolfgang%20Pehlemann%20P1070687.jpg"
+    },
+    {
+      "wikidata_id": "Q426339",
+      "name": "Royal Palace of Naples",
+      "latitude": 40.836136,
+      "longitude": 14.249283,
+      "source_url": "https://www.wikidata.org/wiki/Q426339",
+      "wikidata_types": [
+        "art collection",
+        "art museum",
+        "historic house museum",
+        "history museum",
+        "Istituto museale ad autonomia speciale",
+        "Italian national museum",
+        "Museum of the Italian Ministry of Culture",
+        "palazzo museum",
+        "religious museum",
+        "royal palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Royal_Palace_of_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20Reale%20di%20Napoli.jpg"
+    },
+    {
+      "wikidata_id": "Q241410",
+      "name": "San Francesco di Paola",
+      "latitude": 40.8353,
+      "longitude": 14.2475,
+      "source_url": "https://www.wikidata.org/wiki/Q241410",
+      "wikidata_types": [
+        "church building",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Francesco_di_Paola,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Francesco%20di%20Paola%20%28Naples%29%20exterior.jpg"
+    },
+    {
+      "wikidata_id": "Q810104",
+      "name": "Santa Chiara",
+      "latitude": 40.84688,
+      "longitude": 14.25287,
+      "source_url": "https://www.wikidata.org/wiki/Q810104",
+      "wikidata_types": [
+        "church building",
+        "monastery"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Chiara,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Monastero%20di%20SantaChiaraNaples.jpg"
+    },
+    {
+      "wikidata_id": "Q3523",
+      "name": "Secret Museum",
+      "latitude": 40.85337778,
+      "longitude": 14.25048611,
+      "source_url": "https://www.wikidata.org/wiki/Q3523",
+      "wikidata_types": [
+        "art collection",
+        "erotic museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Secret_Museum,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Panmosaic.jpg"
+    },
+    {
+      "wikidata_id": "Q82709",
+      "name": "Stadio Diego Armando Maradona",
+      "latitude": 40.827967,
+      "longitude": 14.193008,
+      "source_url": "https://www.wikidata.org/wiki/Q82709",
+      "wikidata_types": [
+        "multi-purpose sports venue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Stadio_Diego_Armando_Maradona",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Stadio%20Maradona%20Serie%20A.jpg"
+    },
+    {
+      "wikidata_id": "Q1010594",
+      "name": "Stadio Partenopeo",
+      "latitude": 40.859722,
+      "longitude": 14.293333,
+      "source_url": "https://www.wikidata.org/wiki/Q1010594",
+      "wikidata_types": [
+        "association football venue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Stadio_Partenopeo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/StadioPartenopeo.jpg"
+    },
+    {
+      "wikidata_id": "Q628491",
+      "name": "Teatro di San Carlo",
+      "latitude": 40.837388229,
+      "longitude": 14.2496871,
+      "source_url": "https://www.wikidata.org/wiki/Q628491",
+      "wikidata_types": [
+        "cultural institution",
+        "Italian theater",
+        "opera house"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Teatro_di_San_Carlo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Teatro%20de%20San%20Carlos%2C%20N%C3%A1poles%2C%20Italia%2C%202023-03-25%2C%20DD%20184-186%20HDR.jpg"
+    },
+    {
+      "wikidata_id": "Q691851",
+      "name": "University of Naples Federico II",
+      "latitude": 40.8472,
+      "longitude": 14.2569,
+      "source_url": "https://www.wikidata.org/wiki/Q691851",
+      "wikidata_types": [
+        "open-access publisher",
+        "public university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Naples_Federico_II",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Universit%C3%A0%20degli%20Studi%20di%20Napoli%20Federico%20II%20%283542%29.jpg"
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}

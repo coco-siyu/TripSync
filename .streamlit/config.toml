@@ -1,13 +1,13 @@
 [theme]
 base = "light"
-primaryColor = "#176BFF"
-backgroundColor = "#FFF8F0"
-secondaryBackgroundColor = "#EAF3FF"
-textColor = "#15324A"
-blueColor = "#176BFF"
-greenColor = "#00A99D"
-orangeColor = "#FFBE3D"
-redColor = "#FF5A5F"
+primaryColor = "#5BA7D6"
+backgroundColor = "#F6F3E6"
+secondaryBackgroundColor = "#FCE0D3"
+textColor = "#24232B"
+blueColor = "#6398A9"
+greenColor = "#4F8875"
+orangeColor = "#D58B35"
+redColor = "#5BA7D6"
 grayColor = "#7A8793"
 font = "sans-serif"
 headingFont = "sans-serif"
@@ -23,9 +23,10 @@ showSidebarBorder = false
 gatherUsageStats = false
 
 [server]
-# Avoid Streamlit probing optional vision modules inside Transformers. Polling
-# still reloads this small local app when project files change.
-fileWatcherType = "poll"
+# Transformers exposes optional vision modules that need torchvision, even though
+# TripSync only uses text embeddings. Disable Streamlit's module watcher to keep
+# it from probing those optional modules; restart Streamlit after code changes.
+fileWatcherType = "none"
 
 [client]
 toolbarMode = "minimal"

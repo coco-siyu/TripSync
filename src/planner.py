@@ -51,10 +51,10 @@ class _DayState:
 
 @dataclass(frozen=True)
 class ReplacementOutcome:
-    """Result of replacing or removing one scheduled activity."""
+    """Result of an approved addition, replacement, or removal."""
 
     plan: ItineraryPlan
-    removed_activity: ScheduledActivity
+    removed_activity: ScheduledActivity | None
     replacement_activity: ScheduledActivity | None
     day_number: int
 
@@ -437,8 +437,9 @@ def apply_itinerary_change_proposal(
     ranked_results: Sequence[GroupFitResult],
     *,
     must_do_owners_by_activity_id: Mapping[str, Sequence[str]] | None = None,
+    allow_pace_override: bool = False,
 ) -> ReplacementOutcome:
-    """Apply one approved proposal after deterministic feasibility checks."""
+    """Apply one approved proposal, requiring consent for pace overrides."""
 
     activity_by_id = {activity.id: activity for activity in activities}
     result_by_id = {result.activity_id: result for result in ranked_results}
@@ -450,20 +451,23 @@ def apply_itinerary_change_proposal(
     if target_day is None:
         raise ValueError(f"Day {proposal.day_number} is not in the itinerary")
 
-    target_position = next(
-        (
-            position
-            for position, activity in enumerate(target_day.activities)
-            if activity.activity_id == proposal.remove_activity_id
-        ),
-        None,
-    )
-    if target_position is None:
-        raise ValueError(
-            f"{proposal.remove_activity_id} is not scheduled on Day "
-            f"{proposal.day_number}"
+    target_position: int | None = None
+    removed_activity: ScheduledActivity | None = None
+    if proposal.remove_activity_id is not None:
+        target_position = next(
+            (
+                position
+                for position, activity in enumerate(target_day.activities)
+                if activity.activity_id == proposal.remove_activity_id
+            ),
+            None,
         )
-    removed_activity = target_day.activities[target_position]
+        if target_position is None:
+            raise ValueError(
+                f"{proposal.remove_activity_id} is not scheduled on Day "
+                f"{proposal.day_number}"
+            )
+        removed_activity = target_day.activities[target_position]
     scheduled_ids = {
         activity.activity_id
         for day in plan.days
@@ -494,7 +498,10 @@ def apply_itinerary_change_proposal(
         if activity.activity_id != proposal.remove_activity_id
     ]
     if replacement is not None:
-        updated_activities.insert(target_position, replacement)
+        if target_position is None:
+            updated_activities.append(replacement)
+        else:
+            updated_activities.insert(target_position, replacement)
 
     rule = PACE_RULES[plan.pace]
     activity_hours = round(
@@ -506,12 +513,22 @@ def apply_itinerary_change_proposal(
         2,
     )
     planned_hours = round(activity_hours + transition_hours, 2)
-    if (
-        len(updated_activities) > rule.max_activities
-        or planned_hours > target_day.capacity_hours + 0.01
-    ):
+    exceeds_activity_limit = len(updated_activities) > rule.max_activities
+    exceeds_hour_limit = planned_hours > target_day.capacity_hours + 0.01
+    if (exceeds_activity_limit or exceeds_hour_limit) and not allow_pace_override:
+        pace_issues: list[str] = []
+        if exceeds_activity_limit:
+            pace_issues.append(
+                f"would have more than {rule.max_activities} activities "
+                f"for a {plan.pace.value} pace"
+            )
+        if exceeds_hour_limit:
+            pace_issues.append(
+                f"would be {planned_hours:g} hours against its "
+                f"{target_day.capacity_hours:g}-hour limit"
+            )
         raise ValueError(
-            "The suggested change does not fit this day's pace limits."
+            f"Day {proposal.day_number} " + " and ".join(pace_issues) + "."
         )
 
     updated_day = ItineraryDay(
@@ -521,6 +538,11 @@ def apply_itinerary_change_proposal(
         transition_hours=transition_hours,
         planned_hours=planned_hours,
         capacity_hours=target_day.capacity_hours,
+        pace_override_approved=(
+            target_day.pace_override_approved
+            or exceeds_activity_limit
+            or exceeds_hour_limit
+        ),
     )
     updated_plan = ItineraryPlan.model_validate(
         {

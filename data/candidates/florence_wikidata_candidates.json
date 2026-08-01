@@ -1,0 +1,360 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-01T00:56:34.771621+00:00",
+  "city": "Florence",
+  "country": "Italy",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q2044",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q338489",
+      "name": "Accademia della Crusca",
+      "latitude": 43.8196746,
+      "longitude": 11.2277055,
+      "source_url": "https://www.wikidata.org/wiki/Q338489",
+      "wikidata_types": [
+        "academic archive",
+        "academy of sciences",
+        "archives",
+        "learned society",
+        "national academy"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Accademia_della_Crusca",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Biblioteca%20riccardiana%2001.JPG"
+    },
+    {
+      "wikidata_id": "Q388448",
+      "name": "Bargello National Museum",
+      "latitude": 43.770398,
+      "longitude": 11.258008,
+      "source_url": "https://www.wikidata.org/wiki/Q388448",
+      "wikidata_types": [
+        "art museum",
+        "glyptotheque",
+        "history museum",
+        "Italian national museum",
+        "museum",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bargello",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20del%20bargello%20visto%20da%20piazza%20san%20firenze.JPG"
+    },
+    {
+      "wikidata_id": "Q573881",
+      "name": "Basilica of San Lorenzo",
+      "latitude": 43.775,
+      "longitude": 11.253888888,
+      "source_url": "https://www.wikidata.org/wiki/Q573881",
+      "wikidata_types": [
+        "church building",
+        "former cathedral",
+        "minor basilica",
+        "museum",
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Basilica_of_San_Lorenzo,_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Florencia%2C%20Italia%20-%20panoramio%20%282%29.jpg"
+    },
+    {
+      "wikidata_id": "Q51177",
+      "name": "Basilica of Santa Croce",
+      "latitude": 43.76845,
+      "longitude": 11.26274,
+      "source_url": "https://www.wikidata.org/wiki/Q51177",
+      "wikidata_types": [
+        "church building",
+        "minor basilica",
+        "museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Croce,_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20di%20Santa%20Croce%20%2812437%29.jpg"
+    },
+    {
+      "wikidata_id": "Q51175",
+      "name": "Basilica of Santa Maria Novella",
+      "latitude": 43.7743,
+      "longitude": 11.249367,
+      "source_url": "https://www.wikidata.org/wiki/Q51175",
+      "wikidata_types": [
+        "minor basilica",
+        "museum",
+        "museum of a public entity",
+        "religious museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_Novella",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Santa%20Maria%20Novella%20%28Florence%29.jpg"
+    },
+    {
+      "wikidata_id": "Q856419",
+      "name": "Biblioteca Medicea Laurenziana",
+      "latitude": 43.774656,
+      "longitude": 11.254536,
+      "source_url": "https://www.wikidata.org/wiki/Q856419",
+      "wikidata_types": [
+        "conservation library",
+        "library",
+        "state public library"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access and visitor relevance."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Laurentian_Library",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Medicibib.jpg"
+    },
+    {
+      "wikidata_id": "Q888825",
+      "name": "Boboli Gardens",
+      "latitude": 43.765285,
+      "longitude": 11.24861,
+      "source_url": "https://www.wikidata.org/wiki/Q888825",
+      "wikidata_types": [
+        "historical park museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Boboli_Gardens",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Jard%C3%ADn%20de%20B%C3%B3boli%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2012.jpg"
+    },
+    {
+      "wikidata_id": "Q179900",
+      "name": "David",
+      "latitude": 43.776702777,
+      "longitude": 11.25945,
+      "source_url": "https://www.wikidata.org/wiki/Q179900",
+      "wikidata_types": [
+        "cultural property",
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/David_(Michelangelo)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Michelangelo%27s%20David%20-%20right%20view%202.jpg"
+    },
+    {
+      "wikidata_id": "Q732511",
+      "name": "Florence Baptistery",
+      "latitude": 43.773055555,
+      "longitude": 11.255,
+      "source_url": "https://www.wikidata.org/wiki/Q732511",
+      "wikidata_types": [
+        "baptistery",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Florence_Baptistery",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Firenze%20Battistero%20di%20San%20Giovanni%20Esterno%2004.jpg"
+    },
+    {
+      "wikidata_id": "Q191739",
+      "name": "Florence Cathedral",
+      "latitude": 43.773055555,
+      "longitude": 11.256944444,
+      "source_url": "https://www.wikidata.org/wiki/Q191739",
+      "wikidata_types": [
+        "cathedral",
+        "minor basilica",
+        "museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Florence_Cathedral",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Florence%20Duomo%20from%20Michelangelo%20hill.jpg"
+    },
+    {
+      "wikidata_id": "Q10855544",
+      "name": "Galleria dell'Accademia",
+      "latitude": 43.776944444,
+      "longitude": 11.258888888,
+      "source_url": "https://www.wikidata.org/wiki/Q10855544",
+      "wikidata_types": [
+        "art museum",
+        "Istituto museale ad autonomia speciale",
+        "museum",
+        "Museum of the Italian Ministry of Culture",
+        "national museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Galleria_dell%27Accademia",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Accademia%20di%20Firenze%2C%20veduta%20sul%20cortile%20del%20museo%20dell%27accademia%2001.JPG"
+    },
+    {
+      "wikidata_id": "Q839746",
+      "name": "Loggia dei Lanzi",
+      "latitude": 43.76920278,
+      "longitude": 11.25565833,
+      "source_url": "https://www.wikidata.org/wiki/Q839746",
+      "wikidata_types": [
+        "art collection",
+        "building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Loggia_dei_Lanzi",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Firenze%2C%20loggia%20dei%20lanzi%20%282020%29%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q460907",
+      "name": "National Central Library of Florence",
+      "latitude": 43.7670813,
+      "longitude": 11.2623479,
+      "source_url": "https://www.wikidata.org/wiki/Q460907",
+      "wikidata_types": [
+        "national library",
+        "state public library",
+        "United Nations Depository Library"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access and visitor relevance."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/National_Central_Library_(Florence)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Biblioteca%20Nacional%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q911047",
+      "name": "Palazzo Medici Riccardi",
+      "latitude": 43.775288,
+      "longitude": 11.255986,
+      "source_url": "https://www.wikidata.org/wiki/Q911047",
+      "wikidata_types": [
+        "administrative centre",
+        "city palace",
+        "museum",
+        "museum of a public entity",
+        "palazzo museum",
+        "religious museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Medici_Riccardi",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20Medici%20Riccardi.JPG"
+    },
+    {
+      "wikidata_id": "Q29286",
+      "name": "Palazzo Pitti",
+      "latitude": 43.765153,
+      "longitude": 11.250008,
+      "source_url": "https://www.wikidata.org/wiki/Q29286",
+      "wikidata_types": [
+        "art museum",
+        "Italian national museum",
+        "museum of modern art",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Pitti",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20Pitti%20nel%20tardo%20pomeriggio.jpg"
+    },
+    {
+      "wikidata_id": "Q521619",
+      "name": "Palazzo Strozzi",
+      "latitude": 43.771304,
+      "longitude": 11.252393,
+      "source_url": "https://www.wikidata.org/wiki/Q521619",
+      "wikidata_types": [
+        "city palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Strozzi",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palais%20Strozzi%20-%20Florence%20%28IT52%29%20-%202022-08-31%20-%201.jpg"
+    },
+    {
+      "wikidata_id": "Q271928",
+      "name": "Palazzo Vecchio",
+      "latitude": 43.769444444,
+      "longitude": 11.256111111,
+      "source_url": "https://www.wikidata.org/wiki/Q271928",
+      "wikidata_types": [
+        "art collection",
+        "art museum",
+        "city hall",
+        "museum",
+        "Palazzo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Vecchio",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20della%20signoria%2C%20palazzo%20vecchio%2C%20veduta%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q849846",
+      "name": "piazza della Signoria",
+      "latitude": 43.769722222,
+      "longitude": 11.255555555,
+      "source_url": "https://www.wikidata.org/wiki/Q849846",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_della_Signoria",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20della%20Signoria.jpg"
+    },
+    {
+      "wikidata_id": "Q208633",
+      "name": "Ponte Vecchio",
+      "latitude": 43.76798889,
+      "longitude": 11.25319167,
+      "source_url": "https://www.wikidata.org/wiki/Q208633",
+      "wikidata_types": [
+        "arched bridge",
+        "built-on bridge",
+        "deck arch bridge",
+        "footbridge",
+        "stone bridge"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ponte_Vecchio",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ponte%20Vecchio%20sobre%20el%20r%C3%ADo%20Arno%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2002.jpg"
+    },
+    {
+      "wikidata_id": "Q270474",
+      "name": "Stadio Artemio Franchi",
+      "latitude": 43.780822,
+      "longitude": 11.282258,
+      "source_url": "https://www.wikidata.org/wiki/Q270474",
+      "wikidata_types": [
+        "association football venue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Stadio_Artemio_Franchi",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Firenze%2C%20stadio%20artemio%20franchi%2C%20campo%20da%20gioco%2C%2010%2C0.jpg"
+    },
+    {
+      "wikidata_id": "Q51252",
+      "name": "Uffizi Gallery",
+      "latitude": 43.768333333,
+      "longitude": 11.255277777,
+      "source_url": "https://www.wikidata.org/wiki/Q51252",
+      "wikidata_types": [
+        "art museum",
+        "museum building",
+        "palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Uffizi",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Florence%2C%20Italy%20-%20panoramio%20%28125%29.jpg"
+    },
+    {
+      "wikidata_id": "Q820887",
+      "name": "University of Florence",
+      "latitude": 43.77777,
+      "longitude": 11.25951,
+      "source_url": "https://www.wikidata.org/wiki/Q820887",
+      "wikidata_types": [
+        "archives",
+        "university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Rettorato%20firenze%2C%20aula%20magna%2002.JPG"
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}

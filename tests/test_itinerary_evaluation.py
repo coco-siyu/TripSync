@@ -46,7 +46,7 @@ class ItineraryBenchmarkTests(unittest.TestCase):
         self.assertEqual(first_report.mean_traveler_coverage, 1.0)
         self.assertAlmostEqual(
             first_report.mean_fairness_score,
-            0.6662698412698412,
+            0.7041666666666666,
         )
         self.assertEqual(first_report.deterministic_stability_rate, 1.0)
 

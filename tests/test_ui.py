@@ -11,6 +11,8 @@ from streamlit.testing.v1 import AppTest
 from src.models import ItineraryPlan, ItinerarySource
 from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay
 from src.llm import NarrationGenerationError
+from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
+from src.catalog import load_curated_activities
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -111,7 +113,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         app.session_state["trip_request"] = sample_trip.model_dump(mode="json")
         app.session_state["selected_activity_ids"] = []
         app.session_state["dismissed_must_do_ids"] = []
-        return app.run()
+        return app.run(timeout=10)
 
     def test_app_opens_on_trip_basics_without_exceptions(self) -> None:
         app = AppTest.from_file("app.py")
@@ -194,11 +196,8 @@ class StreamlitInteractionTests(unittest.TestCase):
 
         self.assertTrue(
             any(
-                caption.value
-                == (
-                    "Hybrid retrieval found 12 relevant activities from 12 "
-                    "destination records."
-                )
+                caption.value.startswith("Hybrid retrieval found ")
+                and caption.value.endswith(" destination records.")
                 for caption in app.caption
             )
         )
@@ -324,6 +323,115 @@ class StreamlitInteractionTests(unittest.TestCase):
                 for text_area in app.text_area
             )
         )
+
+    def test_approved_adjustment_proposal_updates_the_itinerary(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        before = ItineraryPlan.model_validate(app.session_state["itinerary_plan"])
+        scheduled_ids = {
+            activity.activity_id
+            for day in before.days
+            for activity in day.activities
+        }
+        target_day = next(day for day in before.days if day.activities)
+        removed_id = target_day.activities[-1].activity_id
+        catalog = load_curated_activities()
+        replacement = next(
+            activity
+            for activity in catalog
+            if activity.city == "Rome"
+            and activity.id not in scheduled_ids
+            and activity.duration_hours <= target_day.activities[-1].duration_hours
+        )
+        proposal = ItineraryChangeProposal(
+            title="A tested replacement",
+            operation="replace",
+            day_number=target_day.day_number,
+            remove_activity_id=removed_id,
+            add_activity_id=replacement.id,
+            rationale="A grounded replacement for the same day.",
+        )
+        app.session_state["itinerary_change_proposals"] = (
+            ItineraryChangeProposals(
+                acknowledgement="Here is a grounded option.",
+                proposals=[proposal],
+            ).model_dump(mode="json")
+        )
+        app.run()
+
+        app.button(key="apply-itinerary-proposal-1").click().run()
+        after = ItineraryPlan.model_validate(app.session_state["itinerary_plan"])
+
+        self.assertIsNone(app.session_state["itinerary_change_proposals"])
+        self.assertNotIn(
+            removed_id,
+            [activity.activity_id for day in after.days for activity in day.activities],
+        )
+        self.assertIn(
+            replacement.id,
+            [activity.activity_id for day in after.days for activity in day.activities],
+        )
+
+    def test_pace_override_requires_confirmation_then_applies(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+        plan = ItineraryPlan.model_validate(app.session_state["itinerary_plan"])
+        scheduled_ids = {
+            activity.activity_id
+            for day in plan.days
+            for activity in day.activities
+        }
+        catalog = load_curated_activities()
+        target_day, removed, replacement = next(
+            (day, scheduled, candidate)
+            for day in plan.days
+            for scheduled in day.activities
+            for candidate in catalog
+            if candidate.city == "Rome"
+            and candidate.id not in scheduled_ids
+            and day.planned_hours - scheduled.duration_hours + candidate.duration_hours
+            > day.capacity_hours
+        )
+        app.session_state["itinerary_change_proposals"] = (
+            ItineraryChangeProposals(
+                acknowledgement="Here is a too-long option.",
+                proposals=[
+                    ItineraryChangeProposal(
+                        title="An option that does not fit",
+                        operation="replace",
+                        day_number=target_day.day_number,
+                        remove_activity_id=removed.activity_id,
+                        add_activity_id=replacement.id,
+                        rationale="This deliberately exceeds the day capacity.",
+                    )
+                ],
+            ).model_dump(mode="json")
+        )
+        app.run()
+
+        self.assertIsNotNone(app.session_state["itinerary_change_proposals"])
+        self.assertTrue(
+            any(
+                "would be" in warning.value
+                for warning in app.warning
+            )
+        )
+        apply_button = app.button(key="apply-itinerary-proposal-1")
+        self.assertTrue(apply_button.disabled)
+        self.assertEqual(apply_button.label, "Apply anyway")
+
+        app.checkbox(key="pace-override-confirm-1").set_value(True).run()
+        app.button(key="apply-itinerary-proposal-1").click().run()
+        updated_plan = ItineraryPlan.model_validate(
+            app.session_state["itinerary_plan"]
+        )
+        updated_day = next(
+            day
+            for day in updated_plan.days
+            if day.day_number == target_day.day_number
+        )
+        self.assertTrue(updated_day.pace_override_approved)
+        self.assertGreater(updated_day.planned_hours, updated_day.capacity_hours)
 
     def test_itinerary_can_use_only_the_shortlist(self) -> None:
         app = self._sample_results_app()

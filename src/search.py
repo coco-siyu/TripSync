@@ -63,6 +63,7 @@ def _activity_document(activity: Activity) -> str:
     fields = [
         activity.name,
         activity.category.replace("_", " "),
+        *activity.category_tags,
         *activity.interests,
         activity.description,
     ]

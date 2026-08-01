@@ -193,6 +193,49 @@ class ChangeProposalTests(unittest.TestCase):
             )
         )
 
+    def test_planner_adds_an_eligible_activity_when_the_day_has_capacity(self) -> None:
+        addition = next(
+            activity
+            for activity in self.eligible
+            if (
+                activity.duration_hours + 0.5 + self.target_day.planned_hours
+                <= self.target_day.capacity_hours
+            )
+        )
+        proposal = ItineraryChangeProposal(
+            title="Fill an open part of the day",
+            operation="add",
+            day_number=self.target_day.day_number,
+            add_activity_id=addition.id,
+            rationale="This catalog activity fits in the day's remaining time.",
+        )
+
+        outcome = apply_itinerary_change_proposal(
+            self.plan,
+            proposal,
+            self.activities,
+            self.ranked,
+        )
+
+        changed_day = outcome.plan.days[self.target_day.day_number - 1]
+        self.assertIsNone(outcome.removed_activity)
+        self.assertEqual(outcome.replacement_activity.activity_id, addition.id)
+        self.assertIn(
+            addition.id,
+            [activity.activity_id for activity in changed_day.activities],
+        )
+
+    def test_add_proposal_cannot_include_a_removal(self) -> None:
+        with self.assertRaises(ValueError):
+            ItineraryChangeProposal(
+                title="Invalid mixed action",
+                operation="add",
+                day_number=self.target_day.day_number,
+                remove_activity_id=self.removed_id,
+                add_activity_id=self.added_id,
+                rationale="An add must not remove another activity.",
+            )
+
     def test_llm_rejects_ungrounded_proposals(self) -> None:
         invalid = ItineraryChangeProposals(
             acknowledgement="Here is an option.",

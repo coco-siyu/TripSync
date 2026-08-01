@@ -141,6 +141,7 @@ class Activity(TripSyncModel):
     city: str = Field(min_length=1, max_length=120)
     country: str = Field(min_length=1, max_length=80)
     category: str = Field(min_length=1, max_length=60)
+    category_tags: list[str] = Field(default_factory=list, max_length=6)
     interests: list[str] = Field(min_length=1, max_length=12)
     walking_level: WalkingLevel
     budget_level: BudgetLevel
@@ -160,6 +161,11 @@ class Activity(TripSyncModel):
     @field_validator("interests", mode="before")
     @classmethod
     def normalize_interests(cls, value: Any) -> Any:
+        return _normalize_tags(value)
+
+    @field_validator("category_tags", mode="before")
+    @classmethod
+    def normalize_category_tags(cls, value: Any) -> Any:
         return _normalize_tags(value)
 
     @field_validator("interests")
@@ -183,7 +189,7 @@ class ScheduledActivity(TripSyncModel):
 
 
 class ItineraryDay(TripSyncModel):
-    """One day with validated capacity and transition estimates."""
+    """One day with validated estimates and an explicit pace override flag."""
 
     day_number: int = Field(ge=1, le=5)
     activities: list[ScheduledActivity] = Field(default_factory=list, max_length=6)
@@ -191,6 +197,7 @@ class ItineraryDay(TripSyncModel):
     transition_hours: float = Field(ge=0, le=12)
     planned_hours: float = Field(ge=0, le=24)
     capacity_hours: float = Field(gt=0, le=12)
+    pace_override_approved: bool = False
 
     @model_validator(mode="after")
     def validate_daily_totals(self) -> ItineraryDay:
@@ -208,7 +215,10 @@ class ItineraryDay(TripSyncModel):
             raise ValueError(
                 "planned hours must include activities and transitions"
             )
-        if self.planned_hours > self.capacity_hours + 0.01:
+        if (
+            self.planned_hours > self.capacity_hours + 0.01
+            and not self.pace_override_approved
+        ):
             raise ValueError("planned hours exceed daily capacity")
         return self
 

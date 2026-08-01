@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-01T01:33:50.808872+00:00",
+  "city": "Venice",
+  "country": "Italy",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q641",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q578460",
+      "name": "Biblioteca Nazionale Marciana",
+      "latitude": 45.433333333,
+      "longitude": 12.339166666,
+      "source_url": "https://www.wikidata.org/wiki/Q578460",
+      "wikidata_types": [
+        "conservation library",
+        "state public library"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access and visitor relevance."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Biblioteca_Marciana",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Libreria%20Marciana%20Venezia%20sera.jpg"
+    },
+    {
+      "wikidata_id": "Q52517",
+      "name": "Bridge of Sighs",
+      "latitude": 45.434055555,
+      "longitude": 12.340861111,
+      "source_url": "https://www.wikidata.org/wiki/Q52517",
+      "wikidata_types": [
+        "footbridge"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bridge_of_Sighs",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Antonio%20Contin%20-%20Ponte%20dei%20sospiri%20%28Venice%29.jpg"
+    },
+    {
+      "wikidata_id": "Q52439",
+      "name": "Burano",
+      "latitude": 45.485555555,
+      "longitude": 12.4175,
+      "source_url": "https://www.wikidata.org/wiki/Q52439",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Burano",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Burano%20Vendig%20Aug%202021%204.jpg"
+    },
+    {
+      "wikidata_id": "Q820872",
+      "name": "Ca' d'Oro",
+      "latitude": 45.440555555,
+      "longitude": 12.333888888,
+      "source_url": "https://www.wikidata.org/wiki/Q820872",
+      "wikidata_types": [
+        "city palace",
+        "mansion",
+        "museum",
+        "museum building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_d%27Oro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ca%27%20d%27Oro%20facciata.jpg"
+    },
+    {
+      "wikidata_id": "Q1546906",
+      "name": "Ca' Foscari University of Venice",
+      "latitude": 45.434464,
+      "longitude": 12.3266,
+      "source_url": "https://www.wikidata.org/wiki/Q1546906",
+      "wikidata_types": [
+        "university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_Foscari_University_of_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/%28Venice%29%20Ca%27%20Foscari.jpg"
+    },
+    {
+      "wikidata_id": "Q35191",
+      "name": "Carnival of Venice",
+      "latitude": 45.4397,
+      "longitude": 12.3319,
+      "source_url": "https://www.wikidata.org/wiki/Q35191",
+      "wikidata_types": [
+        "annual event",
+        "Carnival"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Carnival_of_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venezia%20flickr03.jpg"
+    },
+    {
+      "wikidata_id": "Q189883",
+      "name": "Doge's Palace",
+      "latitude": 45.433666666,
+      "longitude": 12.340416666,
+      "source_url": "https://www.wikidata.org/wiki/Q189883",
+      "wikidata_types": [
+        "art museum",
+        "museum of a public entity",
+        "palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Doge%27s_Palace",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/%28Venice%29%20Doge%27s%20Palace%20facing%20the%20sea.jpg"
+    },
+    {
+      "wikidata_id": "Q338330",
+      "name": "Gallerie dell'Accademia",
+      "latitude": 45.431078,
+      "longitude": 12.328139,
+      "source_url": "https://www.wikidata.org/wiki/Q338330",
+      "wikidata_types": [
+        "art museum",
+        "Istituto museale ad autonomia speciale",
+        "Italian national museum",
+        "museum building",
+        "museum of modern art",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Gallerie_dell%27Accademia",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Accademia%20%28Venice%29.jpg"
+    },
+    {
+      "wikidata_id": "Q52435",
+      "name": "Giudecca",
+      "latitude": 45.425,
+      "longitude": 12.328611111,
+      "source_url": "https://www.wikidata.org/wiki/Q52435",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Giudecca",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Giudecca%20Venice%20Aug%202020%201.jpg"
+    },
+    {
+      "wikidata_id": "Q309243",
+      "name": "Grand Canal",
+      "latitude": 45.442222222,
+      "longitude": 12.326388888,
+      "source_url": "https://www.wikidata.org/wiki/Q309243",
+      "wikidata_types": [
+        "canal",
+        "thoroughfare"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Grand_Canal_(Venice)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Panorama%20of%20Canal%20Grande%20and%20Ponte%20di%20Rialto%2C%20Venice%20-%20September%202017.jpg"
+    },
+    {
+      "wikidata_id": "Q226221",
+      "name": "Lido di Venezia",
+      "latitude": 45.383333333,
+      "longitude": 12.35,
+      "source_url": "https://www.wikidata.org/wiki/Q226221",
+      "wikidata_types": [
+        "barrier island",
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venice_Lido",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Lido%20Aug%202020%201.jpg"
+    },
+    {
+      "wikidata_id": "Q541405",
+      "name": "Mestre",
+      "latitude": 45.490555555,
+      "longitude": 12.238055555,
+      "source_url": "https://www.wikidata.org/wiki/Q541405",
+      "wikidata_types": [
+        "locality"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mestre",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Municipio%20Mestre.jpg"
+    },
+    {
+      "wikidata_id": "Q52437",
+      "name": "Murano",
+      "latitude": 45.4575,
+      "longitude": 12.353611111,
+      "source_url": "https://www.wikidata.org/wiki/Q52437",
+      "wikidata_types": [
+        "island",
+        "locality"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Murano",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Aerial%20photographs%20of%20Venice%202013%2C%20Anton%20Nossik%2C%20009.jpg"
+    },
+    {
+      "wikidata_id": "Q217527",
+      "name": "Piazza San Marco",
+      "latitude": 45.434,
+      "longitude": 12.338,
+      "source_url": "https://www.wikidata.org/wiki/Q217527",
+      "wikidata_types": [
+        "architectural ensemble",
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_San_Marco",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20San%20Marco%20%28Venice%29%20at%20night-msu-2021-6449-.jpg"
+    },
+    {
+      "wikidata_id": "Q52505",
+      "name": "Rialto Bridge",
+      "latitude": 45.438008,
+      "longitude": 12.335639,
+      "source_url": "https://www.wikidata.org/wiki/Q52505",
+      "wikidata_types": [
+        "arch bridge",
+        "built-on bridge",
+        "covered bridge",
+        "footbridge",
+        "renaissance bridge",
+        "stone bridge"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Rialto_Bridge",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Rialto%202025%204.jpg"
+    },
+    {
+      "wikidata_id": "Q844263",
+      "name": "San Michele",
+      "latitude": 45.446944444,
+      "longitude": 12.347222222,
+      "source_url": "https://www.wikidata.org/wiki/Q844263",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Isola_di_San_Michele",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Aerial%20photographs%20of%20Venice%202013%2C%20Anton%20Nossik%2C%20031.jpg"
+    },
+    {
+      "wikidata_id": "Q52531",
+      "name": "Santa Maria della Salute",
+      "latitude": 45.43057,
+      "longitude": 12.33473,
+      "source_url": "https://www.wikidata.org/wiki/Q52531",
+      "wikidata_types": [
+        "minor basilica",
+        "octagonal church",
+        "votive church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_della_Salute",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Santa%20Maria%20della%20Salute%20from%20Hotel%20Monaco.jpg"
+    },
+    {
+      "wikidata_id": "Q172988",
+      "name": "St Mark's Basilica",
+      "latitude": 45.434444444,
+      "longitude": 12.339722222,
+      "source_url": "https://www.wikidata.org/wiki/Q172988",
+      "wikidata_types": [
+        "cathedral",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/St_Mark%27s_Basilica",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venice%20-%20St.%20Marc%27s%20Basilica%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q754194",
+      "name": "St Mark's Campanile",
+      "latitude": 45.434027777,
+      "longitude": 12.339027777,
+      "source_url": "https://www.wikidata.org/wiki/Q754194",
+      "wikidata_types": [
+        "bell tower"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/St_Mark%27s_Campanile",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Campanile%20of%20St.%20Mark%27s%20Basilica%20-%20remote%20view.jpg"
+    },
+    {
+      "wikidata_id": "Q223942",
+      "name": "Teatro La Fenice",
+      "latitude": 45.4337,
+      "longitude": 12.3339,
+      "source_url": "https://www.wikidata.org/wiki/Q223942",
+      "wikidata_types": [
+        "opera house"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/La_Fenice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Teatro%20La%20Fenice%20%28Venice%29%20-%20Facade.jpg"
+    },
+    {
+      "wikidata_id": "Q52441",
+      "name": "Torcello",
+      "latitude": 45.498333333,
+      "longitude": 12.418333333,
+      "source_url": "https://www.wikidata.org/wiki/Q52441",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Torcello",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venezia%20-%20Torcello%2001.JPG"
+    },
+    {
+      "wikidata_id": "Q76925",
+      "name": "Venetian Lagoon",
+      "latitude": 45.413055555,
+      "longitude": 12.297222222,
+      "source_url": "https://www.wikidata.org/wiki/Q76925",
+      "wikidata_types": [
+        "bay",
+        "lagoon"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venetian_Lagoon",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/The%20Venetian%20Lagoon%20ESA25362327%20%28cropped%29.tiff"
+    },
+    {
+      "wikidata_id": "Q205751",
+      "name": "Venice Biennale",
+      "latitude": 45.428889,
+      "longitude": 12.358611,
+      "source_url": "https://www.wikidata.org/wiki/Q205751",
+      "wikidata_types": [
+        "archives",
+        "art exhibition",
+        "biennale",
+        "collection",
+        "exhibition",
+        "film festival",
+        "foundation"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venice_Biennale",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/La%20Biennale%20di%20Venezia%202019.jpg"
+    },
+    {
+      "wikidata_id": "Q49024",
+      "name": "Venice Film Festival",
+      "latitude": 45.406,
+      "longitude": 12.367111111,
+      "source_url": "https://www.wikidata.org/wiki/Q49024",
+      "wikidata_types": [
+        "film festival"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venice_Film_Festival",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Mostra%20Internazionale%20d%E2%80%99Arte%20Cinematografica%20%28Venezia%29%20%284979198162%29.jpg"
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}

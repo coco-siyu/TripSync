@@ -12,11 +12,11 @@ from typing import Any
 from pydantic import Field
 
 from src.models import Activity, TripRequest, TripSyncModel
-from src.search import RetrievalMode, retrieve_activities
+from src.search import EmbeddingModel, RetrievalMode, retrieve_activities
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ACTIVITIES_PATH = REPOSITORY_ROOT / "data" / "sample_activities.json"
+DEFAULT_ACTIVITIES_PATH = REPOSITORY_ROOT / "data" / "activities.json"
 DEFAULT_CASES_PATH = Path(__file__).with_name("retrieval_cases.json")
 
 
@@ -61,6 +61,23 @@ class RetrievalEvaluationReport:
     mean_reciprocal_rank: float
     mean_recall: float
     cases: tuple[RetrievalCaseResult, ...]
+
+
+@dataclass(frozen=True)
+class RetrievalComparisonResult:
+    """One retrieval mode's report within a like-for-like comparison."""
+
+    mode: RetrievalMode
+    report: RetrievalEvaluationReport
+
+
+@dataclass(frozen=True)
+class RetrievalComparisonReport:
+    """Side-by-side reports for the same catalog, cases, and cutoff."""
+
+    k: int
+    case_count: int
+    results: tuple[RetrievalComparisonResult, ...]
 
 
 def load_activities(path: Path = DEFAULT_ACTIVITIES_PATH) -> list[Activity]:
@@ -119,8 +136,9 @@ def evaluate_retrieval(
     *,
     k: int = 5,
     mode: RetrievalMode = "text",
+    embedding_model: EmbeddingModel | None = None,
 ) -> RetrievalEvaluationReport:
-    """Run deterministic text retrieval over every labeled case."""
+    """Run one retrieval mode over every labeled case."""
 
     if k < 1:
         raise ValueError("k must be at least 1")
@@ -138,7 +156,13 @@ def evaluate_retrieval(
                 f"{unknown_list}"
             )
 
-        response = retrieve_activities(activities, case.trip, limit=k, mode=mode)
+        response = retrieve_activities(
+            activities,
+            case.trip,
+            limit=k,
+            mode=mode,
+            embedding_model=embedding_model,
+        )
         ranked_ids = [result.activity_id for result in response.results]
         metrics = score_ranked_ids(
             ranked_ids,
@@ -170,6 +194,35 @@ def evaluate_retrieval(
     )
 
 
+def compare_retrieval_modes(
+    activities: Sequence[Activity],
+    cases: Sequence[RetrievalEvaluationCase],
+    *,
+    k: int = 5,
+    embedding_model: EmbeddingModel | None = None,
+) -> RetrievalComparisonReport:
+    """Evaluate text, vector, and hybrid modes against identical labels."""
+
+    reports = tuple(
+        RetrievalComparisonResult(
+            mode=mode,
+            report=evaluate_retrieval(
+                activities,
+                cases,
+                k=k,
+                mode=mode,
+                embedding_model=embedding_model,
+            ),
+        )
+        for mode in ("text", "vector", "hybrid")
+    )
+    return RetrievalComparisonReport(
+        k=k,
+        case_count=len(cases),
+        results=reports,
+    )
+
+
 def report_as_dict(report: RetrievalEvaluationReport) -> dict[str, Any]:
     """Convert a report into a JSON-serializable dictionary."""
 
@@ -195,6 +248,47 @@ def format_report(report: RetrievalEvaluationReport) -> str:
     return "\n".join(lines)
 
 
+def format_comparison_report(report: RetrievalComparisonReport) -> str:
+    """Render compact, side-by-side retrieval metrics for decisions."""
+
+    lines = [
+        f"TripSync retrieval comparison (k={report.k})",
+        f"Cases: {report.case_count}",
+        "",
+        "Mode     Hit Rate@K   MRR@K   Mean Recall@K",
+    ]
+    for result in report.results:
+        metrics = result.report
+        lines.append(
+            f"{result.mode:<8} {metrics.hit_rate:>10.3f} "
+            f"{metrics.mean_reciprocal_rank:>7.3f} "
+            f"{metrics.mean_recall:>15.3f}"
+        )
+
+    best_mrr = max(
+        result.report.mean_reciprocal_rank for result in report.results
+    )
+    best_recall = max(result.report.mean_recall for result in report.results)
+    best_mrr_modes = ", ".join(
+        result.mode
+        for result in report.results
+        if result.report.mean_reciprocal_rank == best_mrr
+    )
+    best_recall_modes = ", ".join(
+        result.mode
+        for result in report.results
+        if result.report.mean_recall == best_recall
+    )
+    lines.extend(
+        [
+            "",
+            f"Best MRR@{report.k}: {best_mrr_modes} ({best_mrr:.3f})",
+            f"Best mean recall@{report.k}: {best_recall_modes} ({best_recall:.3f})",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def main() -> None:
     """Run the retrieval benchmark from the command line."""
 
@@ -209,18 +303,28 @@ def main() -> None:
     )
     parser.add_argument("--mode", choices=["text", "vector", "hybrid"], default="text")
     parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Compare text, vector, and hybrid modes on the same cases.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Print machine-readable JSON instead of the text summary.",
     )
     args = parser.parse_args()
 
-    report = evaluate_retrieval(
-        load_activities(),
-        load_retrieval_cases(),
-        k=args.k,
-        mode=args.mode,
-    )
+    activities = load_activities()
+    cases = load_retrieval_cases()
+    if args.compare:
+        report = compare_retrieval_modes(activities, cases, k=args.k)
+        if args.json:
+            print(json.dumps(asdict(report), indent=2))
+        else:
+            print(format_comparison_report(report))
+        return
+
+    report = evaluate_retrieval(activities, cases, k=args.k, mode=args.mode)
     if args.json:
         print(json.dumps(report_as_dict(report), indent=2))
     else:

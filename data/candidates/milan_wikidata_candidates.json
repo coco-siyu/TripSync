@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-01T00:57:24.211454+00:00",
+  "city": "Milan",
+  "country": "Italy",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q490",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q4630399",
+      "name": "2026 Winter Olympics",
+      "latitude": 46.533333333,
+      "longitude": 12.133333333,
+      "source_url": "https://www.wikidata.org/wiki/Q4630399",
+      "wikidata_types": [
+        "Winter Olympic Games edition"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/2026_Winter_Olympics",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%20Cortina%202026%20Opening%20Ceremony.jpg"
+    },
+    {
+      "wikidata_id": "Q1071570",
+      "name": "Basilica of Sant'Ambrogio",
+      "latitude": 45.4625,
+      "longitude": 9.175833333,
+      "source_url": "https://www.wikidata.org/wiki/Q1071570",
+      "wikidata_types": [
+        "architectural ensemble",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Basilica_of_Sant%27Ambrogio",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20Sant%27Ambrogio%20016%204923.jpg"
+    },
+    {
+      "wikidata_id": "Q815611",
+      "name": "Biblioteca Ambrosiana",
+      "latitude": 45.463479,
+      "longitude": 9.185788,
+      "source_url": "https://www.wikidata.org/wiki/Q815611",
+      "wikidata_types": [
+        "archives",
+        "conservation library",
+        "private library"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access and visitor relevance."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Biblioteca_Ambrosiana",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20Biblioteca%20Ambrosiana%20016%204839.jpg"
+    },
+    {
+      "wikidata_id": "Q959524",
+      "name": "Bocconi University",
+      "latitude": 45.450277777,
+      "longitude": 9.189722222,
+      "source_url": "https://www.wikidata.org/wiki/Q959524",
+      "wikidata_types": [
+        "medium size publisher",
+        "private university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bocconi_University",
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q894874",
+      "name": "Bottega Veneta",
+      "latitude": 45.443159131,
+      "longitude": 9.201027325,
+      "source_url": "https://www.wikidata.org/wiki/Q894874",
+      "wikidata_types": [
+        "business",
+        "fashion house"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bottega_Veneta",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/BV%20Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q229022",
+      "name": "Catholic University of the Sacred Heart",
+      "latitude": 45.4631,
+      "longitude": 9.176911111,
+      "source_url": "https://www.wikidata.org/wiki/Q229022",
+      "wikidata_types": [
+        "Catholic university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Universit%C3%A0_Cattolica_del_Sacro_Cuore",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/HDR%20-%20Chiostro%20Universit%C3%A0%20Cattolica.jpg"
+    },
+    {
+      "wikidata_id": "Q210022",
+      "name": "Expo 2015",
+      "latitude": 45.52,
+      "longitude": 9.1,
+      "source_url": "https://www.wikidata.org/wiki/Q210022",
+      "wikidata_types": [
+        "world's fair"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Expo_2015",
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q51112",
+      "name": "Galleria Vittorio Emanuele II",
+      "latitude": 45.465638888,
+      "longitude": 9.19,
+      "source_url": "https://www.wikidata.org/wiki/Q51112",
+      "wikidata_types": [
+        "architectural ensemble",
+        "commercial gallery"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Galleria_Vittorio_Emanuele_II",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Veduta%20della%20Galleria%20Vittorio%20Emanuele%20II%20da%20piazza%20del%20Duomo%2C%20Milano.jpg"
+    },
+    {
+      "wikidata_id": "Q133566",
+      "name": "Giuseppe Meazza Stadium",
+      "latitude": 45.478055555,
+      "longitude": 9.123888888,
+      "source_url": "https://www.wikidata.org/wiki/Q133566",
+      "wikidata_types": [
+        "multi-purpose sports venue",
+        "Olympic stadium"
+      ],
+      "review_flags": [
+        "Event venue: keep only for a specific tour or event."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Siro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Stadio%20Meazza%202021%203.jpg"
+    },
+    {
+      "wikidata_id": "Q5471",
+      "name": "La Scala",
+      "latitude": 45.4675,
+      "longitude": 9.189166666,
+      "source_url": "https://www.wikidata.org/wiki/Q5471",
+      "wikidata_types": [
+        "opera house"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/La_Scala",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/20110725%20Milano%20La%20Scala%205507.jpg"
+    },
+    {
+      "wikidata_id": "Q1686544",
+      "name": "Loro Piana",
+      "latitude": 45.477111111,
+      "longitude": 9.187359722,
+      "source_url": "https://www.wikidata.org/wiki/Q1686544",
+      "wikidata_types": [
+        "brick and mortar",
+        "business"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Loro_Piana",
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q18068",
+      "name": "Milan Cathedral",
+      "latitude": 45.463968,
+      "longitude": 9.190578,
+      "source_url": "https://www.wikidata.org/wiki/Q18068",
+      "wikidata_types": [
+        "architectural ensemble",
+        "Catholic cathedral",
+        "church building",
+        "domus",
+        "tourist destination"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milan_Cathedral",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/20110724%20Milan%20Cathedral%205260.jpg"
+    },
+    {
+      "wikidata_id": "Q735559",
+      "name": "Milan Metro",
+      "latitude": 45.466944444,
+      "longitude": 9.19,
+      "source_url": "https://www.wikidata.org/wiki/Q735559",
+      "wikidata_types": [
+        "rapid transit"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milan_Metro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%20metropolitana%20Villa%20San%20Giovanni.JPG"
+    },
+    {
+      "wikidata_id": "Q801193",
+      "name": "Milano Centrale railway station",
+      "latitude": 45.485658,
+      "longitude": 9.203988,
+      "source_url": "https://www.wikidata.org/wiki/Q801193",
+      "wikidata_types": [
+        "dead-end railway station",
+        "railway station",
+        "railway station above ground"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milano_Centrale_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20CentralStation%20016%204294.jpg"
+    },
+    {
+      "wikidata_id": "Q525297",
+      "name": "Piazzale Loreto",
+      "latitude": 45.48623056,
+      "longitude": 9.21676667,
+      "source_url": "https://www.wikidata.org/wiki/Q525297",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazzale_Loreto",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%20-%20piazzale%20Loreto.jpg"
+    },
+    {
+      "wikidata_id": "Q150066",
+      "name": "Pinacoteca di Brera",
+      "latitude": 45.471955,
+      "longitude": 9.187815,
+      "source_url": "https://www.wikidata.org/wiki/Q150066",
+      "wikidata_types": [
+        "art gallery",
+        "art museum",
+        "educational institution",
+        "Istituto museale ad autonomia speciale",
+        "Italian national museum",
+        "museum of modern art",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Pinacoteca_di_Brera",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20-%20Pinacoth%C3%A8que%20de%20Brera%20-%20Cour%20int%C3%A9rieure.jpg"
+    },
+    {
+      "wikidata_id": "Q920809",
+      "name": "Pirelli Tower",
+      "latitude": 45.484801,
+      "longitude": 9.201167,
+      "source_url": "https://www.wikidata.org/wiki/Q920809",
+      "wikidata_types": [
+        "skyscraper"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Pirelli_Tower",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Mi-Milano-1959-Grattacielo-Pirelli.jpg"
+    },
+    {
+      "wikidata_id": "Q392904",
+      "name": "Polytechnic University of Milan",
+      "latitude": 45.478030555,
+      "longitude": 9.227319444,
+      "source_url": "https://www.wikidata.org/wiki/Q392904",
+      "wikidata_types": [
+        "institute of technology",
+        "organization"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Polytechnic_University_of_Milan",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Polimi%20Leonardo%20campus%20main%20building.jpg"
+    },
+    {
+      "wikidata_id": "Q244952",
+      "name": "Santa Maria delle Grazie",
+      "latitude": 45.465833333,
+      "longitude": 9.171111111,
+      "source_url": "https://www.wikidata.org/wiki/Q244952",
+      "wikidata_types": [
+        "abbey church",
+        "church building",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_delle_Grazie,_Milan",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Side%20and%20dome%20-%20Santa%20Maria%20delle%20Grazie%20-%20Milan%202014.jpg"
+    },
+    {
+      "wikidata_id": "Q23354",
+      "name": "Sforza Castle",
+      "latitude": 45.471005,
+      "longitude": 9.179693,
+      "source_url": "https://www.wikidata.org/wiki/Q23354",
+      "wikidata_types": [
+        "castle"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sforza_Castle",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/20110725%20Castello%20Sforzesco%20Milan%205557.jpg"
+    },
+    {
+      "wikidata_id": "Q128910",
+      "name": "The Last Supper",
+      "latitude": 45.466666666,
+      "longitude": 9.170833333,
+      "source_url": "https://www.wikidata.org/wiki/Q128910",
+      "wikidata_types": [
+        "fresco painting",
+        "wall painting",
+        "work of art"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/The_Last_Supper_(Leonardo)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Leonardo%20da%20Vinci%20%281452-1519%29%20-%20The%20Last%20Supper%20%281495-1498%29.jpg"
+    },
+    {
+      "wikidata_id": "Q46210",
+      "name": "University of Milan",
+      "latitude": 45.4600626,
+      "longitude": 9.194659978,
+      "source_url": "https://www.wikidata.org/wiki/Q46210",
+      "wikidata_types": [
+        "public research university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Milan",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Festa%20del%20Perdono%20Facciata%20Milano.jpg"
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}

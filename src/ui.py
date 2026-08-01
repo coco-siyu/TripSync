@@ -12,7 +12,9 @@ from uuid import uuid4
 import streamlit as st
 from pydantic import ValidationError
 
+from src.catalog import load_curated_activities
 from src.feedback import (
+    FeedbackRating,
     FeedbackTargetType,
     feedback_target_id,
     record_feedback,
@@ -52,10 +54,10 @@ from src.proposals import (
 )
 from src.scoring import GroupFitResult, rank_activities
 from src.search import RetrievalMode, RetrievedActivity, retrieve_activities
+from src.trips import save_trip
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-SAMPLE_DATA_PATH = REPOSITORY_ROOT / "data" / "sample_activities.json"
 RETRIEVAL_MODE: RetrievalMode = (
     os.getenv("TRIPSYNC_RETRIEVAL_MODE", "hybrid").strip().lower()
     if os.getenv("TRIPSYNC_RETRIEVAL_MODE", "hybrid").strip().lower()
@@ -182,11 +184,10 @@ def build_sample_trip() -> TripRequest:
 
 
 @st.cache_data
-def load_sample_activities() -> list[Activity]:
-    """Load and validate the development activity catalog."""
+def load_activity_catalog() -> list[Activity]:
+    """Load the one canonical, city-filtered TripSync activity catalog."""
 
-    raw_activities = json.loads(SAMPLE_DATA_PATH.read_text(encoding="utf-8"))
-    return [Activity.model_validate(activity) for activity in raw_activities]
+    return load_curated_activities()
 
 
 def _initialize_state() -> None:
@@ -212,6 +213,7 @@ def _initialize_state() -> None:
         "itinerary_change_proposals": None,
         "itinerary_change_error": None,
         "feedback_session_id": uuid4().hex,
+        "saved_trip_id": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -250,20 +252,17 @@ def _apply_styles() -> None:
         """
         <style>
         :root {
-            --ocean-blue: #176BFF;
-            --sunset-coral: #FF5A5F;
-            --mango-yellow: #FFBE3D;
-            --lagoon-teal: #00A99D;
-            --deep-teal: #007F73;
-            --deep-navy: #15324A;
-            --warm-cream: #FFF8F0;
+            --ocean-blue: #6398A9;
+            --sunset-coral: #5BA7D6;
+            --mango-yellow: #F9B95C;
+            --lagoon-teal: #96C7B3;
+            --deep-teal: #477C6D;
+            --deep-navy: #24232B;
+            --warm-cream: #F6F3E6;
         }
 
         [data-testid="stAppViewContainer"] {
-            background:
-                radial-gradient(circle at 92% 7%, rgba(255, 190, 61, 0.28), transparent 24rem),
-                radial-gradient(circle at 5% 34%, rgba(0, 169, 157, 0.15), transparent 28rem),
-                linear-gradient(180deg, #EAF3FF 0rem, var(--warm-cream) 34rem);
+            background: #F6F3E6;
         }
 
         [data-testid="stHeader"] {
@@ -378,21 +377,29 @@ def _apply_styles() -> None:
         .st-key-travelers-shell,
         .st-key-summary-card,
         .st-key-shortlist-card {
-            background: rgba(255,255,255,0.94);
-            border: 1px solid rgba(23, 107, 255, 0.14);
             border-radius: 1.35rem;
             box-shadow: 0 16px 40px rgba(21, 50, 74, 0.075);
             padding: 1.35rem 1.45rem 1.1rem;
         }
 
+        .st-key-trip-card {
+            background: linear-gradient(135deg, #F9FCFE, #DCEEF8);
+            border: 1px solid rgba(91, 167, 214, 0.52);
+        }
+
+        .st-key-travelers-shell {
+            background: #F9B95C;
+            border: 1px solid rgba(185, 121, 38, 0.48);
+        }
+
         .st-key-summary-card {
-            background: linear-gradient(115deg, #FFFFFF 0%, #FFF1C8 100%);
-            border-color: rgba(255, 190, 61, 0.42);
+            background: linear-gradient(115deg, #FFFCF5 0%, #FCE3AE 100%);
+            border: 1px solid rgba(249, 185, 92, 0.62);
         }
 
         .st-key-shortlist-card {
-            background: linear-gradient(125deg, #FFFFFF 0%, #E9FBF9 100%);
-            border-color: rgba(0, 169, 157, 0.28);
+            background: linear-gradient(125deg, #F8FCFD 0%, #D7EAF0 100%);
+            border: 1px solid rgba(99, 152, 169, 0.50);
             margin-top: 1.5rem;
         }
 
@@ -420,8 +427,8 @@ def _apply_styles() -> None:
 
         .st-key-traveler-card-2,
         .st-key-traveler-card-5 {
-            background: linear-gradient(150deg, #FFFFFF, #FFF0F0) !important;
-            border-color: rgba(255, 90, 95, 0.20) !important;
+            background: linear-gradient(150deg, #FFFFFF, #EAF5FB) !important;
+            border-color: rgba(91, 167, 214, 0.38) !important;
             border-top-color: var(--sunset-coral) !important;
         }
 
@@ -450,7 +457,7 @@ def _apply_styles() -> None:
 
         div[class*="st-key-result-card-1-"] {
             border-top-color: var(--sunset-coral);
-            box-shadow: 0 16px 42px rgba(255, 90, 95, 0.13);
+            box-shadow: 0 16px 42px rgba(91, 167, 214, 0.18);
         }
 
         div[class*="st-key-result-card-2-"] {
@@ -468,7 +475,7 @@ def _apply_styles() -> None:
         }
 
         .ts-section-label {
-            color: #D8444A;
+            color: #5BA7D6;
             font-size: 0.76rem;
             font-weight: 850;
             letter-spacing: 0.14em;
@@ -531,10 +538,10 @@ def _apply_styles() -> None:
         }
 
         .ts-must-do-line {
-            background: rgba(255,90,95,0.10);
+            background: rgba(91,167,214,0.12);
             border-left: 3px solid var(--sunset-coral);
             border-radius: 0.45rem;
-            color: #B5323A;
+            color: #397FA9;
             font-size: 0.82rem;
             font-weight: 800;
             margin: 0.4rem 0 0.7rem;
@@ -1297,38 +1304,61 @@ def _render_llm_feedback(
     st.caption(
         "Saved locally on this computer. Please do not include private details."
     )
-    with st.form(f"feedback-form-{target_id}", border=False):
-        rating = st.segmented_control(
-            "Was this helpful?",
-            ["👍 Helpful", "👎 Not useful"],
-            selection_mode="single",
-            key=f"feedback-rating-{target_id}",
-            width="stretch",
-        )
-        comment = st.text_area(
-            "Optional feedback comment",
-            placeholder="What worked or what should change?",
-            max_chars=1_000,
-            key=f"feedback-comment-{target_id}",
-        )
-        submitted = st.form_submit_button(
-            "Send feedback",
-            icon=":material/rate_review:",
-            type="tertiary",
-            width="stretch",
-        )
-    if submitted:
-        if rating is None:
-            st.warning("Choose Helpful or Not useful before sending feedback.")
-            return
+    rating_key = f"saved-feedback-rating-{target_id}"
+
+    def save_rating(rating: FeedbackRating, comment: str | None = None) -> None:
         record_feedback(
             session_id=st.session_state.feedback_session_id,
             target_type=target_type,
             target_id=target_id,
-            rating="up" if rating == "👍 Helpful" else "down",
+            rating=rating,
             comment=comment,
         )
-        st.toast("Thanks — your feedback was saved locally.")
+        st.session_state[rating_key] = rating
+
+    st.caption("Was this helpful? Your choice saves immediately.")
+    helpful_col, not_useful_col = st.columns(2)
+    if helpful_col.button(
+        "Helpful",
+        key=f"feedback-helpful-{target_id}",
+        icon=":material/thumb_up:",
+        type="secondary",
+        width="stretch",
+    ):
+        save_rating("up")
+        st.toast("Marked helpful and saved locally.")
+    if not_useful_col.button(
+        "Not useful",
+        key=f"feedback-not-useful-{target_id}",
+        icon=":material/thumb_down:",
+        type="secondary",
+        width="stretch",
+    ):
+        save_rating("down")
+        st.toast("Marked not useful and saved locally.")
+
+    comment = st.text_area(
+        "Optional feedback comment",
+        placeholder="What worked or what should change?",
+        max_chars=1_000,
+        key=f"feedback-comment-{target_id}",
+    )
+    saved_rating = st.session_state.get(rating_key)
+    if saved_rating:
+        st.caption(
+            "Your rating is saved. Add a comment below only if you want to "
+            "update it."
+        )
+    if st.button(
+        "Save comment",
+        key=f"feedback-comment-save-{target_id}",
+        icon=":material/rate_review:",
+        type="tertiary",
+        width="stretch",
+        disabled=saved_rating is None,
+    ):
+        save_rating(saved_rating, comment)
+        st.toast("Your comment was saved locally.")
 
 
 def _render_overall_experience_feedback(
@@ -1422,7 +1452,14 @@ def _load_change_proposals(
             plan,
             eligible_activities,
         )
-    except (ValidationError, ProposalGroundingError):
+    except ValidationError:
+        st.session_state.itinerary_change_proposals = None
+        st.session_state.itinerary_change_error = (
+            "Those suggestions no longer match this itinerary. Ask again "
+            "after reviewing the updated plan."
+        )
+        return None
+    except ProposalGroundingError:
         st.session_state.itinerary_change_proposals = None
         st.session_state.itinerary_change_error = (
             "Those suggestions no longer match this itinerary. Ask again "
@@ -1437,6 +1474,8 @@ def _apply_change_proposal(
     candidate_activities: list[Activity],
     ranked_results: list[GroupFitResult],
     owners_by_activity_id: dict[str, tuple[str, ...]],
+    *,
+    allow_pace_override: bool = False,
 ) -> None:
     """Apply an organizer-approved proposal and retain an undo snapshot."""
 
@@ -1466,31 +1505,34 @@ def _apply_change_proposal(
         candidate_activities,
         ranked_results,
         must_do_owners_by_activity_id=owners_by_activity_id,
+        allow_pace_override=allow_pace_override,
     )
     rejected = dict(st.session_state.rejected_activities)
-    rejected[outcome.removed_activity.activity_id] = RejectedActivity(
-        activity_id=outcome.removed_activity.activity_id,
-        activity_name=outcome.removed_activity.activity_name,
-        reason=RejectionReason.OTHER,
-        note=f"Organizer accepted suggestion: {proposal.title}",
-        day_number=outcome.day_number,
-    ).model_dump(mode="json")
+    if outcome.removed_activity is not None:
+        rejected[outcome.removed_activity.activity_id] = RejectedActivity(
+            activity_id=outcome.removed_activity.activity_id,
+            activity_name=outcome.removed_activity.activity_name,
+            reason=RejectionReason.OTHER,
+            note=f"Organizer accepted suggestion: {proposal.title}",
+            day_number=outcome.day_number,
+        ).model_dump(mode="json")
     st.session_state.itinerary_undo = previous_state
     st.session_state.rejected_activities = rejected
-    st.session_state.selected_activity_ids = [
-        activity_id
-        for activity_id in st.session_state.selected_activity_ids
-        if activity_id != outcome.removed_activity.activity_id
-    ]
-    if (
-        owners_by_activity_id.get(outcome.removed_activity.activity_id)
-        and outcome.removed_activity.activity_id
-        not in st.session_state.dismissed_must_do_ids
-    ):
-        st.session_state.dismissed_must_do_ids = [
-            *st.session_state.dismissed_must_do_ids,
-            outcome.removed_activity.activity_id,
+    if outcome.removed_activity is not None:
+        st.session_state.selected_activity_ids = [
+            activity_id
+            for activity_id in st.session_state.selected_activity_ids
+            if activity_id != outcome.removed_activity.activity_id
         ]
+        if (
+            owners_by_activity_id.get(outcome.removed_activity.activity_id)
+            and outcome.removed_activity.activity_id
+            not in st.session_state.dismissed_must_do_ids
+        ):
+            st.session_state.dismissed_must_do_ids = [
+                *st.session_state.dismissed_must_do_ids,
+                outcome.removed_activity.activity_id,
+            ]
     if outcome.replacement_activity is not None:
         if (
             outcome.replacement_activity.activity_id
@@ -1505,7 +1547,12 @@ def _apply_change_proposal(
     st.session_state.itinerary_narration_error = None
     st.session_state.itinerary_change_proposals = None
     st.session_state.itinerary_change_error = None
-    if outcome.replacement_activity is None:
+    if outcome.removed_activity is None and outcome.replacement_activity is not None:
+        st.session_state.itinerary_notice = (
+            f"Added {outcome.replacement_activity.activity_name} to Day "
+            f"{outcome.day_number}."
+        )
+    elif outcome.replacement_activity is None:
         st.session_state.itinerary_notice = (
             f"Removed {outcome.removed_activity.activity_name} from Day "
             f"{outcome.day_number}; the time is now open."
@@ -1536,7 +1583,10 @@ def _render_change_proposals(
         for activity in candidate_activities
         if activity.id not in scheduled_ids and activity.id not in excluded_ids
     ]
-    proposals = _load_change_proposals(plan, eligible_activities)
+    proposals = _load_change_proposals(
+        plan,
+        eligible_activities,
+    )
 
     with st.container(border=True):
         st.markdown(
@@ -1603,20 +1653,23 @@ def _render_change_proposals(
             for index, proposal in enumerate(proposals.proposals, start=1):
                 with st.container(border=True):
                     st.markdown(f"**Option {index}: {proposal.title}**")
-                    action = (
-                        "Leave time open after removing"
-                        if proposal.operation == "remove"
-                        else "Replace"
-                    )
-                    st.caption(
-                        f"Day {proposal.day_number} · {action} "
-                        f"`{proposal.remove_activity_id}`"
-                        + (
-                            f" with `{proposal.add_activity_id}`"
-                            if proposal.add_activity_id
-                            else ""
+                    if proposal.operation == "add":
+                        action_description = (
+                            f"Day {proposal.day_number} · Add "
+                            f"`{proposal.add_activity_id}`"
                         )
-                    )
+                    elif proposal.operation == "remove":
+                        action_description = (
+                            f"Day {proposal.day_number} · Leave time open "
+                            f"after removing `{proposal.remove_activity_id}`"
+                        )
+                    else:
+                        action_description = (
+                            f"Day {proposal.day_number} · Replace "
+                            f"`{proposal.remove_activity_id}` with "
+                            f"`{proposal.add_activity_id}`"
+                        )
+                    st.caption(action_description)
                     st.write(proposal.rationale)
                     for tradeoff in proposal.tradeoffs:
                         st.caption(f"Trade-off: {tradeoff}")
@@ -1624,12 +1677,45 @@ def _render_change_proposals(
                         target_type="adjustment_proposal",
                         payload=proposal.model_dump(mode="json"),
                     )
+                    application_error: str | None = None
+                    try:
+                        apply_itinerary_change_proposal(
+                            plan,
+                            proposal,
+                            candidate_activities,
+                            ranked_results,
+                            must_do_owners_by_activity_id=owners_by_activity_id,
+                        )
+                    except ValueError as error:
+                        application_error = str(error)
+                    if application_error:
+                        st.warning(
+                            "This option exceeds the recommended pace: "
+                            f"{application_error}",
+                            icon=":material/schedule:",
+                        )
+                        override_confirmed = st.checkbox(
+                            "I understand this day will exceed its "
+                            "recommended pace. Apply it anyway.",
+                            key=f"pace-override-confirm-{index}",
+                        )
+                    else:
+                        override_confirmed = False
                     if st.button(
-                        "Apply this suggestion",
+                        (
+                            "Apply anyway"
+                            if application_error
+                            else "Apply this suggestion"
+                        ),
                         key=f"apply-itinerary-proposal-{index}",
-                        icon=":material/check_circle:",
+                        icon=(
+                            ":material/schedule:"
+                            if application_error
+                            else ":material/check_circle:"
+                        ),
                         type="primary",
                         width="stretch",
+                        disabled=application_error is not None and not override_confirmed,
                     ):
                         try:
                             _apply_change_proposal(
@@ -1638,6 +1724,7 @@ def _render_change_proposals(
                                 candidate_activities,
                                 ranked_results,
                                 owners_by_activity_id,
+                                allow_pace_override=application_error is not None,
                             )
                             st.toast("Applied your approved itinerary change.")
                         except ValueError as error:
@@ -1733,6 +1820,13 @@ def _render_itinerary(
                     f"{day.planned_hours:g} of "
                     f"{day.capacity_hours:g} hours planned"
                 )
+                if day.pace_override_approved:
+                    timing_col.badge(
+                        "Over recommended pace",
+                        icon=":material/schedule:",
+                        color="orange",
+                    )
+                    timing_col.caption("Added with organizer approval.")
 
                 if not day.activities:
                     st.caption(
@@ -2014,7 +2108,20 @@ def _render_results_step() -> None:
         st.rerun()
 
     trip = TripRequest.model_validate(st.session_state.trip_request)
-    activities = load_sample_activities()
+    if st.button("Save this trip", icon=":material/bookmark_add:", key="save-trip"):
+        saved = save_trip(
+            trip,
+            {
+                "selected_activity_ids": st.session_state.selected_activity_ids,
+                "dismissed_must_do_ids": st.session_state.dismissed_must_do_ids,
+                "itinerary_plan": st.session_state.itinerary_plan,
+                "rejected_activities": st.session_state.rejected_activities,
+            },
+            trip_id=st.session_state.saved_trip_id,
+        )
+        st.session_state.saved_trip_id = saved.trip_id
+        st.toast(f"Saved {saved.title}")
+    activities = load_activity_catalog()
     activity_by_id = _activity_lookup(activities)
     retrieval_response = retrieve_activities(
         activities,

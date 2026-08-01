@@ -23,6 +23,7 @@ from urllib.request import Request, urlopen
 
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 WIKIDATA_ENTITY_URL = "https://www.wikidata.org/wiki/"
+WIKIDATA_SEARCH_URL = "https://www.wikidata.org/w/api.php"
 TRANSIENT_HTTP_STATUSES = {429, 500, 502, 503, 504}
 
 
@@ -56,6 +57,8 @@ class CatalogCandidate:
     latitude: float
     longitude: float
     source_url: str
+    wikidata_types: tuple[str, ...]
+    review_flags: tuple[str, ...]
     wikipedia_url: str | None = None
     image_url: str | None = None
 
@@ -75,6 +78,38 @@ def supported_city(value: str) -> CitySource:
         raise ValueError(f"Unsupported city {value!r}. Choose one of: {choices}.") from error
 
 
+def resolve_city(city_name: str, country: str, *, timeout: int = 20) -> CitySource:
+    """Resolve a free-text city and country to a Wikidata entity for import."""
+
+    name = city_name.strip()
+    country_name = country.strip()
+    if not name or not country_name:
+        raise ValueError("city and country are required")
+    known = SUPPORTED_CITIES.get(_city_key(name))
+    if known and known.country.casefold() == country_name.casefold():
+        return known
+    request = Request(
+        f"{WIKIDATA_SEARCH_URL}?{urlencode({'action': 'wbsearchentities', 'search': name, 'language': 'en', 'format': 'json', 'type': 'item', 'limit': 20})}",
+        headers={"Accept": "application/json", "User-Agent": "TripSync catalog importer (educational project)"},
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed HTTPS endpoint
+            payload = json.load(response)
+    except (HTTPError, URLError) as error:
+        raise CatalogImportError(f"Could not resolve {name}, {country_name}. Try again later.") from error
+    results = payload.get("search", []) if isinstance(payload, dict) else []
+    country_match = next((
+        item for item in results
+        if country_name.casefold() in str(item.get("description", "")).casefold()
+        and any(word in str(item.get("description", "")).casefold() for word in ("city", "town", "municipality", "commune"))
+    ), None)
+    match = country_match or (results[0] if results else None)
+    entity_id = match.get("id") if isinstance(match, dict) else None
+    if not isinstance(entity_id, str) or not entity_id.startswith("Q"):
+        raise CatalogImportError(f"No Wikidata city match found for {name}, {country_name}.")
+    return CitySource(name=name, country=country_name, wikidata_id=entity_id)
+
+
 def build_query(city: CitySource, *, limit: int = 100) -> str:
     """Build the bounded, attraction-focused SPARQL query for one city."""
 
@@ -82,13 +117,23 @@ def build_query(city: CitySource, *, limit: int = 100) -> str:
         raise ValueError("limit must be between 1 and 250")
 
     return f"""
-SELECT DISTINCT ?item ?itemLabel ?coord ?article ?image ?sitelinks WHERE {{
-  # Administrative containment avoids nearby towns and city-wide events that
-  # a simple radius search can accidentally include.
-  ?item wdt:P131* wd:{city.wikidata_id} ;
-        wdt:P625 ?coord ;
-        wikibase:sitelinks ?sitelinks .
-  FILTER(?item != wd:{city.wikidata_id})
+SELECT DISTINCT ?item ?itemLabel ?coord ?article ?image ?sitelinks ?type ?typeLabel WHERE {{
+  # Limit unique places before optional type labels expand one place into
+  # several result rows. Without this subquery, --limit 25 could mean five
+  # attractions with five types each instead of 25 attractions.
+  {{
+    SELECT ?item ?coord ?sitelinks WHERE {{
+      # Administrative containment avoids nearby towns and city-wide events
+      # that a simple radius search can accidentally include.
+      ?item wdt:P131* wd:{city.wikidata_id} ;
+            wdt:P625 ?coord ;
+            wikibase:sitelinks ?sitelinks .
+      FILTER(?item != wd:{city.wikidata_id})
+    }}
+    ORDER BY DESC(?sitelinks)
+    LIMIT {limit}
+  }}
+  OPTIONAL {{ ?item wdt:P31 ?type . }}
   OPTIONAL {{
     ?article schema:about ?item ;
              schema:isPartOf <https://en.wikipedia.org/> .
@@ -96,8 +141,6 @@ SELECT DISTINCT ?item ?itemLabel ?coord ?article ?image ?sitelinks WHERE {{
   OPTIONAL {{ ?item wdt:P18 ?image . }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,it" . }}
 }}
-ORDER BY DESC(?sitelinks)
-LIMIT {limit}
 """.strip()
 
 
@@ -118,11 +161,33 @@ def _coordinates(value: str) -> tuple[float, float]:
         raise ValueError(f"Unexpected Wikidata coordinate: {value!r}") from error
 
 
+def _review_flags(types: set[str]) -> tuple[str, ...]:
+    """Describe items that need context rather than silently excluding them."""
+
+    normalized_types = " ".join(type_name.casefold() for type_name in types)
+    flags: list[str] = []
+    if "stadium" in normalized_types:
+        flags.append("Event venue: keep only for a specific tour or event.")
+    if "university" in normalized_types or "college" in normalized_types:
+        flags.append("Institution: verify visitor access or a campus-tour experience.")
+    if "library" in normalized_types:
+        flags.append("Institution: verify visitor access and visitor relevance.")
+    if "sculpture" in normalized_types or "artwork" in normalized_types:
+        flags.append("Standalone artwork: prefer the venue where it can be visited.")
+    return tuple(flags)
+
+
+def _is_transport_infrastructure(types: set[str]) -> bool:
+    """Filter travel infrastructure, which is outside the activity catalog."""
+
+    normalized_types = " ".join(type_name.casefold() for type_name in types)
+    return any(term in normalized_types for term in ("airport", "aerodrome", "airfield"))
+
+
 def parse_candidates(payload: dict[str, Any]) -> list[CatalogCandidate]:
     """Convert a Wikidata SPARQL JSON response into deduplicated candidates."""
 
-    candidates: list[CatalogCandidate] = []
-    seen_ids: set[str] = set()
+    candidates_by_id: dict[str, dict[str, Any]] = {}
     bindings = payload.get("results", {}).get("bindings", [])
     if not isinstance(bindings, list):
         raise ValueError("Wikidata response does not contain a bindings list")
@@ -137,18 +202,35 @@ def parse_candidates(payload: dict[str, Any]) -> list[CatalogCandidate]:
             wikidata_id = _wikidata_id(entity_url)
         except (KeyError, AttributeError, ValueError):
             continue
-        if not name or wikidata_id in seen_ids:
+        if not name:
             continue
-        seen_ids.add(wikidata_id)
+        candidate = candidates_by_id.setdefault(
+            wikidata_id,
+            {
+                "wikidata_id": wikidata_id,
+                "name": name,
+                "latitude": latitude,
+                "longitude": longitude,
+                "source_url": f"{WIKIDATA_ENTITY_URL}{wikidata_id}",
+                "wikipedia_url": binding.get("article", {}).get("value"),
+                "image_url": binding.get("image", {}).get("value"),
+                "types": set(),
+            },
+        )
+        type_name = binding.get("typeLabel", {}).get("value")
+        if isinstance(type_name, str) and type_name.strip():
+            candidate["types"].add(type_name.strip())
+
+    candidates = []
+    for candidate in candidates_by_id.values():
+        types = candidate.pop("types")
+        if _is_transport_infrastructure(types):
+            continue
         candidates.append(
             CatalogCandidate(
-                wikidata_id=wikidata_id,
-                name=name,
-                latitude=latitude,
-                longitude=longitude,
-                source_url=f"{WIKIDATA_ENTITY_URL}{wikidata_id}",
-                wikipedia_url=binding.get("article", {}).get("value"),
-                image_url=binding.get("image", {}).get("value"),
+                **candidate,
+                wikidata_types=tuple(sorted(types, key=str.casefold)),
+                review_flags=_review_flags(types),
             )
         )
     return sorted(candidates, key=lambda candidate: (candidate.name.casefold(), candidate.wikidata_id))
@@ -242,6 +324,8 @@ def main() -> None:
         default=[city.name for city in SUPPORTED_CITIES.values()],
         help="One or more supported cities (default: Rome Florence Milan Venice).",
     )
+    parser.add_argument("--city", help="Any city to resolve through Wikidata, for example Naples.")
+    parser.add_argument("--country", help="Country used to disambiguate --city, for example Italy.")
     parser.add_argument("--limit", type=int, default=100, help="Maximum candidates per city (1-250).")
     parser.add_argument(
         "--retries",
@@ -252,8 +336,10 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("data/candidates"))
     arguments = parser.parse_args()
 
-    for city_name in arguments.cities:
-        city = supported_city(city_name)
+    if arguments.city and not arguments.country:
+        parser.error("--country is required when using --city")
+    cities = [resolve_city(arguments.city, arguments.country)] if arguments.city else [supported_city(city_name) for city_name in arguments.cities]
+    for city in cities:
         try:
             candidates = fetch_candidates(
                 city,

@@ -86,15 +86,18 @@ underlying itinerary.
 
 The itinerary screen also accepts a plain-language adjustment request such as
 “make Day 2 calmer” or “add more food.” The LLM may return at most three
-structured options. Each option can only replace one activity on the same day
-with an eligible retrieved catalog activity, or remove that activity and leave
-time open. The LLM cannot apply a proposal.
+structured options. Each option can add an eligible retrieved catalog activity
+to a named day, replace one activity on the same day, or remove an activity and
+leave time open. The LLM cannot apply a proposal.
 
 When the organizer chooses **Apply this suggestion**, TripSync checks the day,
 activity IDs, duplicate prevention, activity count, and pace capacity again in
-the deterministic planner. The outgoing activity is recorded as an intentional
-override, the replacement joins the shortlist, the prior plan remains available
-through Undo, and the old trip story is cleared.
+the deterministic planner. If an option exceeds the recommended activity or hour
+limit, the organizer sees the exact consequence and must explicitly confirm
+**Apply anyway**. The day remains visibly marked as over pace after that approval.
+An outgoing activity is recorded as an intentional rejection, an added activity
+joins the shortlist, the prior plan remains available through Undo, and the old
+trip story is cleared.
 
 ## Local feedback
 

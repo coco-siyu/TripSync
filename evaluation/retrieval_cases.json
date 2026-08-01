@@ -215,5 +215,57 @@
     "relevant_activity_ids": [
       "rome_vatican_museums"
     ]
+  },
+  {
+    "case_id": "florence_renaissance_art",
+    "description": "A Florence group seeking Renaissance art and sculpture.",
+    "trip": {
+      "destination": "Florence", "country": "Italy", "days": 3,
+      "budget_level": "moderate", "pace": "balanced",
+      "travelers": [
+        {"name": "Ari", "interests": ["art", "sculpture"], "walking_tolerance": "moderate"},
+        {"name": "Bea", "interests": ["history"], "walking_tolerance": "low"}
+      ]
+    },
+    "relevant_activity_ids": ["florence_uffizi_gallery", "florence_galleria_dell_accademia", "florence_bargello_national_museum"]
+  },
+  {
+    "case_id": "florence_relaxed_gardens",
+    "description": "A relaxed Florence group looking for nature and photography.",
+    "trip": {
+      "destination": "Florence", "country": "Italy", "days": 2,
+      "budget_level": "moderate", "pace": "relaxed",
+      "travelers": [
+        {"name": "Cleo", "interests": ["nature", "relaxation"], "walking_tolerance": "moderate"},
+        {"name": "Dara", "interests": ["photography"], "walking_tolerance": "high"}
+      ]
+    },
+    "relevant_activity_ids": ["florence_boboli_gardens"]
+  },
+  {
+    "case_id": "milan_music_and_culture",
+    "description": "A Milan group interested in music, culture, and historic architecture.",
+    "trip": {
+      "destination": "Milan", "country": "Italy", "days": 3,
+      "budget_level": "high", "pace": "balanced",
+      "travelers": [
+        {"name": "Emi", "interests": ["music", "culture"], "walking_tolerance": "low"},
+        {"name": "Finn", "interests": ["architecture", "history"], "walking_tolerance": "moderate"}
+      ]
+    },
+    "relevant_activity_ids": ["milan_la_scala", "milan_milan_cathedral"]
+  },
+  {
+    "case_id": "milan_design_and_art",
+    "description": "A Milan group combining design, art, and photography.",
+    "trip": {
+      "destination": "Milan", "country": "Italy", "days": 2,
+      "budget_level": "moderate", "pace": "balanced",
+      "travelers": [
+        {"name": "Gia", "interests": ["design", "architecture"], "walking_tolerance": "moderate"},
+        {"name": "Hugo", "interests": ["art", "photography"], "walking_tolerance": "low"}
+      ]
+    },
+    "relevant_activity_ids": ["milan_pirelli_tower", "milan_pinacoteca_di_brera"]
   }
 ]

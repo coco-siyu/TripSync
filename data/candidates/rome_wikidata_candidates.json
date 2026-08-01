@@ -1,0 +1,393 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-01T00:57:14.271559+00:00",
+  "city": "Rome",
+  "country": "Italy",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q220",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q189417",
+      "name": "Appian Way",
+      "latitude": 41.841389,
+      "longitude": 12.5325,
+      "source_url": "https://www.wikidata.org/wiki/Q189417",
+      "wikidata_types": [
+        "Roman road",
+        "street"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Appian_Way",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Appian%20Way.jpg"
+    },
+    {
+      "wikidata_id": "Q5786",
+      "name": "Arch of Constantine",
+      "latitude": 41.889828,
+      "longitude": 12.490605,
+      "source_url": "https://www.wikidata.org/wiki/Q5786",
+      "wikidata_types": [
+        "archaeological site",
+        "real property",
+        "triumphal arch"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Arch_of_Constantine",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arch%20of%20Constantine%20%28Rome%29%20-%20South%20side%2C%20from%20Via%20triumphalis.jpg"
+    },
+    {
+      "wikidata_id": "Q84090",
+      "name": "Archbasilica of St. John Lateran",
+      "latitude": 41.885905555,
+      "longitude": 12.506155555,
+      "source_url": "https://www.wikidata.org/wiki/Q84090",
+      "wikidata_types": [
+        "Catholic cathedral",
+        "ecclesiastical district",
+        "major basilica",
+        "papal basilica",
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Archbasilica_of_Saint_John_Lateran",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Giovanni%20in%20Laterano%202021.jpg"
+    },
+    {
+      "wikidata_id": "Q625149",
+      "name": "Aurelian Walls",
+      "latitude": 41.873292,
+      "longitude": 12.498955,
+      "source_url": "https://www.wikidata.org/wiki/Q625149",
+      "wikidata_types": [
+        "archaeological site",
+        "city walls",
+        "defensive wall",
+        "real property"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Aurelian_Walls",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Celio%20-%20le%20mura%20tra%20porta%20san%20Sebastiano%20e%20porta%20Ardeatina%201974.JPG"
+    },
+    {
+      "wikidata_id": "Q194103",
+      "name": "Aventine Hill",
+      "latitude": 41.883333333,
+      "longitude": 12.483333333,
+      "source_url": "https://www.wikidata.org/wiki/Q194103",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Aventine_Hill",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ripa%20-%20Aventino%20-%20CavalieriDiMalta.JPG"
+    },
+    {
+      "wikidata_id": "Q186282",
+      "name": "Basilica di Santa Maria Maggiore",
+      "latitude": 41.8975,
+      "longitude": 12.498611111,
+      "source_url": "https://www.wikidata.org/wiki/Q186282",
+      "wikidata_types": [
+        "ecclesiastical district",
+        "major basilica",
+        "papal basilica",
+        "shrine of Our Lady"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_Maggiore",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20di%20Santa%20Maria%20Maggiore%20-%20Roma.jpg"
+    },
+    {
+      "wikidata_id": "Q216104",
+      "name": "Caelian Hill",
+      "latitude": 41.883587497,
+      "longitude": 12.494992342,
+      "source_url": "https://www.wikidata.org/wiki/Q216104",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Caelian_Hill",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Caelian%20Hill.jpg"
+    },
+    {
+      "wikidata_id": "Q34925",
+      "name": "Capitoline Hill",
+      "latitude": 41.893333333,
+      "longitude": 12.483055555,
+      "source_url": "https://www.wikidata.org/wiki/Q34925",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Capitoline_Hill",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Aracoeli-fachada.jpg"
+    },
+    {
+      "wikidata_id": "Q333906",
+      "name": "Capitoline Museums",
+      "latitude": 41.893055555,
+      "longitude": 12.482777777,
+      "source_url": "https://www.wikidata.org/wiki/Q333906",
+      "wikidata_types": [
+        "archaeological museum",
+        "art museum",
+        "museum",
+        "museum of a public entity"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Capitoline_Museums",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20dei%20Conservatori%20in%20Rome%20%282%29.jpg"
+    },
+    {
+      "wikidata_id": "Q486382",
+      "name": "Castel Sant'Angelo",
+      "latitude": 41.903044,
+      "longitude": 12.466307,
+      "source_url": "https://www.wikidata.org/wiki/Q486382",
+      "wikidata_types": [
+        "mausoleum",
+        "museum",
+        "quadrangular castle",
+        "roman mausoleum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Castel_Sant%27Angelo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Castel%20Sant%27Angelo%20at%20Night.jpg"
+    },
+    {
+      "wikidata_id": "Q207808",
+      "name": "Circus Maximus",
+      "latitude": 41.8859,
+      "longitude": 12.4857,
+      "source_url": "https://www.wikidata.org/wiki/Q207808",
+      "wikidata_types": [
+        "archaeological site",
+        "circus"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Circus_Maximus",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Circus%20Maximus%202025.jpg"
+    },
+    {
+      "wikidata_id": "Q211233",
+      "name": "Esquiline Hill",
+      "latitude": 41.895555555,
+      "longitude": 12.496666666,
+      "source_url": "https://www.wikidata.org/wiki/Q211233",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Esquiline_Hill",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/A%20handbook%20of%20Rome%20and%20the%20Campagna%20%281899%29%20%2814762604401%29.jpg"
+    },
+    {
+      "wikidata_id": "Q99309",
+      "name": "Pantheon",
+      "latitude": 41.898611111,
+      "longitude": 12.476944444,
+      "source_url": "https://www.wikidata.org/wiki/Q99309",
+      "wikidata_types": [
+        "ancient Roman structure",
+        "archaeological artifact museum",
+        "historical civil building museum",
+        "Italian national museum",
+        "minor basilica",
+        "Museum of the Italian Ministry of Culture",
+        "religious museum",
+        "Roman archaeological site",
+        "Roman temple",
+        "secularized religious building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Pantheon,_Rome",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Pantheon%20%28Rome%29%20-%20Right%20side%20and%20front.jpg"
+    },
+    {
+      "wikidata_id": "Q463400",
+      "name": "Piazza Navona",
+      "latitude": 41.89871,
+      "longitude": 12.47316,
+      "source_url": "https://www.wikidata.org/wiki/Q463400",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_Navona",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paolo%20Monti%20-%20Servizio%20fotografico%20%28Roma%2C%201966%29%20-%20BEIC%206329173.jpg"
+    },
+    {
+      "wikidata_id": "Q207896",
+      "name": "Quirinal Hill",
+      "latitude": 41.901111111,
+      "longitude": 12.488333333,
+      "source_url": "https://www.wikidata.org/wiki/Q207896",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Quirinal_Hill",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Quirinal.palace.in.rome.arp.jpg"
+    },
+    {
+      "wikidata_id": "Q223079",
+      "name": "Quirinal Palace",
+      "latitude": 41.9,
+      "longitude": 12.4875,
+      "source_url": "https://www.wikidata.org/wiki/Q223079",
+      "wikidata_types": [
+        "city palace",
+        "official residence",
+        "Palazzo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Quirinal_Palace",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Quirinale%20palazzo%20e%20obelisco%20con%20dioscuri%20Roma.jpg"
+    },
+    {
+      "wikidata_id": "Q180212",
+      "name": "Roman Forum",
+      "latitude": 41.8922,
+      "longitude": 12.4852,
+      "source_url": "https://www.wikidata.org/wiki/Q180212",
+      "wikidata_types": [
+        "archaeological site",
+        "forum",
+        "real property",
+        "roman ruins",
+        "square",
+        "tourist destination"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Roman_Forum",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Foro%20Romano%20Musei%20Capitolini%20Roma.jpg"
+    },
+    {
+      "wikidata_id": "Q237480",
+      "name": "Rome Metro",
+      "latitude": 41.893055555,
+      "longitude": 12.482777777,
+      "source_url": "https://www.wikidata.org/wiki/Q237480",
+      "wikidata_types": [
+        "rapid transit",
+        "transport network"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Rome_Metro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Inaugurazione%20metro%20B1.jpg"
+    },
+    {
+      "wikidata_id": "Q209344",
+      "name": "Sapienza University of Rome",
+      "latitude": 41.903333333,
+      "longitude": 12.515833333,
+      "source_url": "https://www.wikidata.org/wiki/Q209344",
+      "wikidata_types": [
+        "organization",
+        "public university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sapienza_University_of_Rome",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Sapienza%20entrance%20%2820040201351%29.jpg"
+    },
+    {
+      "wikidata_id": "Q159884",
+      "name": "Stadio Olimpico",
+      "latitude": 41.933888888,
+      "longitude": 12.454722222,
+      "source_url": "https://www.wikidata.org/wiki/Q159884",
+      "wikidata_types": [
+        "association football venue",
+        "Olympic stadium",
+        "rugby union venue"
+      ],
+      "review_flags": [
+        "Event venue: keep only for a specific tour or event."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Stadio_Olimpico",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Stadio%20Olimpico%202024.jpg"
+    },
+    {
+      "wikidata_id": "Q192784",
+      "name": "Trajan's Column",
+      "latitude": 41.895833333,
+      "longitude": 12.484166666,
+      "source_url": "https://www.wikidata.org/wiki/Q192784",
+      "wikidata_types": [
+        "archaeological site",
+        "victory column"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Trajan%27s_Column",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Trajan%20column%20%28Rome%29%20September%202015-2.jpg"
+    },
+    {
+      "wikidata_id": "Q211295",
+      "name": "Trajan's Forum",
+      "latitude": 41.895417,
+      "longitude": 12.485869,
+      "source_url": "https://www.wikidata.org/wiki/Q211295",
+      "wikidata_types": [
+        "forum",
+        "Roman archaeological site",
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Trajan%27s_Forum",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/IT-Rom-kaiserforen.jpg"
+    },
+    {
+      "wikidata_id": "Q185382",
+      "name": "Trevi Fountain",
+      "latitude": 41.900833333,
+      "longitude": 12.483055555,
+      "source_url": "https://www.wikidata.org/wiki/Q185382",
+      "wikidata_types": [
+        "fountain",
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Trevi_Fountain",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Trevi%20Fountain%20-%20Roma.jpg"
+    },
+    {
+      "wikidata_id": "Q26319",
+      "name": "Università degli Studi Niccolò Cusano",
+      "latitude": 41.911848,
+      "longitude": 12.393253,
+      "source_url": "https://www.wikidata.org/wiki/Q26319",
+      "wikidata_types": [
+        "distance education university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Universit%C3%A0_degli_Studi_Niccol%C3%B2_Cusano",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Campus%20Unicusano.jpg"
+    },
+    {
+      "wikidata_id": "Q216085",
+      "name": "Viminal Hill",
+      "latitude": 41.899166666,
+      "longitude": 12.494166666,
+      "source_url": "https://www.wikidata.org/wiki/Q216085",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Viminal_Hill",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Baths%20of%20Diocletian-Antmoose1.jpg"
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}
