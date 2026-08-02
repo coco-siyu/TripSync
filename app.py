@@ -19,15 +19,16 @@ if "app_workspace" not in st.session_state:
     st.session_state.app_workspace = "Plan a trip"
 
 workspaces = ["Plan a trip", "My trips", "Feedback insights", "Curate catalog"]
-with st.container(horizontal=True):
-    for workspace in workspaces:
-        if st.button(
-            workspace,
-            key=f"workspace-{workspace.casefold().replace(' ', '-')}",
-            type="primary" if st.session_state.app_workspace == workspace else "secondary",
-        ):
-            st.session_state.app_workspace = workspace
-            st.rerun()
+with st.container(key="workspace-nav"):
+    with st.container(horizontal=True):
+        for workspace in workspaces:
+            if st.button(
+                workspace,
+                key=f"workspace-{workspace.casefold().replace(' ', '-')}",
+                type="primary" if st.session_state.app_workspace == workspace else "secondary",
+            ):
+                st.session_state.app_workspace = workspace
+                st.rerun()
 
 view = st.session_state.app_workspace
 if view == "Curate catalog":

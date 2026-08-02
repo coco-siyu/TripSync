@@ -275,6 +275,19 @@ def _apply_styles() -> None:
             padding-bottom: 5rem;
         }
 
+        /* Keep the workspace controls above the decorative hero layers. */
+        .st-key-workspace-nav {
+            isolation: isolate;
+            position: relative;
+            z-index: 20;
+        }
+
+        .st-key-workspace-nav button {
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 21;
+        }
+
         .st-key-hero {
             background: linear-gradient(125deg, #176BFF 0%, #0C86EA 52%, #00A99D 100%);
             border: 1px solid rgba(255,255,255,0.35);
