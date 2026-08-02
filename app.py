@@ -18,12 +18,18 @@ st.set_page_config(
 if "app_workspace" not in st.session_state:
     st.session_state.app_workspace = "Plan a trip"
 
-view = st.segmented_control(
-    "TripSync workspace",
-    ["Plan a trip", "My trips", "Feedback insights", "Curate catalog"],
-    label_visibility="collapsed",
-    key="app_workspace",
-)
+workspaces = ["Plan a trip", "My trips", "Feedback insights", "Curate catalog"]
+with st.container(horizontal=True):
+    for workspace in workspaces:
+        if st.button(
+            workspace,
+            key=f"workspace-{workspace.casefold().replace(' ', '-')}",
+            type="primary" if st.session_state.app_workspace == workspace else "secondary",
+        ):
+            st.session_state.app_workspace = workspace
+            st.rerun()
+
+view = st.session_state.app_workspace
 if view == "Curate catalog":
     render_catalog_workspace()
 elif view == "My trips":

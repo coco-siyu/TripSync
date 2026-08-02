@@ -130,7 +130,11 @@ class StreamlitInteractionTests(unittest.TestCase):
 
     def test_complete_preference_flow_reaches_ranked_results(self) -> None:
         app = AppTest.from_file("app.py").run()
-        app.button[0].click().run()
+        next(
+            button
+            for button in app.button
+            if button.label == "Continue to travelers"
+        ).click().run()
 
         app.text_input(key="traveler_name_0").set_value("Coco")
         app.text_input(key="traveler_name_1").set_value("Sam")
