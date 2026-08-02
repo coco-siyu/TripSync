@@ -5,7 +5,7 @@ import streamlit as st
 from src.catalog_ui import render_catalog_workspace
 from src.feedback_ui import render_feedback_insights
 from src.trips_ui import render_saved_trips
-from src.ui import render_app
+from src.ui import _apply_styles, render_app
 
 
 st.set_page_config(
@@ -14,6 +14,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# Shared layout and navigation styles must load before every workspace, not
+# only after the plan page starts rendering.
+_apply_styles()
 
 if "app_workspace" not in st.session_state:
     st.session_state.app_workspace = "Plan a trip"

@@ -2292,7 +2292,6 @@ def render_app() -> None:
     """Render the complete TripSync preference flow."""
 
     _initialize_state()
-    _apply_styles()
     _render_hero()
     _render_progress()
 
