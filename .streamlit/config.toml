@@ -1,23 +1,33 @@
 [theme]
 base = "light"
-primaryColor = "#5BA7D6"
-backgroundColor = "#F6F3E6"
-secondaryBackgroundColor = "#FCE0D3"
-textColor = "#24232B"
-blueColor = "#6398A9"
-greenColor = "#4F8875"
-orangeColor = "#D58B35"
-redColor = "#5BA7D6"
-grayColor = "#7A8793"
-font = "sans-serif"
-headingFont = "sans-serif"
-headingFontWeights = [800, 750, 700, 700, 700, 700]
+primaryColor = "#8C4640"
+backgroundColor = "#FDF6EF"
+secondaryBackgroundColor = "#F7EAE1"
+codeBackgroundColor = "#F3E2D7"
+textColor = "#3A2E2B"
+linkColor = "#46788A"
+borderColor = "#E8D8CE"
+blueColor = "#46788A"
+greenColor = "#477C6D"
+yellowColor = "#D89A30"
+orangeColor = "#A86C17"
+redColor = "#A94F48"
+violetColor = "#7D668F"
+grayColor = "#8A7A75"
+font = "Nunito:https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
+headingFont = "'Baloo 2':https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap"
+headingFontSizes = ["42px", "30px", "23px", "18px", "16px", "14px"]
+headingFontWeights = [800, 700, 700, 700, 700, 700]
 baseFontSize = 16
+baseFontWeight = 400
 baseRadius = "large"
 buttonRadius = "full"
-borderColor = "#C9D9EA"
 showWidgetBorder = true
 showSidebarBorder = false
+linkUnderline = false
+chartCategoricalColors = ["#D7897F", "#F9B95C", "#96C7B3", "#6398A9", "#8C4640", "#477C6D"]
+dataframeBorderColor = "#E8D8CE"
+dataframeHeaderBackgroundColor = "#F3E2D7"
 
 [browser]
 gatherUsageStats = false

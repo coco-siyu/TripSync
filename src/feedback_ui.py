@@ -6,13 +6,36 @@ import json
 import hmac
 import os
 
+import pandas as pd
 import streamlit as st
 
-from src.feedback_insights import feedback_insights_as_dict, load_feedback_insights
+from src.feedback import list_feedback, list_overall_experience_feedback
+from src.feedback_insights import (
+    build_feedback_insights,
+    feedback_dashboard_data,
+    feedback_insights_as_dict,
+)
 
 
 def _rating_label(value: float | None) -> str:
     return "—" if value is None else f"{value:.2f} / 5"
+
+
+@st.cache_data(ttl="5m", show_spinner=False)
+def _load_dashboard_records() -> tuple[list, list]:
+    """Load the small admin dataset once per cache window."""
+
+    return list_feedback(), list_overall_experience_feedback()
+
+
+def _dashboard_chart_data(feedback: list, overall: list) -> dict[str, pd.DataFrame]:
+    """Return privacy-safe DataFrames for the five monitoring charts."""
+
+    data = feedback_dashboard_data(feedback, overall)
+    return {
+        name: pd.DataFrame(rows)
+        for name, rows in data.items()
+    }
 
 
 def render_feedback_insights() -> None:
@@ -36,7 +59,11 @@ def render_feedback_insights() -> None:
     st.caption(
         "Shared feedback is stored securely. Exports omit session and itinerary identifiers."
     )
-    insights = load_feedback_insights()
+    refresh = st.button("Refresh dashboard", icon=":material/refresh:")
+    if refresh:
+        _load_dashboard_records.clear()
+    feedback, overall = _load_dashboard_records()
+    insights = build_feedback_insights(feedback, overall)
 
     with st.container(horizontal=True):
         st.metric("Overall plan ratings", insights.overall_response_count, border=True)
@@ -70,6 +97,82 @@ def render_feedback_insights() -> None:
             border=True,
         )
 
+    chart_data = _dashboard_chart_data(feedback, overall)
+    st.subheader("Feedback dashboard")
+    st.caption("Five aggregated views of the feedback received so far. Refresh after collecting a new response.")
+
+    left, right = st.columns(2)
+    with left:
+        with st.container(border=True):
+            st.markdown("**Feedback received over time**")
+            daily = chart_data["daily_submissions"]
+            st.line_chart(
+                daily,
+                x="Date",
+                y="Submissions",
+                color="Feedback type",
+                height=260,
+            )
+    with right:
+        with st.container(border=True):
+            st.markdown("**Helpful rate by generated experience**")
+            helpful_rates = chart_data["helpful_rates"]
+            if helpful_rates.empty:
+                st.caption("Rate a story or suggestion to populate this chart.")
+            else:
+                st.bar_chart(
+                    helpful_rates,
+                    x="Experience",
+                    y="Helpful rate",
+                    color="#5BA7D6",
+                    height=260,
+                )
+
+    left, right = st.columns(2)
+    with left:
+        with st.container(border=True):
+            st.markdown("**Helpful and not-useful responses**")
+            thumbs = chart_data["thumb_counts"]
+            if thumbs.empty:
+                st.caption("No generated-experience ratings yet.")
+            else:
+                st.bar_chart(
+                    thumbs,
+                    x="Experience",
+                    y="Responses",
+                    color="Rating",
+                    stack=False,
+                    height=260,
+                )
+    with right:
+        with st.container(border=True):
+            st.markdown("**Average overall plan rating**")
+            averages = chart_data["rating_averages"]
+            if averages.empty:
+                st.caption("Rate a complete plan to populate this chart.")
+            else:
+                st.bar_chart(
+                    averages,
+                    x="Rating",
+                    y="Average score",
+                    color="#5BA7D6",
+                    height=260,
+                )
+
+    with st.container(border=True):
+        st.markdown("**Overall plan rating distribution**")
+        distribution = chart_data["score_distribution"]
+        if not overall:
+            st.caption("Rate a complete plan to populate this chart.")
+        else:
+            st.bar_chart(
+                distribution,
+                x="Score",
+                y="Responses",
+                color="Rating",
+                stack=False,
+                height=280,
+            )
     with st.container(horizontal=True):
         st.download_button(
             "Download feedback JSON",

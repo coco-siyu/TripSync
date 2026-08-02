@@ -15,7 +15,11 @@ from src.feedback import (
     record_feedback,
     record_overall_experience_feedback,
 )
-from src.feedback_insights import build_feedback_insights, feedback_insights_as_dict
+from src.feedback_insights import (
+    build_feedback_insights,
+    feedback_dashboard_data,
+    feedback_insights_as_dict,
+)
 
 
 class FeedbackTests(unittest.TestCase):
@@ -126,3 +130,34 @@ class FeedbackTests(unittest.TestCase):
         self.assertEqual(len(insights.comments), 2)
         self.assertNotIn("anonymous-session", str(exported))
         self.assertNotIn("overall_experience_one", str(exported))
+
+    def test_dashboard_data_aggregates_without_exposing_identifiers(self) -> None:
+        feedback = [
+            FeedbackRecord(
+                session_id="private-session",
+                target_type="trip_story",
+                target_id="private-output",
+                rating="up",
+                comment=None,
+                created_at="2026-08-02T12:00:00+00:00",
+            )
+        ]
+        overall = [
+            OverallExperienceRecord(
+                session_id="private-session",
+                itinerary_id="private-itinerary",
+                helpfulness=5,
+                clarity=4,
+                group_fit=3,
+                comment=None,
+                created_at="2026-08-02T12:05:00+00:00",
+            )
+        ]
+
+        dashboard = feedback_dashboard_data(feedback, overall)
+
+        self.assertEqual(dashboard["helpful_rates"], [{"Experience": "Trip stories", "Helpful rate": 100.0}])
+        self.assertEqual(len(dashboard["daily_submissions"]), 2)
+        self.assertEqual(dashboard["rating_averages"][0]["Average score"], 5.0)
+        self.assertNotIn("private-session", str(dashboard))
+        self.assertNotIn("private-itinerary", str(dashboard))

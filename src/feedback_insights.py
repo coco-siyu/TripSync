@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
@@ -135,3 +136,89 @@ def feedback_insights_as_dict(insights: FeedbackInsights) -> dict:
         },
         "comments": [asdict(comment) for comment in insights.comments],
     }
+
+
+def feedback_dashboard_data(
+    feedback: Iterable[FeedbackRecord],
+    overall_experience: Iterable[OverallExperienceRecord],
+) -> dict[str, list[dict[str, object]]]:
+    """Build chart-ready aggregates without retaining anonymous identifiers.
+
+    The UI receives only dates, labels, scores, and counts. Session, itinerary,
+    and generated-output identifiers never leave this aggregation layer.
+    """
+
+    generated = tuple(feedback)
+    overall = tuple(overall_experience)
+    source_names = {
+        "trip_story": "Trip stories",
+        "adjustment_proposal": "Adjustment suggestions",
+    }
+
+    daily_counts: dict[tuple[str, str], int] = {}
+    for record in generated:
+        day = _feedback_day(record.created_at)
+        key = (day, source_names[record.target_type])
+        daily_counts[key] = daily_counts.get(key, 0) + 1
+    for record in overall:
+        day = _feedback_day(record.created_at)
+        key = (day, "Overall plans")
+        daily_counts[key] = daily_counts.get(key, 0) + 1
+
+    source_counts: dict[tuple[str, str], int] = {}
+    for record in generated:
+        key = (source_names[record.target_type], "Helpful" if record.rating == "up" else "Not useful")
+        source_counts[key] = source_counts.get(key, 0) + 1
+
+    helpful_rates = []
+    for source in source_names.values():
+        helpful = source_counts.get((source, "Helpful"), 0)
+        total = helpful + source_counts.get((source, "Not useful"), 0)
+        if total:
+            helpful_rates.append({"Experience": source, "Helpful rate": round(helpful / total * 100, 1)})
+
+    rating_fields = (
+        ("Helpfulness", "helpfulness"),
+        ("Clarity", "clarity"),
+        ("Group fit", "group_fit"),
+    )
+    rating_averages = [
+        {
+            "Rating": label,
+            "Average score": round(sum(getattr(record, field) for record in overall) / len(overall), 2),
+        }
+        for label, field in rating_fields
+        if overall
+    ]
+    score_distribution = [
+        {
+            "Score": score,
+            "Rating": label,
+            "Responses": sum(getattr(record, field) == score for record in overall),
+        }
+        for label, field in rating_fields
+        for score in range(1, 6)
+    ]
+
+    return {
+        "daily_submissions": [
+            {"Date": day, "Feedback type": source, "Submissions": count}
+            for (day, source), count in sorted(daily_counts.items())
+        ],
+        "helpful_rates": helpful_rates,
+        "thumb_counts": [
+            {"Experience": source, "Rating": rating, "Responses": count}
+            for (source, rating), count in sorted(source_counts.items())
+        ],
+        "rating_averages": rating_averages,
+        "score_distribution": score_distribution,
+    }
+
+
+def _feedback_day(created_at: str) -> str:
+    """Return a stable UTC day even when historical rows omit an offset."""
+
+    try:
+        return datetime.fromisoformat(created_at.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return created_at[:10]

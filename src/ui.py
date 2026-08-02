@@ -247,22 +247,73 @@ def _invalidate_itinerary() -> None:
     st.session_state.itinerary_change_error = None
 
 
-def _apply_styles() -> None:
+def _apply_styles(workspace: str = "Plan a trip") -> None:
+    workspace_colors = {
+        "Plan a trip": {
+            "accent": "#D7897F",
+            "primary": "#8C4640",
+            "soft": "#F8E4DF",
+            "glow": "rgba(215,137,127,0.24)",
+        },
+        "My trips": {
+            "accent": "#F9B95C",
+            "primary": "#8A5E17",
+            "soft": "#FDEDD2",
+            "glow": "rgba(249,185,92,0.24)",
+        },
+        "Feedback insights": {
+            "accent": "#96C7B3",
+            "primary": "#2F5A49",
+            "soft": "#E4F1EC",
+            "glow": "rgba(150,199,179,0.28)",
+        },
+        "Curate catalog": {
+            "accent": "#6398A9",
+            "primary": "#1F4552",
+            "soft": "#E4EFF2",
+            "glow": "rgba(99,152,169,0.25)",
+        },
+    }
+    page_colors = workspace_colors.get(
+        workspace,
+        workspace_colors["Plan a trip"],
+    )
+    st.markdown(
+        f"""
+        <style>
+        :root {{
+            --page-accent: {page_colors["accent"]};
+            --page-primary: {page_colors["primary"]};
+            --page-soft: {page_colors["soft"]};
+            --page-glow: {page_colors["glow"]};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown(
         """
         <style>
         :root {
-            --ocean-blue: #6398A9;
-            --sunset-coral: #5BA7D6;
-            --mango-yellow: #F9B95C;
-            --lagoon-teal: #96C7B3;
-            --deep-teal: #477C6D;
-            --deep-navy: #24232B;
-            --warm-cream: #F6F3E6;
+            --nectarine: #D7897F;
+            --nectarine-dark: #8C4640;
+            --peach: #F9B95C;
+            --peach-dark: #8A5E17;
+            --mint: #96C7B3;
+            --mint-dark: #2F5A49;
+            --lagoon: #6398A9;
+            --lagoon-dark: #1F4552;
+            --cream: #FDF6EF;
+            --ink: #3A2E2B;
+            --muted: #8A7A75;
+            --paper: #FFFFFF;
         }
 
         [data-testid="stAppViewContainer"] {
-            background: #F6F3E6;
+            background:
+                radial-gradient(circle at 8% 14%, var(--page-glow), transparent 22rem),
+                var(--cream);
+            transition: background 220ms ease;
         }
 
         [data-testid="stHeader"] {
@@ -270,16 +321,31 @@ def _apply_styles() -> None:
         }
 
         .block-container {
-            max-width: 1120px;
-            padding-top: 1.5rem;
-            padding-bottom: 5rem;
+            max-width: 1180px;
+            padding-top: 1rem;
+            padding-bottom: 5.5rem;
         }
 
-        /* Keep the workspace controls above the decorative hero layers. */
         .st-key-workspace-nav {
+            border-bottom: 1px solid var(--page-glow);
             isolation: isolate;
+            margin-bottom: 1.7rem;
+            padding: 0.35rem 0 0.9rem;
             position: relative;
             z-index: 20;
+        }
+
+        .ts-nav-brand {
+            color: var(--nectarine-dark);
+            font-family: "Baloo 2", sans-serif;
+            font-size: 1.65rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .ts-nav-brand span {
+            color: var(--lagoon);
         }
 
         .st-key-workspace-nav button {
@@ -288,131 +354,286 @@ def _apply_styles() -> None:
             z-index: 21;
         }
 
-        .st-key-hero {
-            background: linear-gradient(125deg, #176BFF 0%, #0C86EA 52%, #00A99D 100%);
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 1.75rem;
-            box-shadow: 0 24px 64px rgba(23, 107, 255, 0.24);
-            color: white;
-            overflow: hidden;
-            padding: 1.9rem 2rem 1.6rem;
-            position: relative;
-            margin-bottom: 1.1rem;
+        .st-key-workspace-nav button[data-testid="stBaseButton-tertiary"] {
+            color: var(--ink);
         }
 
-        .st-key-hero::before {
-            background: var(--mango-yellow);
+        .st-key-workspace-nav button[data-testid="stBaseButton-tertiary"]:hover {
+            background: var(--page-soft);
+        }
+
+        .st-key-workspace-nav button[data-testid="stBaseButton-primary"],
+        .st-key-workspace-page button[data-testid^="stBaseButton-primary"] {
+            background: var(--page-primary);
+            border-color: var(--page-primary);
+            box-shadow: 0 8px 20px var(--page-glow);
+        }
+
+        .st-key-workspace-page button[data-testid="stBaseButton-secondary"] {
+            background: rgba(255,255,255,0.72);
+            border-color: var(--page-accent);
+            color: var(--page-primary);
+        }
+
+        .st-key-workspace-page button[data-testid="stBaseButton-secondary"]:hover {
+            background: var(--page-soft);
+            border-color: var(--page-primary);
+        }
+
+        .st-key-workspace-page [data-testid="stSlider"]
+        [data-rac][data-orientation="horizontal"] > div[data-rac]
+        > div[data-rac] {
+            background-color: var(--page-primary);
+        }
+
+        .st-key-workspace-plan-a-trip button[data-testid="stBaseButton-tertiary"] {
+            color: var(--nectarine-dark);
+        }
+
+        .st-key-workspace-my-trips button[data-testid="stBaseButton-tertiary"] {
+            color: var(--peach-dark);
+        }
+
+        .st-key-workspace-feedback-insights button[data-testid="stBaseButton-tertiary"] {
+            color: var(--mint-dark);
+        }
+
+        .st-key-workspace-curate-catalog button[data-testid="stBaseButton-tertiary"] {
+            color: var(--lagoon-dark);
+        }
+
+        .st-key-workspace-plan-a-trip button p::before,
+        .st-key-workspace-my-trips button p::before,
+        .st-key-workspace-feedback-insights button p::before,
+        .st-key-workspace-curate-catalog button p::before {
             border-radius: 50%;
             content: "";
-            height: 9rem;
-            opacity: 0.96;
-            position: absolute;
-            right: -2.2rem;
-            top: -3.4rem;
-            width: 9rem;
+            display: inline-block;
+            height: 0.48rem;
+            margin-right: 0.42rem;
+            vertical-align: 0.04rem;
+            width: 0.48rem;
         }
 
-        .st-key-hero::after {
-            background:
-                radial-gradient(circle, rgba(255,255,255,0.72) 1.5px, transparent 1.7px);
-            background-size: 13px 13px;
-            bottom: -2.2rem;
-            content: "";
-            height: 8rem;
-            opacity: 0.34;
-            position: absolute;
-            right: 2.8rem;
-            transform: rotate(-8deg);
-            width: 13rem;
+        .st-key-workspace-plan-a-trip button p::before {
+            background: var(--nectarine);
         }
 
-        .st-key-hero > div {
+        .st-key-workspace-my-trips button p::before {
+            background: var(--peach);
+        }
+
+        .st-key-workspace-feedback-insights button p::before {
+            background: var(--mint);
+        }
+
+        .st-key-workspace-curate-catalog button p::before {
+            background: var(--lagoon);
+        }
+
+        .st-key-workspace-page {
+            background: linear-gradient(
+                180deg,
+                var(--page-soft) 0,
+                rgba(255,255,255,0.34) 25rem,
+                rgba(255,255,255,0) 48rem
+            );
+            border-top: 6px solid var(--page-accent);
+            border-radius: 1.8rem;
+            box-shadow: 0 18px 48px var(--page-glow);
+            padding: 1.45rem 1.5rem 2.25rem;
+            transition: background 220ms ease, border-color 220ms ease;
+        }
+
+        .st-key-workspace-page h1,
+        .st-key-workspace-page .ts-section-label,
+        .st-key-workspace-page .ts-score {
+            color: var(--page-primary);
+        }
+
+        .st-key-workspace-page div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: var(--page-glow);
+        }
+
+        .st-key-hero {
+            margin-bottom: 1.4rem;
+            padding: 0.8rem 0 1rem;
             position: relative;
-            z-index: 1;
         }
 
-        .st-key-hero h1 {
-            color: #FFFFFF;
-            font-size: clamp(2.4rem, 6vw, 4.6rem);
-            font-weight: 850;
-            letter-spacing: -0.055em;
-            line-height: 0.98;
-            max-width: 48rem;
+        .st-key-hero-copy {
+            padding: 1.2rem 1.6rem 1rem 0.15rem;
         }
 
         .ts-brand {
-            color: var(--mango-yellow);
-            font-size: 0.78rem;
-            font-weight: 850;
-            letter-spacing: 0.16em;
+            color: var(--nectarine);
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            margin-bottom: 0.65rem;
             text-transform: uppercase;
-            margin-bottom: 0.35rem;
+        }
+
+        .st-key-hero h1 {
+            color: var(--nectarine-dark);
+            font-family: "Baloo 2", sans-serif;
+            font-size: clamp(2.8rem, 5.3vw, 4.5rem);
+            font-weight: 800;
+            letter-spacing: -0.045em;
+            line-height: 0.98;
+            margin: 0 0 1rem;
+            max-width: 38rem;
         }
 
         .ts-kicker {
-            color: rgba(255,255,255,0.88);
-            font-size: 1.04rem;
-            line-height: 1.6;
-            max-width: 44rem;
-            margin-top: -0.35rem;
+            color: var(--muted);
+            font-size: 1.02rem;
+            line-height: 1.65;
+            margin: 0;
+            max-width: 34rem;
+        }
+
+        .ts-hero-visual {
+            background: linear-gradient(155deg, var(--peach) 0%, var(--nectarine) 100%);
+            border-radius: 1.8rem;
+            box-shadow: 0 20px 50px rgba(140,70,64,0.16);
+            height: 22rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ts-hero-arch {
+            background: var(--mint);
+            border-radius: 10rem 10rem 0 0;
+            bottom: 0;
+            height: 82%;
+            left: 50%;
+            position: absolute;
+            transform: translateX(-50%);
+            width: 68%;
+        }
+
+        .ts-hero-route {
+            border: 2px dashed rgba(47,90,73,0.40);
+            border-bottom: 0;
+            border-radius: 8rem 8rem 0 0;
+            bottom: 0;
+            height: 62%;
+            left: 50%;
+            position: absolute;
+            transform: translateX(-50%);
+            width: 44%;
+        }
+
+        .ts-hero-route::before,
+        .ts-hero-route::after {
+            background: var(--lagoon-dark);
+            border: 4px solid rgba(255,255,255,0.92);
+            border-radius: 50%;
+            content: "";
+            height: 1rem;
+            position: absolute;
+            width: 1rem;
+        }
+
+        .ts-hero-route::before {
+            left: -0.55rem;
+            top: 58%;
+        }
+
+        .ts-hero-route::after {
+            right: -0.55rem;
+            top: 10%;
+        }
+
+        .ts-visual-badge {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(58,46,43,0.05);
+            border-radius: 1rem;
+            box-shadow: 0 8px 22px rgba(58,46,43,0.12);
+            color: var(--lagoon-dark);
+            font-size: 0.82rem;
+            font-weight: 800;
+            line-height: 1.25;
+            padding: 0.72rem 0.9rem;
+            position: absolute;
+        }
+
+        .ts-visual-badge small {
+            color: var(--muted);
+            display: block;
+            font-size: 0.67rem;
+            font-weight: 600;
+            margin-top: 0.18rem;
+        }
+
+        .ts-visual-badge--top {
+            left: 1.35rem;
+            top: 1.35rem;
+        }
+
+        .ts-visual-badge--bottom {
+            bottom: 1.35rem;
+            right: 1.35rem;
         }
 
         .ts-hero-badges {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.9rem;
+            gap: 0.55rem;
+            margin-top: 1.35rem;
         }
 
         .ts-hero-badge {
             align-items: center;
-            backdrop-filter: blur(8px);
-            background: rgba(255,255,255,0.17);
-            border: 1px solid rgba(255,255,255,0.30);
+            background: var(--paper);
+            border: 1px solid #ECDDD3;
             border-radius: 999px;
-            color: #FFFFFF;
+            box-shadow: 0 5px 14px rgba(140,70,64,0.05);
+            color: var(--nectarine-dark);
             display: inline-flex;
-            font-size: 0.75rem;
-            font-weight: 750;
-            padding: 0.38rem 0.7rem;
+            font-size: 0.74rem;
+            font-weight: 800;
+            padding: 0.42rem 0.72rem;
         }
 
         .st-key-progress-card {
-            background: linear-gradient(90deg, rgba(255,255,255,0.94), rgba(255,243,211,0.94));
-            border: 1px solid rgba(23, 107, 255, 0.13);
-            border-radius: 1rem;
-            box-shadow: 0 8px 25px rgba(21, 50, 74, 0.06);
-            padding: 0.35rem 0.8rem 0.15rem;
-            margin-bottom: 1.2rem;
+            background: rgba(255,255,255,0.78);
+            border: 1px solid #EADBD2;
+            border-radius: 1.1rem;
+            box-shadow: 0 8px 22px rgba(140,70,64,0.05);
+            margin-bottom: 1.15rem;
+            padding: 0.35rem 0.9rem 0.12rem;
         }
 
         .st-key-trip-card,
         .st-key-travelers-shell,
         .st-key-summary-card,
         .st-key-shortlist-card {
-            border-radius: 1.35rem;
-            box-shadow: 0 16px 40px rgba(21, 50, 74, 0.075);
-            padding: 1.35rem 1.45rem 1.1rem;
+            border-radius: 1.55rem;
+            box-shadow: 0 14px 36px rgba(140,70,64,0.08);
+            padding: 1.45rem 1.55rem 1.2rem;
         }
 
         .st-key-trip-card {
-            background: linear-gradient(135deg, #F9FCFE, #DCEEF8);
-            border: 1px solid rgba(91, 167, 214, 0.52);
+            background: var(--paper);
+            border: 1px solid #EADBD2;
         }
 
         .st-key-travelers-shell {
-            background: #F9B95C;
-            border: 1px solid rgba(185, 121, 38, 0.48);
+            background: var(--mint);
+            border: 1px solid rgba(47,90,73,0.16);
+            color: #173D2E;
         }
 
         .st-key-summary-card {
-            background: linear-gradient(115deg, #FFFCF5 0%, #FCE3AE 100%);
-            border: 1px solid rgba(249, 185, 92, 0.62);
+            background: linear-gradient(120deg, #FFFDF9 0%, #FBE6C3 100%);
+            border: 1px solid rgba(168,108,23,0.16);
         }
 
         .st-key-shortlist-card {
-            background: linear-gradient(125deg, #F8FCFD 0%, #D7EAF0 100%);
-            border: 1px solid rgba(99, 152, 169, 0.50);
+            background: linear-gradient(130deg, #FFFFFF 0%, #E8F1F3 100%);
+            border: 1px solid rgba(99,152,169,0.30);
             margin-top: 1.5rem;
         }
 
@@ -421,82 +642,76 @@ def _apply_styles() -> None:
         }
 
         div[class*="st-key-itinerary-day-"] {
-            background: rgba(255,255,255,0.94);
-            border: 1px solid rgba(23, 107, 255, 0.18);
-            border-left: 5px solid var(--ocean-blue);
-            border-radius: 1.15rem;
-            box-shadow: 0 14px 32px rgba(21, 50, 74, 0.08);
+            background: rgba(255,255,255,0.96);
+            border: 1px solid #EADBD2;
+            border-left: 5px solid var(--lagoon);
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 28px rgba(58,46,43,0.07);
             margin: 0.8rem 0;
-            padding: 0.45rem 0.85rem;
+            padding: 0.55rem 0.95rem;
         }
 
         div[class*="st-key-traveler-card-"] {
-            background: linear-gradient(150deg, #FFFFFF, #EDF5FF);
-            border: 1px solid rgba(23, 107, 255, 0.18);
-            border-top: 5px solid var(--ocean-blue);
-            border-radius: 1.1rem;
+            background: rgba(255,255,255,0.83);
+            border: 1px solid rgba(47,90,73,0.16);
+            border-top: 5px solid var(--mint-dark);
+            border-radius: 1.2rem;
             padding: 1rem 1.05rem 0.85rem;
         }
 
         .st-key-traveler-card-2,
         .st-key-traveler-card-5 {
-            background: linear-gradient(150deg, #FFFFFF, #EAF5FB) !important;
-            border-color: rgba(91, 167, 214, 0.38) !important;
-            border-top-color: var(--sunset-coral) !important;
+            border-top-color: var(--nectarine) !important;
         }
 
         .st-key-traveler-card-3,
         .st-key-traveler-card-6 {
-            background: linear-gradient(150deg, #FFFFFF, #E9FBF9) !important;
-            border-color: rgba(0, 169, 157, 0.20) !important;
-            border-top-color: var(--lagoon-teal) !important;
+            border-top-color: var(--lagoon) !important;
         }
 
         .st-key-traveler-card-4 {
-            background: linear-gradient(150deg, #FFFFFF, #FFF5D9) !important;
-            border-color: rgba(255, 190, 61, 0.28) !important;
-            border-top-color: var(--mango-yellow) !important;
+            border-top-color: var(--peach) !important;
         }
 
         div[class*="st-key-result-card-"] {
-            background: rgba(255,255,255,0.96);
-            border: 1px solid rgba(23, 107, 255, 0.13);
-            border-top: 5px solid var(--ocean-blue);
-            border-radius: 1.25rem;
-            box-shadow: 0 12px 30px rgba(21, 50, 74, 0.07);
+            background: rgba(255,255,255,0.98);
+            border: 1px solid #EADBD2;
+            border-top: 5px solid var(--lagoon);
+            border-radius: 1.35rem;
+            box-shadow: 0 10px 26px rgba(58,46,43,0.06);
             padding: 1.15rem 1.25rem 0.85rem;
             margin-bottom: 0.85rem;
         }
 
         div[class*="st-key-result-card-1-"] {
-            border-top-color: var(--sunset-coral);
-            box-shadow: 0 16px 42px rgba(91, 167, 214, 0.18);
+            border-top-color: var(--nectarine);
+            box-shadow: 0 14px 34px rgba(140,70,64,0.10);
         }
 
         div[class*="st-key-result-card-2-"] {
-            border-top-color: var(--ocean-blue);
+            border-top-color: var(--peach);
         }
 
         div[class*="st-key-result-card-3-"] {
-            border-top-color: var(--lagoon-teal);
+            border-top-color: var(--mint);
         }
 
         div[class*="st-key-result-card-"]:hover {
-            box-shadow: 0 18px 45px rgba(23, 107, 255, 0.14);
+            box-shadow: 0 18px 42px rgba(140,70,64,0.12);
             transform: translateY(-2px);
             transition: all 160ms ease;
         }
 
         .ts-section-label {
-            color: #5BA7D6;
+            color: var(--page-primary);
             font-size: 0.76rem;
-            font-weight: 850;
-            letter-spacing: 0.14em;
+            font-weight: 800;
+            letter-spacing: 0.13em;
             text-transform: uppercase;
         }
 
         .ts-helper {
-            color: rgba(21,50,74,0.68);
+            color: var(--muted);
             line-height: 1.55;
             margin-bottom: 1rem;
         }
@@ -509,19 +724,19 @@ def _apply_styles() -> None:
         }
 
         .ts-chip {
-            background: rgba(0,169,157,0.11);
-            border: 1px solid rgba(0,127,115,0.16);
+            background: rgba(150,199,179,0.22);
+            border: 1px solid rgba(47,90,73,0.14);
             border-radius: 999px;
-            color: var(--deep-teal);
+            color: var(--mint-dark);
             display: inline-block;
             font-size: 0.76rem;
-            font-weight: 750;
+            font-weight: 800;
             padding: 0.28rem 0.58rem;
         }
 
         .ts-score {
             align-items: baseline;
-            color: var(--deep-teal);
+            color: var(--nectarine-dark);
             display: flex;
             gap: 0.15rem;
         }
@@ -535,26 +750,26 @@ def _apply_styles() -> None:
         }
 
         .ts-score span {
-            color: rgba(21,50,74,0.56);
+            color: var(--muted);
             font-size: 0.8rem;
             font-weight: 700;
         }
 
         .ts-tradeoff {
-            background: rgba(255,190,61,0.17);
-            border-left: 3px solid var(--sunset-coral);
+            background: rgba(249,185,92,0.18);
+            border-left: 3px solid var(--peach);
             border-radius: 0.45rem;
-            color: rgba(21,50,74,0.80);
+            color: #66513A;
             font-size: 0.82rem;
             margin: 0.35rem 0;
             padding: 0.45rem 0.65rem;
         }
 
         .ts-must-do-line {
-            background: rgba(91,167,214,0.12);
-            border-left: 3px solid var(--sunset-coral);
+            background: rgba(215,137,127,0.13);
+            border-left: 3px solid var(--nectarine);
             border-radius: 0.45rem;
-            color: #397FA9;
+            color: var(--nectarine-dark);
             font-size: 0.82rem;
             font-weight: 800;
             margin: 0.4rem 0 0.7rem;
@@ -573,9 +788,13 @@ def _apply_styles() -> None:
         }
 
         .ts-shortlist-meta {
-            color: rgba(21,50,74,0.62);
+            color: var(--muted);
             font-size: 0.78rem;
             margin-top: -0.45rem;
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-radius: 1.25rem;
         }
 
         div[data-testid="stForm"] {
@@ -593,8 +812,28 @@ def _apply_styles() -> None:
                 padding-right: 1rem;
             }
 
-            .st-key-hero {
-                padding: 1.15rem;
+            .st-key-hero-copy {
+                padding: 0.5rem 0 1rem;
+            }
+
+            .st-key-hero h1 {
+                font-size: clamp(2.6rem, 13vw, 3.7rem);
+            }
+
+            .ts-hero-visual {
+                height: 17rem;
+            }
+
+            .st-key-trip-card,
+            .st-key-travelers-shell,
+            .st-key-summary-card,
+            .st-key-shortlist-card {
+                padding: 1.1rem 1rem 0.9rem;
+            }
+
+            .st-key-workspace-page {
+                border-radius: 1.35rem;
+                padding: 1rem 0.85rem 1.5rem;
             }
         }
         </style>
@@ -605,24 +844,43 @@ def _apply_styles() -> None:
 
 def _render_hero() -> None:
     with st.container(key="hero"):
-        st.markdown('<div class="ts-brand">TripSync · Everyone gets a say</div>', unsafe_allow_html=True)
-        st.title("Your next great trip starts together.")
-        st.markdown(
-            '<p class="ts-kicker">Mix everyone’s interests, pace, budget, and '
-            "must-dos. TripSync finds the bright spots your whole crew can get "
-            "excited about—without hiding the trade-offs.</p>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <div class="ts-hero-badges" aria-label="TripSync planning benefits">
-                <span class="ts-hero-badge">✦ Everyone heard</span>
-                <span class="ts-hero-badge">☀ Fair matches</span>
-                <span class="ts-hero-badge">↗ Trade-offs explained</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        copy_col, visual_col = st.columns([1.08, 0.92], gap="large", vertical_alignment="center")
+        with copy_col:
+            with st.container(key="hero-copy"):
+                st.markdown(
+                    '<div class="ts-brand">TripSync · Everyone gets a say</div>',
+                    unsafe_allow_html=True,
+                )
+                st.title("Your next great trip starts together.")
+                st.markdown(
+                    """
+                    <p class="ts-kicker">Mix everyone’s interests, pace, budget,
+                    and must-dos. TripSync finds the bright spots your whole crew
+                    can get excited about—without hiding the trade-offs.</p>
+                    <div class="ts-hero-badges" aria-label="TripSync planning benefits">
+                        <span class="ts-hero-badge">Everyone heard</span>
+                        <span class="ts-hero-badge">Fair matches</span>
+                        <span class="ts-hero-badge">Trade-offs explained</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        with visual_col:
+            st.markdown(
+                """
+                <div class="ts-hero-visual" aria-hidden="true">
+                    <div class="ts-hero-arch"></div>
+                    <div class="ts-hero-route"></div>
+                    <div class="ts-visual-badge ts-visual-badge--top">
+                        3-day trip<small>Rome · balanced pace</small>
+                    </div>
+                    <div class="ts-visual-badge ts-visual-badge--bottom">
+                        A plan for everyone<small>interests · budget · must-dos</small>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 def _render_progress() -> None:
