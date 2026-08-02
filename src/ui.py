@@ -2118,6 +2118,7 @@ def _render_results_step() -> None:
                 "rejected_activities": st.session_state.rejected_activities,
             },
             trip_id=st.session_state.saved_trip_id,
+            session_id=st.session_state.feedback_session_id,
         )
         st.session_state.saved_trip_id = saved.trip_id
         st.toast(f"Saved {saved.title}")

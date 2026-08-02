@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from src.feedback import DEFAULT_FEEDBACK_DATABASE_PATH
 from src.models import TripRequest
+from src.supabase_store import is_configured, select_for_session, upsert
 
 
 @dataclass(frozen=True)
@@ -28,10 +29,13 @@ def _ensure_schema(connection: sqlite3.Connection) -> None:
         state_json TEXT NOT NULL, updated_at TEXT NOT NULL)""")
 
 
-def save_trip(trip: TripRequest, state: dict, *, title: str | None = None, trip_id: str | None = None) -> SavedTrip:
+def save_trip(trip: TripRequest, state: dict, *, title: str | None = None, trip_id: str | None = None, session_id: str = "local") -> SavedTrip:
     """Save a validated trip and its serializable planner state."""
 
     record = SavedTrip(trip_id or uuid4().hex, (title or f"{trip.destination} · {trip.days} days").strip(), trip, state, datetime.now(UTC).isoformat())
+    if is_configured():
+        upsert("saved_trips", {"session_id": session_id, "trip_id": record.trip_id, "title": record.title, "trip_json": trip.model_dump(mode="json"), "state_json": state, "updated_at": record.updated_at}, conflict="session_id,trip_id")
+        return record
     with closing(sqlite3.connect(DEFAULT_FEEDBACK_DATABASE_PATH)) as connection:
         with connection:
             _ensure_schema(connection)
@@ -42,7 +46,10 @@ def save_trip(trip: TripRequest, state: dict, *, title: str | None = None, trip_
     return record
 
 
-def list_saved_trips() -> list[SavedTrip]:
+def list_saved_trips(session_id: str = "local") -> list[SavedTrip]:
+    if is_configured():
+        rows = select_for_session("saved_trips", session_id)
+        return [SavedTrip(row["trip_id"], row["title"], TripRequest.model_validate(row["trip_json"]), row["state_json"], row["updated_at"]) for row in rows]
     if not DEFAULT_FEEDBACK_DATABASE_PATH.exists():
         return []
     with closing(sqlite3.connect(DEFAULT_FEEDBACK_DATABASE_PATH)) as connection:

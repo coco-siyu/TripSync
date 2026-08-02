@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from src.supabase_store import is_configured, select, upsert
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STATE_DIRECTORY = Path(
@@ -110,6 +112,20 @@ def record_feedback(
         comment=cleaned_comment,
         created_at=created_at,
     )
+    if is_configured():
+        upsert(
+            "llm_feedback",
+            {
+                "session_id": record.session_id,
+                "target_type": record.target_type,
+                "target_id": record.target_id,
+                "rating": record.rating,
+                "comment": record.comment,
+                "created_at": record.created_at,
+            },
+            conflict="session_id,target_type,target_id",
+        )
+        return record
     with closing(_connect(database_path)) as connection:
         with connection:
             _ensure_schema(connection)
@@ -140,6 +156,14 @@ def list_feedback(
 ) -> list[FeedbackRecord]:
     """Return local feedback rows for future human-review analysis."""
 
+    if is_configured():
+        return [
+            FeedbackRecord(
+                row["session_id"], row["target_type"], row["target_id"],
+                row["rating"], row.get("comment"), row["created_at"],
+            )
+            for row in select("llm_feedback", order="created_at")
+        ]
     if not database_path.exists():
         return []
     with closing(_connect(database_path)) as connection:
@@ -183,6 +207,21 @@ def record_overall_experience_feedback(
         comment=cleaned_comment,
         created_at=datetime.now(UTC).isoformat(),
     )
+    if is_configured():
+        upsert(
+            "overall_experience_feedback",
+            {
+                "session_id": record.session_id,
+                "itinerary_id": record.itinerary_id,
+                "helpfulness": record.helpfulness,
+                "clarity": record.clarity,
+                "group_fit": record.group_fit,
+                "comment": record.comment,
+                "created_at": record.created_at,
+            },
+            conflict="session_id,itinerary_id",
+        )
+        return record
     with closing(_connect(database_path)) as connection:
         with connection:
             _ensure_overall_experience_schema(connection)
@@ -234,6 +273,15 @@ def list_overall_experience_feedback(
 ) -> list[OverallExperienceRecord]:
     """Return stored overall experience ratings for human-review analysis."""
 
+    if is_configured():
+        return [
+            OverallExperienceRecord(
+                row["session_id"], row["itinerary_id"], row["helpfulness"],
+                row["clarity"], row["group_fit"], row.get("comment"),
+                row["created_at"],
+            )
+            for row in select("overall_experience_feedback", order="created_at")
+        ]
     if not database_path.exists():
         return []
     with closing(_connect(database_path)) as connection:

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import hmac
+import os
 
 import streamlit as st
 
@@ -14,12 +16,25 @@ def _rating_label(value: float | None) -> str:
 
 
 def render_feedback_insights() -> None:
-    """Render local feedback metrics, comments, and a privacy-safe export."""
+    """Render protected, privacy-safe feedback metrics and export."""
+
+    expected_password = os.getenv("TRIPSYNC_ADMIN_PASSWORD", "")
+    if expected_password and not st.session_state.get("feedback_insights_authorized"):
+        st.title("Feedback insights")
+        with st.form("feedback-insights-access"):
+            password = st.text_input("Admin password", type="password")
+            unlocked = st.form_submit_button("Open insights", icon=":material/lock_open:")
+        if unlocked:
+            if hmac.compare_digest(password, expected_password):
+                st.session_state.feedback_insights_authorized = True
+                st.rerun()
+            st.error("That password was not recognized.")
+        return
 
     st.markdown('<div class="ts-section-label">Learn from real planning sessions</div>', unsafe_allow_html=True)
     st.title("Feedback insights")
     st.caption(
-        "Only feedback saved on this computer is shown. Exports omit session and itinerary identifiers."
+        "Shared feedback is stored securely. Exports omit session and itinerary identifiers."
     )
     insights = load_feedback_insights()
 

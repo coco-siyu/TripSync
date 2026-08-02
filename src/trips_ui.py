@@ -20,7 +20,7 @@ def _open_trip(record: SavedTrip) -> None:
 def render_saved_trips() -> None:
     st.markdown('<div class="ts-section-label">Your saved plans</div>', unsafe_allow_html=True)
     st.title("Pick up where you left off")
-    records = list_saved_trips()
+    records = list_saved_trips(st.session_state.feedback_session_id)
     if not records:
         st.info("Save a plan from the results screen and it will appear here.", icon=":material/bookmark:")
         return
