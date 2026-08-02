@@ -159,6 +159,19 @@ class ChangeProposalTests(unittest.TestCase):
             ItineraryChangeProposals,
         )
 
+    def test_change_prompt_allows_an_explicitly_accepted_fuller_day(self) -> None:
+        messages = build_itinerary_change_input(
+            self.trip,
+            self.eligible,
+            self.plan,
+            "Add something to Day 2; a fuller day is fine.",
+        )
+
+        self.assertIn(
+            "may exceed the stated daily capacity",
+            messages[0]["content"],
+        )
+
     def test_allows_alternative_options_for_the_same_stop(self) -> None:
         alternatives = ItineraryChangeProposals(
             acknowledgement="Here are two ways to make the day calmer.",
