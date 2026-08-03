@@ -24,6 +24,22 @@ def _candidate_rows(batch: dict) -> list[dict]:
     ]
 
 
+def _selected_candidate(rows: list[dict], selected_rows: list[int]) -> dict | None:
+    """Return the selected candidate only when the table selection is current.
+
+    Streamlit preserves a dataframe selection across reruns. When the reviewer
+    changes batches, that old row index may not exist in the newly selected
+    batch, so it must be treated as no selection rather than indexed directly.
+    """
+
+    if len(selected_rows) != 1:
+        return None
+    selected_index = selected_rows[0]
+    if not isinstance(selected_index, int) or not 0 <= selected_index < len(rows):
+        return None
+    return rows[selected_index]["candidate"]
+
+
 def render_catalog_workspace() -> None:
     """Render the candidate search, selection, and Pydantic-backed editor."""
 
@@ -57,10 +73,10 @@ def render_catalog_workspace() -> None:
     display = pd.DataFrame([{key: value for key, value in row.items() if key not in {"source_url", "candidate"}} for row in rows])
     event = st.dataframe(display, hide_index=True, on_select="rerun", selection_mode="single-row", key="candidate-table")
     selected_rows = event.selection.rows
-    if not selected_rows:
+    candidate = _selected_candidate(rows, selected_rows)
+    if candidate is None:
         st.caption("Select one place to complete its planning details.")
         return
-    candidate = rows[selected_rows[0]]["candidate"]
     draft = draft_activity(candidate)
     st.subheader(f"Review {candidate['name']}")
     if candidate.get("review_flags"):

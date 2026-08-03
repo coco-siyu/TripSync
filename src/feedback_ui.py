@@ -15,6 +15,7 @@ from src.feedback_insights import (
     feedback_dashboard_data,
     feedback_insights_as_dict,
 )
+from src.supabase_store import is_configured
 
 
 def _rating_label(value: float | None) -> str:
@@ -42,7 +43,14 @@ def render_feedback_insights() -> None:
     """Render protected, privacy-safe feedback metrics and export."""
 
     expected_password = os.getenv("TRIPSYNC_ADMIN_PASSWORD", "")
-    if expected_password and not st.session_state.get("feedback_insights_authorized"):
+    if not expected_password:
+        st.title("Feedback insights")
+        st.error(
+            "This admin workspace is disabled until TRIPSYNC_ADMIN_PASSWORD is configured.",
+            icon=":material/lock:",
+        )
+        return
+    if not st.session_state.get("feedback_insights_authorized"):
         st.title("Feedback insights")
         with st.form("feedback-insights-access"):
             password = st.text_input("Admin password", type="password")
@@ -59,6 +67,14 @@ def render_feedback_insights() -> None:
     st.caption(
         "Shared feedback is stored securely. Exports omit session and itinerary identifiers."
     )
+    if is_configured():
+        st.caption("Data source: shared Supabase feedback store.")
+    else:
+        st.warning(
+            "Data source: local SQLite fallback. This Docker container cannot see shared "
+            "feedback until SUPABASE_URL and SUPABASE_SECRET_KEY are configured.",
+            icon=":material/storage:",
+        )
     refresh = st.button("Refresh dashboard", icon=":material/refresh:")
     if refresh:
         _load_dashboard_records.clear()

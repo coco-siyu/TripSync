@@ -1,0 +1,14 @@
+services:
+  tripsync:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      TRIPSYNC_STATE_DIR: /app/state
+    volumes:
+      - tripsync-state:/app/state
+
+volumes:
+  tripsync-state:

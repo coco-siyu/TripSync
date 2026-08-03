@@ -25,8 +25,10 @@ structured-output contract.
   as over pace.
 - Uses the OpenAI Responses API only for a grounded itinerary story and
   organizer-approved adjustment options; the LLM cannot silently change a plan.
-- Stores local feedback and saved trips in SQLite, with a feedback-insights view
-  and privacy-safe feedback export.
+- Saves trips, LLM feedback, and overall-plan ratings to Supabase when it is
+  configured; SQLite is the local-development fallback.
+- Includes an admin-protected feedback dashboard with five privacy-safe charts
+  and JSON export.
 
 ## How the system works
 
@@ -37,7 +39,7 @@ flowchart LR
     C --> D["Deterministic itinerary planner"]
     D --> E["Grounded LLM story / adjustment options"]
     E --> F["Organizer review and explicit approval"]
-    F --> G["Saved trip and feedback"]
+    F --> G["Supabase / local saved trip and feedback"]
 ```
 
 The LLM receives only the validated trip, eligible catalog records, and current
@@ -61,6 +63,46 @@ Set `OPENAI_API_KEY` in `.env` to enable trip stories and LLM adjustment ideas.
 The deterministic recommendation and itinerary flow works without making an API
 call. Never commit `.env` or `.streamlit/secrets.toml`.
 
+### Shared persistence and feedback dashboard
+
+For shared persistence, create a Supabase project, run
+[`supabase/schema.sql`](supabase/schema.sql) once in its SQL Editor, then add
+these server-only values to `.env` locally and your Streamlit Cloud secrets in
+production:
+
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SECRET_KEY=your-server-side-secret
+TRIPSYNC_ADMIN_PASSWORD=choose-a-dashboard-password
+```
+
+The first two values store saved trips and feedback server-side. The dashboard
+password protects **Feedback insights**. Without Supabase credentials, TripSync
+uses the local SQLite fallback in `data/`.
+
+Saved plans are deliberately scoped to the current anonymous browser session.
+That prevents one public visitor from seeing another visitor's plans. Supporting
+the same person's history across devices would require an authentication step.
+
+## Run with Docker Compose
+
+Docker Compose starts the complete local app and retains the local SQLite
+fallback state in a named volume. It also forwards any optional OpenAI,
+Supabase, and dashboard variables from `.env`.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open <http://localhost:8501>. Stop it with `Ctrl+C`; add `-d` to run it in the
+background. Remove the local fallback volume only when you intentionally want
+to erase it:
+
+```bash
+docker compose down --volumes
+```
+
 ## Run with Docker
 
 Build the image (the semantic retrieval model is downloaded during the build):
@@ -69,19 +111,20 @@ Build the image (the semantic retrieval model is downloaded during the build):
 docker build -t tripsync .
 ```
 
-Run it with an OpenAI key and a named volume for local saved trips and feedback:
+Run it with an OpenAI key and a named volume for the local fallback state:
 
 ```bash
 docker run --rm -p 8501:8501 \
-  -e OPENAI_API_KEY="your-api-key" \
+  --env-file .env \
   -v tripsync-state:/app/state \
   tripsync
 ```
 
 Open <http://localhost:8501>. The catalog is included in the image; the mounted
-`tripsync-state` volume stores only SQLite state. On a hosted platform, set
-`OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) through that platform's secrets
-manager, never in the repository.
+`tripsync-state` volume stores only SQLite fallback state. On a hosted platform,
+set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, Supabase credentials, and
+the dashboard password) through that platform's secrets manager, never in the
+repository.
 
 ## Evaluation
 
@@ -116,6 +159,18 @@ candidate imports remain under `data/candidates/` for review. The curation rules
 are in [docs/curation-standard.md](docs/curation-standard.md), and retrieval
 behavior is in [docs/retrieval.md](docs/retrieval.md).
 
+## Live demo and project evidence
+
+- **Public demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
+- **RAG boundary:** [docs/rag.md](docs/rag.md)
+- **Catalog curation standard:** [docs/curation-standard.md](docs/curation-standard.md)
+- **Retrieval comparison and itinerary evaluation:** [evaluation/README.md](evaluation/README.md)
+
+The project includes text, vector, and hybrid retrieval benchmarks against the
+same labelled cases. Hybrid retrieval is the product default because it combines
+exact preference matching with semantic similarity; the evaluation document
+reports the trade-offs rather than hiding them behind a single score.
+
 ## Project layout
 
 ```text
@@ -126,16 +181,19 @@ evaluation/            Retrieval, itinerary, and LLM evaluation suites
 tests/                 Unit and Streamlit interaction tests
 docs/                  RAG, retrieval, scoring, itinerary, and curation notes
 Dockerfile             Reproducible deployment image
+docker-compose.yml     One-command local app environment
+supabase/schema.sql    Shared persistence schema
 ```
 
 ## Current boundaries
 
 TripSync is a planning prototype, not a booking tool. It does not provide live
 opening hours, ticket availability, prices, routes, hotel or flight search, or
-payments. Duration and pace values are curated planning estimates. The default
-SQLite persistence is appropriate for local use or a single persistent deployment
-volume; a multi-user production version should move saved trips and feedback to a
-managed database.
+payments. Duration and pace values are curated planning estimates. The SQLite
+fallback is appropriate for local use. The current shared Supabase setup has no
+accounts, so saved-trip history remains session-scoped. A fuller production
+version would add authentication, live opening-hours/ticket sources, and
+user-controlled data deletion.
 
 ## License
 
