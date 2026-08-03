@@ -195,7 +195,8 @@ The project also includes a `dlt` ingestion pipeline and weekly GitHub Actions
 workflow. Its versioned popular-destination queue starts with Italian cities,
 Paris, Barcelona, London, Kyoto, and New York City. It retrieves raw Wikidata
 candidates, records local provenance in DuckDB, and opens a review pull request.
-It does **not** publish activities automatically.
+It does **not** publish activities automatically. The weekly workflow rotates
+through three active destinations; a manual run processes the entire queue.
 
 ```bash
 python -m src.catalog_dlt --limit 50

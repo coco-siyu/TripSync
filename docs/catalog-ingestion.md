@@ -7,6 +7,13 @@ The popular-destination queue lives in `data/destination_queue.json`. It is a
 versioned list of city/country pairs that the schedule uses automatically. Set
 `"active": false` to pause a place; add another object to expand the queue.
 
+The weekly workflow rotates through three active destinations at a time, in
+queue order. With the initial ten destinations, each gets refreshed at least
+once in roughly four weeks. Rotation avoids repeatedly querying the same small
+set; it is date-based rather than stateful, so a failed run does not incorrectly
+mark a city as refreshed. Manual runs retrieve every active destination unless
+you explicitly choose a rotation size.
+
 ## What the pipeline does
 
 1. Retrieves bounded place candidates from Wikidata for each requested city.
@@ -24,6 +31,12 @@ After installing the requirements:
 
 ```bash
 python -m src.catalog_dlt --limit 50
+```
+
+To preview the same small slice used by the weekly workflow:
+
+```bash
+python -m src.catalog_dlt --limit 50 --rotate-size 3
 ```
 
 This creates or refreshes review batches and local provenance in

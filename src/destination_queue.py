@@ -35,6 +35,7 @@ class DestinationQueue(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: int = Field(ge=1)
+    review_note: str | None = Field(default=None, max_length=1_000)
     destinations: list[DestinationQueueItem] = Field(min_length=1, max_length=100)
 
 

@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Retrieve candidates for review
-        run: python -m src.catalog_dlt --limit 50
+        run: python -m src.catalog_dlt --limit 50 --rotate-size 3
       - name: Open a review pull request
         uses: peter-evans/create-pull-request@v7
         with:

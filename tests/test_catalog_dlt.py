@@ -7,7 +7,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from src.catalog_dlt import candidate_records, ingest_cities, ingest_destinations
+from datetime import date
+
+from src.catalog_dlt import candidate_records, ingest_cities, ingest_destinations, rotate_destinations
 from src.destination_queue import DestinationQueueItem, load_destination_queue
 from src.catalog_import import CatalogCandidate, supported_city
 
@@ -76,6 +78,18 @@ class CatalogDltTests(unittest.TestCase):
             )
             queue = load_destination_queue(path)
         self.assertEqual([(item.city, item.country) for item in queue], [("Rome", "Italy")])
+
+    def test_rotation_selects_a_fair_wrapping_weekly_slice(self) -> None:
+        destinations = [
+            DestinationQueueItem(city=city, country="Example")
+            for city in ("One", "Two", "Three", "Four", "Five")
+        ]
+        selection = rotate_destinations(destinations, 2, run_date=date(2026, 8, 3))
+        self.assertEqual([item.city for item in selection], ["One", "Two"])
+        next_week = rotate_destinations(destinations, 2, run_date=date(2026, 8, 10))
+        self.assertEqual([item.city for item in next_week], ["Three", "Four"])
+        all_destinations = rotate_destinations(destinations, 0, run_date=date(2026, 8, 3))
+        self.assertEqual([item.city for item in all_destinations], ["One", "Two", "Three", "Four", "Five"])
 
     @patch("src.catalog_dlt.dlt.pipeline")
     @patch("src.catalog_dlt.resolve_city")

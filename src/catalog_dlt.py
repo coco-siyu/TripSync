@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -31,6 +31,30 @@ def _candidate_batch_label(path: Path) -> str:
         return str(path.relative_to(REPOSITORY_ROOT))
     except ValueError:
         return str(path)
+
+
+def rotate_destinations(
+    destinations: Iterable[DestinationQueueItem],
+    batch_size: int,
+    *,
+    run_date: date | None = None,
+) -> list[DestinationQueueItem]:
+    """Choose a stable weekly slice so a large queue is refreshed fairly."""
+
+    destination_list = list(destinations)
+    if not destination_list:
+        raise ValueError("at least one destination is required")
+    if batch_size < 1:
+        return destination_list
+    if batch_size >= len(destination_list):
+        return destination_list
+    effective_date = run_date or datetime.now(UTC).date()
+    week_index = effective_date.toordinal() // 7
+    start = (week_index * batch_size) % len(destination_list)
+    return [
+        destination_list[(start + offset) % len(destination_list)]
+        for offset in range(batch_size)
+    ]
 
 
 def candidate_records(
@@ -120,6 +144,10 @@ def main() -> None:
         "--destination-queue", type=Path, default=DEFAULT_DESTINATION_QUEUE_PATH,
         help="Versioned JSON queue used when --cities is omitted.",
     )
+    parser.add_argument(
+        "--rotate-size", type=int, default=0,
+        help="For scheduled runs, retrieve this many queue destinations this week; 0 retrieves all.",
+    )
     parser.add_argument("--limit", type=int, default=50, help="Candidates per city (1–250).")
     arguments = parser.parse_args()
     if arguments.cities:
@@ -127,8 +155,11 @@ def main() -> None:
             parser.error("--country is required with --cities")
         summary = ingest_cities(arguments.cities, arguments.country, limit=arguments.limit)
     else:
+        destinations = rotate_destinations(
+            load_destination_queue(arguments.destination_queue), arguments.rotate_size
+        )
         summary = ingest_destinations(
-            load_destination_queue(arguments.destination_queue), limit=arguments.limit
+            destinations, limit=arguments.limit
         )
     for city, count in summary.items():
         print(f"{city}: saved {count} review candidates; none were published.")
