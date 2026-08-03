@@ -189,11 +189,27 @@ This is deliberate: automation prepares and validates many records at once,
 but it does not silently claim that a place is currently open, accessible, or a
 good fit for every traveler.
 
+### Scheduled candidate retrieval
+
+The project also includes a `dlt` ingestion pipeline and weekly GitHub Actions
+workflow. Its versioned popular-destination queue starts with Italian cities,
+Paris, Barcelona, London, Kyoto, and New York City. It retrieves raw Wikidata
+candidates, records local provenance in DuckDB, and opens a review pull request.
+It does **not** publish activities automatically.
+
+```bash
+python -m src.catalog_dlt --limit 50
+```
+
+See [docs/catalog-ingestion.md](docs/catalog-ingestion.md) for the human review
+step and how to run a different country.
+
 ## Live demo and project evidence
 
 - **Public demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
 - **RAG boundary:** [docs/rag.md](docs/rag.md)
 - **Catalog curation standard:** [docs/curation-standard.md](docs/curation-standard.md)
+- **Scheduled catalog ingestion:** [docs/catalog-ingestion.md](docs/catalog-ingestion.md)
 - **Retrieval comparison and itinerary evaluation:** [evaluation/README.md](evaluation/README.md)
 
 The project includes text, vector, and hybrid retrieval benchmarks against the

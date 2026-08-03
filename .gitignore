@@ -65,6 +65,8 @@ db.sqlite3
 db.sqlite3-journal
 data/tripsync_feedback.db
 data/tripsync_feedback.db-journal
+data/tripsync_ingestion.duckdb
+.dlt/
 
 # Flask stuff:
 instance/

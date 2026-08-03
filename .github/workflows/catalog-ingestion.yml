@@ -1,0 +1,35 @@
+name: Refresh review-only catalog candidates
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  retrieve-candidates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Retrieve candidates for review
+        run: python -m src.catalog_dlt --limit 50
+      - name: Open a review pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: refresh catalog review candidates"
+          title: "chore: refresh catalog review candidates"
+          body: |
+            Automated Wikidata retrieval for human review.
+
+            These are raw candidates only; merge does not publish activities.
+          branch: automation/catalog-candidates
+          delete-branch: true
+          add-paths: data/candidates/

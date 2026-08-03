@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "review_note": "This is the scheduled discovery queue. Set active to false to pause a destination. It retrieves review candidates only and never publishes activities automatically.",
+  "destinations": [
+    {"city": "Rome", "country": "Italy", "active": true},
+    {"city": "Florence", "country": "Italy", "active": true},
+    {"city": "Milan", "country": "Italy", "active": true},
+    {"city": "Venice", "country": "Italy", "active": true},
+    {"city": "Naples", "country": "Italy", "active": true},
+    {"city": "Paris", "country": "France", "active": true},
+    {"city": "Barcelona", "country": "Spain", "active": true},
+    {"city": "London", "country": "United Kingdom", "active": true},
+    {"city": "Kyoto", "country": "Japan", "active": true},
+    {"city": "New York City", "country": "United States", "active": true}
+  ]
+}

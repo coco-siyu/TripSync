@@ -104,12 +104,17 @@ def load_curated_activities(path: Path = ACTIVITY_CATALOG_PATH) -> list[Activity
 
     if not _uses_supabase(path):
         return _load_local_activities(path)
-    rows = select(SUPABASE_CATALOG_TABLE, order="activity_id")
-    if rows:
-        return [Activity.model_validate(row["activity_json"]) for row in rows]
-    seed = _load_local_activities(path)
-    upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows(seed), conflict="activity_id")
-    return seed
+    try:
+        rows = select(SUPABASE_CATALOG_TABLE, order="activity_id")
+        if rows:
+            return [Activity.model_validate(row["activity_json"]) for row in rows]
+        seed = _load_local_activities(path)
+        upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows(seed), conflict="activity_id")
+        return seed
+    except Exception:  # noqa: BLE001 - a local, usable catalog is the safe fallback
+        # A transient network problem must not stop planning. Writes remain
+        # explicit and therefore still surface an actionable Supabase error.
+        return _load_local_activities(path)
 
 
 def save_activity(activity: Activity, path: Path = ACTIVITY_CATALOG_PATH) -> None:

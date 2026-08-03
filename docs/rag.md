@@ -17,6 +17,28 @@ keeping activity selection and scheduling deterministic.
 The LLM writes trip and day summaries, activity-fit explanations, practical notes,
 and trade-offs. It does not choose activities or change the schedule.
 
+## Knowledge-base documents and chunking
+
+Today, one curated `Activity` record is one retrieval document. It contains a
+short name, description, city, category, interests, walking level, budget,
+duration, accessibility notes, and source URL. These records are already small,
+self-contained, and structured, so splitting them into chunks would lose useful
+connections (for example, a museum's walking level from its interests) without
+improving retrieval.
+
+The current RAG source is the curated TripSync catalog: the initial local
+`data/activities.json` seed plus candidates retrieved from Wikidata and then
+reviewed, corrected, and explicitly published by a human. Wikidata is a
+discovery/provenance source, not unreviewed prompt context.
+
+Chunking becomes appropriate if TripSync later ingests long materials such as
+official attraction pages, city guides, accessibility guides, or lengthy
+traveler notes. In that case, split by meaningful sections (for example,
+admission, accessibility, and visit tips), retain the activity ID/source URL on
+every chunk, retrieve only the most relevant chunks, and cite their source in
+the final UI. Live opening hours, prices, and availability would need a verified
+live provider rather than a static chunk.
+
 ## Configuration
 
 Create a local `.env` file from the example:
