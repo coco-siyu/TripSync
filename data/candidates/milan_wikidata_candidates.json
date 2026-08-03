@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-01T00:57:24.211454+00:00",
+  "generated_at": "2026-08-03T17:43:56.385370+00:00",
   "city": "Milan",
   "country": "Italy",
   "source": {
@@ -11,6 +11,19 @@
     "attribution": "Data sourced from Wikidata."
   },
   "candidates": [
+    {
+      "wikidata_id": "Q1814307",
+      "name": "1978 European Athletics Indoor Championships",
+      "latitude": 45.4669,
+      "longitude": 9.19,
+      "source_url": "https://www.wikidata.org/wiki/Q1814307",
+      "wikidata_types": [
+        "recurring sporting event edition"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/1978_European_Athletics_Indoor_Championships",
+      "image_url": null
+    },
     {
       "wikidata_id": "Q4630399",
       "name": "2026 Winter Olympics",
@@ -23,6 +36,22 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/2026_Winter_Olympics",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%20Cortina%202026%20Opening%20Ceremony.jpg"
+    },
+    {
+      "wikidata_id": "Q810080",
+      "name": "Basilica of San Lorenzo",
+      "latitude": 45.45806,
+      "longitude": 9.182121,
+      "source_url": "https://www.wikidata.org/wiki/Q810080",
+      "wikidata_types": [
+        "architectural ensemble",
+        "church building",
+        "early Christian basilica",
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Basilica_of_San_Lorenzo,_Milan",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%20-%20Basilica%20san%20Lorenzo%20a%20porta%20Ticinese.jpg"
     },
     {
       "wikidata_id": "Q1071570",
@@ -72,6 +101,19 @@
       "image_url": null
     },
     {
+      "wikidata_id": "Q2501413",
+      "name": "Bosco Verticale",
+      "latitude": 45.485833333,
+      "longitude": 9.190277777,
+      "source_url": "https://www.wikidata.org/wiki/Q2501413",
+      "wikidata_types": [
+        "building complex"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bosco_Verticale",
+      "image_url": null
+    },
+    {
       "wikidata_id": "Q894874",
       "name": "Bottega Veneta",
       "latitude": 45.443159131,
@@ -84,6 +126,35 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Bottega_Veneta",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/BV%20Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q338472",
+      "name": "Brera Academy",
+      "latitude": 45.47222222,
+      "longitude": 9.18888889,
+      "source_url": "https://www.wikidata.org/wiki/Q338472",
+      "wikidata_types": [
+        "academy of fine arts"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Brera_Academy",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Pinacoteca%20di%20Brera%203%20stitched.jpg"
+    },
+    {
+      "wikidata_id": "Q1580885",
+      "name": "Brera Astronomical Observatory",
+      "latitude": 45.471992,
+      "longitude": 9.187705,
+      "source_url": "https://www.wikidata.org/wiki/Q1580885",
+      "wikidata_types": [
+        "astronomical observatory",
+        "museum of a public entity",
+        "science museum",
+        "technology museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Brera_Astronomical_Observatory",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Brera%20-%20cupole.jpg"
     },
     {
       "wikidata_id": "Q229022",
@@ -99,6 +170,32 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Universit%C3%A0_Cattolica_del_Sacro_Cuore",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/HDR%20-%20Chiostro%20Universit%C3%A0%20Cattolica.jpg"
+    },
+    {
+      "wikidata_id": "Q5291382",
+      "name": "Domus Academy",
+      "latitude": 45.4456,
+      "longitude": 9.1744,
+      "source_url": "https://www.wikidata.org/wiki/Q5291382",
+      "wikidata_types": [
+        "design school"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Domus_Academy",
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q2300366",
+      "name": "Expo 1906 Milan international exhibition",
+      "latitude": 45.47288889,
+      "longitude": 9.17444444,
+      "source_url": "https://www.wikidata.org/wiki/Q2300366",
+      "wikidata_types": [
+        "world's fair"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milan_International",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Poster%20ufficiale%20di%20Expo-Milano-1906%20di%20Leopoldo%20Metlicovitz.jpg"
     },
     {
       "wikidata_id": "Q210022",
@@ -128,6 +225,22 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Veduta%20della%20Galleria%20Vittorio%20Emanuele%20II%20da%20piazza%20del%20Duomo%2C%20Milano.jpg"
     },
     {
+      "wikidata_id": "Q2054135",
+      "name": "Gallerie d'Italia – Milano",
+      "latitude": 45.46735,
+      "longitude": 9.19004,
+      "source_url": "https://www.wikidata.org/wiki/Q2054135",
+      "wikidata_types": [
+        "art museum",
+        "museum",
+        "museum of modern art",
+        "private museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Gallerie_di_Piazza_Scala",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Veduta%20del%20Palazzo%20della%20Banca%20Commerciale%20Italiana%2C%20piazza%20della%20Scala%2C%20Milano%2C%20tre%20quarti%20da%20sinistra.jpg"
+    },
+    {
       "wikidata_id": "Q133566",
       "name": "Giuseppe Meazza Stadium",
       "latitude": 45.478055555,
@@ -142,6 +255,19 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/San_Siro",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Stadio%20Meazza%202021%203.jpg"
+    },
+    {
+      "wikidata_id": "Q85355",
+      "name": "Gruppo Mondadori",
+      "latitude": 45.4748372,
+      "longitude": 9.298897332,
+      "source_url": "https://www.wikidata.org/wiki/Q85355",
+      "wikidata_types": [
+        "book publisher"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mondadori",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Mondadori%20headquarters%20by%20Oscar%20Niemeyer%2C%20Segrate%20%28Milano%29%2007.jpg"
     },
     {
       "wikidata_id": "Q5471",
@@ -171,6 +297,23 @@
       "image_url": null
     },
     {
+      "wikidata_id": "Q729978",
+      "name": "Mediolanum",
+      "latitude": 45.462907,
+      "longitude": 9.185321,
+      "source_url": "https://www.wikidata.org/wiki/Q729978",
+      "wikidata_types": [
+        "ancient city",
+        "archaeological site",
+        "city",
+        "municipium",
+        "Roman city"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mediolanum",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/A%20model%20in%20wood%20of%20imperial%20era%20Mediolanum%2C%20Civico%20museo%20archeologico%20di%20Milano%20%288441760743%29.jpg"
+    },
+    {
       "wikidata_id": "Q18068",
       "name": "Milan Cathedral",
       "latitude": 45.463968,
@@ -188,6 +331,21 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/20110724%20Milan%20Cathedral%205260.jpg"
     },
     {
+      "wikidata_id": "Q2045972",
+      "name": "Milan Conservatory",
+      "latitude": 45.465,
+      "longitude": 9.203611111,
+      "source_url": "https://www.wikidata.org/wiki/Q2045972",
+      "wikidata_types": [
+        "academic institution",
+        "archives",
+        "conservatory"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milan_Conservatory",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Il%20Conservatorio%20di%20Musica%20di%20Milano.jpg"
+    },
+    {
       "wikidata_id": "Q735559",
       "name": "Milan Metro",
       "latitude": 45.466944444,
@@ -199,6 +357,20 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Milan_Metro",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%20metropolitana%20Villa%20San%20Giovanni.JPG"
+    },
+    {
+      "wikidata_id": "Q801185",
+      "name": "Milano Cadorna railway station",
+      "latitude": 45.468618,
+      "longitude": 9.175196,
+      "source_url": "https://www.wikidata.org/wiki/Q801185",
+      "wikidata_types": [
+        "dead-end railway station",
+        "railway station"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milano_Cadorna_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazzale%20Luigi%20Cadorna%20con%20la%20stazione%20delle%20Ferrovie%20Nord%20di%20Milano.jpg"
     },
     {
       "wikidata_id": "Q801193",
@@ -214,6 +386,82 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Milano_Centrale_railway_station",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20CentralStation%20016%204294.jpg"
+    },
+    {
+      "wikidata_id": "Q801187",
+      "name": "Milano Porta Garibaldi railway station",
+      "latitude": 45.484597,
+      "longitude": 9.187596,
+      "source_url": "https://www.wikidata.org/wiki/Q801187",
+      "wikidata_types": [
+        "dead-end railway station",
+        "railway station",
+        "station located on surface"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Milano_Porta_Garibaldi_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Skyline%20of%20the%20financial%20center%2C%20in%20the%20foreground%2C%20the%20Milano%20Porta%20Garibaldi%20railway%20station%2C%20Milan%2C%20Italy.jpg"
+    },
+    {
+      "wikidata_id": "Q1533416",
+      "name": "Museo Civico di Storia Naturale di Milano",
+      "latitude": 45.472777,
+      "longitude": 9.202457,
+      "source_url": "https://www.wikidata.org/wiki/Q1533416",
+      "wikidata_types": [
+        "ethnographic museum",
+        "museum of a public entity",
+        "natural history museum",
+        "organization",
+        "Palazzo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Museo_Civico_di_Storia_Naturale_di_Milano",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Veduta%20del%20Museo%20civico%20di%20storia%20naturale%20di%20Milano.jpg"
+    },
+    {
+      "wikidata_id": "Q261233",
+      "name": "Museo del Novecento",
+      "latitude": 45.463414,
+      "longitude": 9.190261,
+      "source_url": "https://www.wikidata.org/wiki/Q261233",
+      "wikidata_types": [
+        "museum of a public entity",
+        "museum of modern art"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Museo_del_Novecento",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arengario%20da%20Piazzetta%20Reale.jpg"
+    },
+    {
+      "wikidata_id": "Q1190657",
+      "name": "Museo Poldi Pezzoli",
+      "latitude": 45.468664,
+      "longitude": 9.191583,
+      "source_url": "https://www.wikidata.org/wiki/Q1190657",
+      "wikidata_types": [
+        "art museum",
+        "historic house museum",
+        "Palazzo",
+        "private museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Museo_Poldi_Pezzoli",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Il%20palazzo%20che%20ospita%20il%20Museo%20Poldi-Pezzoli%20in%20via%20Manzoni%2C%20Milano.jpg"
+    },
+    {
+      "wikidata_id": "Q51108",
+      "name": "piazza del Duomo",
+      "latitude": 45.46416667,
+      "longitude": 9.19,
+      "source_url": "https://www.wikidata.org/wiki/Q51108",
+      "wikidata_types": [
+        "Cathedral Square",
+        "pedestrian zone"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_del_Duomo,_Milan",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milano%2C%20Duomo%20with%20Milan%20Cathedral%20and%20Galleria%20Vittorio%20Emanuele%20II%2C%202016.jpg"
     },
     {
       "wikidata_id": "Q525297",
@@ -275,6 +523,24 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Polimi%20Leonardo%20campus%20main%20building.jpg"
     },
     {
+      "wikidata_id": "Q51105",
+      "name": "Royal Palace of Milan",
+      "latitude": 45.463054,
+      "longitude": 9.191153,
+      "source_url": "https://www.wikidata.org/wiki/Q51105",
+      "wikidata_types": [
+        "architectural ensemble",
+        "art museum",
+        "city palace",
+        "museum building",
+        "Palazzo",
+        "royal palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Royal_Palace_of_Milan",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Veduta%20di%20tre%20quarti%20del%20Palazzo%20Reale%20di%20Milano.jpg"
+    },
+    {
       "wikidata_id": "Q244952",
       "name": "Santa Maria delle Grazie",
       "latitude": 45.465833333,
@@ -288,6 +554,21 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_delle_Grazie,_Milan",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Side%20and%20dome%20-%20Santa%20Maria%20delle%20Grazie%20-%20Milan%202014.jpg"
+    },
+    {
+      "wikidata_id": "Q589462",
+      "name": "Santa Maria presso San Satiro",
+      "latitude": 45.462608,
+      "longitude": 9.188035,
+      "source_url": "https://www.wikidata.org/wiki/Q589462",
+      "wikidata_types": [
+        "architectural ensemble",
+        "church building",
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_presso_San_Satiro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20Santa%20Maria%20presso%20San%20Satiro%20016%204771.jpg"
     },
     {
       "wikidata_id": "Q23354",
@@ -318,6 +599,49 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Leonardo%20da%20Vinci%20%281452-1519%29%20-%20The%20Last%20Supper%20%281495-1498%29.jpg"
     },
     {
+      "wikidata_id": "Q1156274",
+      "name": "Torre Velasca",
+      "latitude": 45.459938,
+      "longitude": 9.190665,
+      "source_url": "https://www.wikidata.org/wiki/Q1156274",
+      "wikidata_types": [
+        "multifamily residential",
+        "office building",
+        "skyscraper",
+        "tower"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Torre_Velasca",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Torre%20Velasca%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q963111",
+      "name": "UniCredit Tower",
+      "latitude": 45.483844444,
+      "longitude": 9.189877777,
+      "source_url": "https://www.wikidata.org/wiki/Q963111",
+      "wikidata_types": [
+        "skyscraper"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/UniCredit_Tower",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Milan%20skyline%20with%20Unicredit%20Tower%20and%20Bosco%20Verticale.jpg"
+    },
+    {
+      "wikidata_id": "Q64825395",
+      "name": "Unipol Dome",
+      "latitude": 45.441666666,
+      "longitude": 9.255555555,
+      "source_url": "https://www.wikidata.org/wiki/Q64825395",
+      "wikidata_types": [
+        "building or structure under construction",
+        "indoor ice rink"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/PalaItalia",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arena%20Santa%20Giulia%20-%20PalaItalia%20illuminata%20%2811%20gennaio%202026%29.jpg"
+    },
+    {
       "wikidata_id": "Q46210",
       "name": "University of Milan",
       "latitude": 45.4600626,
@@ -331,6 +655,22 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Milan",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Festa%20del%20Perdono%20Facciata%20Milano.jpg"
+    },
+    {
+      "wikidata_id": "Q1073674",
+      "name": "University of Milan-Bicocca",
+      "latitude": 45.518406,
+      "longitude": 9.213344,
+      "source_url": "https://www.wikidata.org/wiki/Q1073674",
+      "wikidata_types": [
+        "medium size publisher",
+        "university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Milano-Bicocca",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/U1%20visto%20da%20piazza%20della%20Scienza%2C%20Milano.jpg"
     }
   ],
   "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."

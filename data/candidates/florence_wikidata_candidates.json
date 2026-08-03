@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-01T00:56:34.771621+00:00",
+  "generated_at": "2026-08-03T17:43:53.273625+00:00",
   "city": "Florence",
   "country": "Italy",
   "source": {
@@ -11,6 +11,20 @@
     "attribution": "Data sourced from Wikidata."
   },
   "candidates": [
+    {
+      "wikidata_id": "Q4585397",
+      "name": "Academy of Fine Arts, Florence",
+      "latitude": 43.776907,
+      "longitude": 11.258475,
+      "source_url": "https://www.wikidata.org/wiki/Q4585397",
+      "wikidata_types": [
+        "academy of fine arts",
+        "archives"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Accademia_di_Belle_Arti_di_Firenze",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Accademia%20di%20Belle%20Arti.JPG"
+    },
     {
       "wikidata_id": "Q338489",
       "name": "Accademia della Crusca",
@@ -95,6 +109,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Santa%20Maria%20Novella%20%28Florence%29.jpg"
     },
     {
+      "wikidata_id": "Q1062114",
+      "name": "Basilica of the Holy Trinity",
+      "latitude": 43.770153,
+      "longitude": 11.250719,
+      "source_url": "https://www.wikidata.org/wiki/Q1062114",
+      "wikidata_types": [
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Trinita",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20di%20Santa%20Trinita%2C%20Florence.jpg"
+    },
+    {
       "wikidata_id": "Q856419",
       "name": "Biblioteca Medicea Laurenziana",
       "latitude": 43.774656,
@@ -125,6 +152,40 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Jard%C3%ADn%20de%20B%C3%B3boli%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2012.jpg"
     },
     {
+      "wikidata_id": "Q1996075",
+      "name": "Brancacci Chapel",
+      "latitude": 43.7677682,
+      "longitude": 11.24370253,
+      "source_url": "https://www.wikidata.org/wiki/Q1996075",
+      "wikidata_types": [
+        "art museum",
+        "chapel",
+        "museum",
+        "museum of a public entity",
+        "religious museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Brancacci_Chapel",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Brancacci%20color.jpg"
+    },
+    {
+      "wikidata_id": "Q2418618",
+      "name": "Casa Buonarroti",
+      "latitude": 43.769849,
+      "longitude": 11.263607,
+      "source_url": "https://www.wikidata.org/wiki/Q2418618",
+      "wikidata_types": [
+        "archives",
+        "art museum",
+        "historic house museum",
+        "museum",
+        "private museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Casa_Buonarroti",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/3035%20-%20Firenze%20-%20Busto%20sopra%20l%27ingresso%20di%20Casa%20Buonarroti%20-%20Foto%20Giovanni%20Dall%27Orto%2C%2028-Oct-2007.jpg"
+    },
+    {
       "wikidata_id": "Q179900",
       "name": "David",
       "latitude": 43.776702777,
@@ -139,6 +200,33 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/David_(Michelangelo)",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Michelangelo%27s%20David%20-%20right%20view%202.jpg"
+    },
+    {
+      "wikidata_id": "Q374591",
+      "name": "Farnese Hercules",
+      "latitude": 40.8534,
+      "longitude": 14.2505,
+      "source_url": "https://www.wikidata.org/wiki/Q374591",
+      "wikidata_types": [
+        "statue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Farnese_Hercules",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Herakles%20Farnese%20MAN%20Napoli%20Inv6001%20n01.jpg"
+    },
+    {
+      "wikidata_id": "Q800761",
+      "name": "Firenze Santa Maria Novella railway station",
+      "latitude": 43.776338,
+      "longitude": 11.247527,
+      "source_url": "https://www.wikidata.org/wiki/Q800761",
+      "wikidata_types": [
+        "dead-end railway station",
+        "railway station"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Firenze_Santa_Maria_Novella_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Florence%2C%20Santa%20Maria%20Novella%20railway%20station%2C%20Gruppo%20Toscano%2C%201934%202.jpg"
     },
     {
       "wikidata_id": "Q732511",
@@ -187,6 +275,50 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Accademia%20di%20Firenze%2C%20veduta%20sul%20cortile%20del%20museo%20dell%27accademia%2001.JPG"
     },
     {
+      "wikidata_id": "Q1140023",
+      "name": "Giotto's Campanile",
+      "latitude": 43.772805555,
+      "longitude": 11.255805555,
+      "source_url": "https://www.wikidata.org/wiki/Q1140023",
+      "wikidata_types": [
+        "bell tower",
+        "tower"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Giotto%27s_Campanile",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Catedral%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2095.jpg"
+    },
+    {
+      "wikidata_id": "Q2707802",
+      "name": "Historic Centre of Florence",
+      "latitude": 43.77306,
+      "longitude": 11.25611111,
+      "source_url": "https://www.wikidata.org/wiki/Q2707802",
+      "wikidata_types": [
+        "district",
+        "neighborhood",
+        "old town",
+        "quarter of Florence",
+        "urban area"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Historic_Centre_of_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ponte%20Vecchio%20001.jpg"
+    },
+    {
+      "wikidata_id": "Q1257947",
+      "name": "Hospital of Innocents",
+      "latitude": 43.776388888,
+      "longitude": 11.261111111,
+      "source_url": "https://www.wikidata.org/wiki/Q1257947",
+      "wikidata_types": [
+        "museum building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ospedale_degli_Innocenti",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Spedale%20innocenti%2C%20veduta%2001.JPG"
+    },
+    {
       "wikidata_id": "Q839746",
       "name": "Loggia dei Lanzi",
       "latitude": 43.76920278,
@@ -199,6 +331,74 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Loggia_dei_Lanzi",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Firenze%2C%20loggia%20dei%20lanzi%20%282020%29%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q1357573",
+      "name": "Medici Chapels",
+      "latitude": 43.775204,
+      "longitude": 11.253117,
+      "source_url": "https://www.wikidata.org/wiki/Q1357573",
+      "wikidata_types": [
+        "art museum",
+        "chapel",
+        "Italian national museum",
+        "museum",
+        "Museum of the Italian Ministry of Culture",
+        "religious museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Medici_Chapels",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Medicibib.jpg"
+    },
+    {
+      "wikidata_id": "Q1200696",
+      "name": "Museo dell'Opera del Duomo",
+      "latitude": 43.7727,
+      "longitude": 11.255817,
+      "source_url": "https://www.wikidata.org/wiki/Q1200696",
+      "wikidata_types": [
+        "art museum",
+        "museum",
+        "private museum",
+        "religious museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Museo_dell%27Opera_del_Duomo_(Florence)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Museum%20Facade%20Opera%20del%20Duomo%202015.jpg"
+    },
+    {
+      "wikidata_id": "Q13453137",
+      "name": "Museum of San Marco",
+      "latitude": 43.778198,
+      "longitude": 11.259329,
+      "source_url": "https://www.wikidata.org/wiki/Q13453137",
+      "wikidata_types": [
+        "art museum",
+        "Italian national museum",
+        "monastery",
+        "museum",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Museo_Nazionale_di_San_Marco",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Firenze%2C%20chiesa%20e%20convento%20di%20san%20marco%2C%20facciata%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q637237",
+      "name": "National Archaeological Museum",
+      "latitude": 43.776646,
+      "longitude": 11.261259,
+      "source_url": "https://www.wikidata.org/wiki/Q637237",
+      "wikidata_types": [
+        "archaeological museum",
+        "Istituto museale ad autonomia speciale",
+        "Italian national museum",
+        "museum",
+        "Museum of the Italian Ministry of Culture"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/National_Archaeological_Museum,_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Museo%20archeologico%20nazionale%2C%20ingresso%2001.JPG"
     },
     {
       "wikidata_id": "Q460907",
@@ -216,6 +416,21 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/National_Central_Library_(Florence)",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Biblioteca%20Nacional%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q860816",
+      "name": "Orsanmichele",
+      "latitude": 43.77071,
+      "longitude": 11.25505,
+      "source_url": "https://www.wikidata.org/wiki/Q860816",
+      "wikidata_types": [
+        "church building",
+        "granary",
+        "market hall"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Orsanmichele",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/La%20chiesa%20di%20Orsanmichele%2C%20detta%20anticamente%20anche%20chiesa%20di%20San%20Michele%20in%20Orto.jpg"
     },
     {
       "wikidata_id": "Q911047",
@@ -252,6 +467,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20Pitti%20nel%20tardo%20pomeriggio.jpg"
     },
     {
+      "wikidata_id": "Q923702",
+      "name": "Palazzo Rucellai",
+      "latitude": 43.77127778,
+      "longitude": 11.24959722,
+      "source_url": "https://www.wikidata.org/wiki/Q923702",
+      "wikidata_types": [
+        "Palazzo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Rucellai",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Via%20della%20Vigna%20Nuova%2018%2C%20palazzo%20rucellai%2C%2002%2C0.jpg"
+    },
+    {
       "wikidata_id": "Q521619",
       "name": "Palazzo Strozzi",
       "latitude": 43.771304,
@@ -282,6 +510,20 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20della%20signoria%2C%20palazzo%20vecchio%2C%20veduta%2001.jpg"
     },
     {
+      "wikidata_id": "Q600355",
+      "name": "Pazzi Chapel",
+      "latitude": 43.76737527,
+      "longitude": 11.26281958,
+      "source_url": "https://www.wikidata.org/wiki/Q600355",
+      "wikidata_types": [
+        "architectural element",
+        "chapel"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Pazzi_Chapel",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Pazzi%20Chapel%20Santa%20Croce%20Apr%202008%20P.JPG"
+    },
+    {
       "wikidata_id": "Q849846",
       "name": "piazza della Signoria",
       "latitude": 43.769722222,
@@ -309,7 +551,77 @@
       ],
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Ponte_Vecchio",
-      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ponte%20Vecchio%20sobre%20el%20r%C3%ADo%20Arno%2C%20Florencia%2C%20Italia%2C%202022-09-19%2C%20DD%2002.jpg"
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ponte%20Vecchio%20from%20Ponte%20alle%20Grazie.jpg"
+    },
+    {
+      "wikidata_id": "Q844337",
+      "name": "San Miniato al Monte",
+      "latitude": 43.759444,
+      "longitude": 11.265,
+      "source_url": "https://www.wikidata.org/wiki/Q844337",
+      "wikidata_types": [
+        "abbey church",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Miniato_al_Monte",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Sanminiato.jpg"
+    },
+    {
+      "wikidata_id": "Q1042634",
+      "name": "Santa Maria del Carmine",
+      "latitude": 43.767777777,
+      "longitude": 11.243611111,
+      "source_url": "https://www.wikidata.org/wiki/Q1042634",
+      "wikidata_types": [
+        "abbey church",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_del_Carmine,_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20del%20Carmine%2C%20veduta%20sulla%20chiesa%20del%20carmine.jpg"
+    },
+    {
+      "wikidata_id": "Q2287001",
+      "name": "Santissima Annunziata",
+      "latitude": 43.7769,
+      "longitude": 11.26128,
+      "source_url": "https://www.wikidata.org/wiki/Q2287001",
+      "wikidata_types": [
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santissima_Annunziata,_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20budini%20gattai%2C%20vista%20verso%20piazza%20santissima%20annunziata%2C%20basilica%2004.jpg"
+    },
+    {
+      "wikidata_id": "Q1519975",
+      "name": "Santo Spirito",
+      "latitude": 43.76722222,
+      "longitude": 11.24777778,
+      "source_url": "https://www.wikidata.org/wiki/Q1519975",
+      "wikidata_types": [
+        "church building",
+        "minor basilica",
+        "monastery"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santo_Spirito,_Florence",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Chiesa%20Santo%20Spirito%2C%20Firenze.jpg"
+    },
+    {
+      "wikidata_id": "Q672416",
+      "name": "Scuola Normale Superiore",
+      "latitude": 43.719611,
+      "longitude": 10.400225,
+      "source_url": "https://www.wikidata.org/wiki/Q672416",
+      "wikidata_types": [
+        "archives",
+        "superior graduate school in Italy"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Scuola_Normale_Superiore",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20Carovana%20Pisa.jpg"
     },
     {
       "wikidata_id": "Q270474",
@@ -354,6 +666,22 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Florence",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Rettorato%20firenze%2C%20aula%20magna%2002.JPG"
+    },
+    {
+      "wikidata_id": "Q913058",
+      "name": "Vasari Corridor",
+      "latitude": 43.768997,
+      "longitude": 11.256379,
+      "source_url": "https://www.wikidata.org/wiki/Q913058",
+      "wikidata_types": [
+        "art collection",
+        "corridor",
+        "museum",
+        "passageway"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Vasari_Corridor",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Corridoio%20Vasariano%2C%20curva.JPG"
     }
   ],
   "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
