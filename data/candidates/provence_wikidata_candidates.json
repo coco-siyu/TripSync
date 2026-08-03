@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-03T19:25:17.324057+00:00",
+  "city": "Provence",
+  "country": "Paris",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q70450",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q3212177",
+      "name": "Alpine chalet La Redalle and pigsty",
+      "latitude": 46.88007,
+      "longitude": 6.64802,
+      "source_url": "https://www.wikidata.org/wiki/Q3212177",
+      "wikidata_types": [
+        "architectural structure",
+        "mountain hut"
+      ],
+      "review_flags": [],
+      "wikipedia_url": null,
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q22577970",
+      "name": "Provence",
+      "latitude": 46.89052,
+      "longitude": 6.72608,
+      "source_url": "https://www.wikidata.org/wiki/Q22577970",
+      "wikidata_types": [
+        "human settlement"
+      ],
+      "review_flags": [],
+      "wikipedia_url": null,
+      "image_url": null
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}

@@ -11,19 +11,17 @@ import streamlit as st
 from pydantic import ValidationError
 
 from src.catalog import (
+    activity_id,
     auto_curate_candidates,
-    build_activity,
     candidate_files,
     delete_candidates_from_batch,
     delete_activities,
     load_candidate_batch,
     load_curated_activities,
     save_activities,
-    save_activity,
     update_activity,
 )
 from src.catalog_import import CatalogImportError, fetch_candidates, resolve_city, write_candidate_file
-from src.draft_curation import draft_activity
 from src.models import Activity, BudgetLevel, WalkingLevel
 from src.ui import INTEREST_OPTIONS
 
@@ -37,20 +35,11 @@ def _candidate_rows(batch: dict) -> list[dict]:
     ]
 
 
-def _selected_candidate(rows: list[dict], selected_rows: list[int]) -> dict | None:
-    """Return the selected candidate only when the table selection is current.
+def _candidate_batch_label(path: Path) -> str:
+    """Describe a review batch with travel context instead of a JSON filename."""
 
-    Streamlit preserves a dataframe selection across reruns. When the reviewer
-    changes batches, that old row index may not exist in the newly selected
-    batch, so it must be treated as no selection rather than indexed directly.
-    """
-
-    if len(selected_rows) != 1:
-        return None
-    selected_index = selected_rows[0]
-    if not isinstance(selected_index, int) or not 0 <= selected_index < len(rows):
-        return None
-    return rows[selected_index]["candidate"]
+    batch = load_candidate_batch(path)
+    return f"{batch['city']}, {batch['country']} · {len(batch['candidates'])} retrieved places"
 
 
 def _catalog_access_allowed() -> bool:
@@ -89,7 +78,7 @@ def _selected_activity_ids(activities: list, selected_rows: list[int]) -> list[s
 
 
 def _selected_candidate_ids(rows: list[dict], selected_rows: list[int]) -> list[str]:
-    """Return stable Wikidata IDs for valid selections in one candidate batch."""
+    """Return stable Wikidata IDs for selected raw candidates."""
 
     return [
         rows[index]["candidate"]["wikidata_id"]
@@ -277,11 +266,14 @@ def _render_published_catalog() -> None:
                 st.rerun()
 
 
-def _render_batch_curation() -> None:
-    """Fetch, bulk-promote, refine, or discard one raw candidate batch."""
+def _render_catalog_import() -> None:
+    """Fetch a batch, then select raw candidates to publish or discard."""
 
     st.subheader("Fetch and batch curate")
-    st.caption("Search Wikidata candidates, bulk-promote safe drafts, or remove unwanted source records.")
+    st.caption(
+        "Fetch a city or choose a review batch. Select places in the table, then add the "
+        "eligible ones to the published catalog or remove unsuitable source candidates."
+    )
 
     with st.container(border=True, key="catalog-query"):
         with st.form("catalog-query-form"):
@@ -303,139 +295,124 @@ def _render_batch_curation() -> None:
     if not files:
         st.info("Fetch a city above to start a review batch.", icon=":material/search:")
         return
-    selected_file = st.selectbox("Candidate batch", files, format_func=lambda file: file.name)
+    selected_file = st.selectbox("Candidate batch", files, format_func=_candidate_batch_label)
     batch = load_candidate_batch(selected_file)
     rows = _candidate_rows(batch)
     automatic_activities, automatically_skipped = auto_curate_candidates(
         [row["candidate"] for row in rows], batch["city"], batch["country"]
     )
+    activity_by_id = {activity.id: activity for activity in automatic_activities}
     published_ids = {activity.id for activity in load_curated_activities()}
-    eligible_to_add = [
-        activity for activity in automatic_activities if activity.id not in published_ids
-    ]
     batch_result_key = f"catalog-batch-result-{selected_file.name}"
-    with st.container(border=True):
-        st.markdown("**Fast batch curation**")
-        st.caption(
-            f"{len(automatic_activities)} candidates have safe, Pydantic-valid drafts. "
-            f"{len(automatically_skipped)} are excluded automatically (for example hotels or transport)."
-        )
-        if len(eligible_to_add) != len(automatic_activities):
-            st.caption(
-                f"{len(eligible_to_add)} are new; "
-                f"{len(automatic_activities) - len(eligible_to_add)} are already in the catalog."
-            )
-        previous_result = st.session_state.get(batch_result_key)
-        if previous_result:
-            st.success(previous_result, icon=":material/check_circle:")
-        if eligible_to_add:
-            if st.button(
-                f"Add all {len(eligible_to_add)} eligible candidates",
-                icon=":material/library_add:",
-                type="primary",
-                key=f"catalog-batch-add-{selected_file.name}",
-                help="Adds every eligible candidate in this batch. Table selections below are only for detailed editing.",
-            ):
-                added, duplicates = save_activities(eligible_to_add)
-                st.session_state[batch_result_key] = (
-                    f"Added {len(added)} activities to the catalog. "
-                    f"Skipped {len(duplicates)} existing duplicates."
+    st.subheader("Retrieved places")
+    st.caption("Use the checkbox in the table header to select every place in this batch.")
+    display = pd.DataFrame(
+        [
+            {
+                "Name": row["Name"],
+                "City": batch["city"],
+                "Country": batch["country"],
+                "Category": activity_by_id.get(
+                    activity_id(batch["city"], row["Name"]), None
+                ).category.replace("_", " ")
+                if activity_id(batch["city"], row["Name"]) in activity_by_id
+                else "Not eligible",
+                "Interests": ", ".join(
+                    activity_by_id[activity_id(batch["city"], row["Name"])].interests
                 )
-                st.rerun()
-        else:
-            st.success(
-                f"All {len(automatic_activities)} eligible candidates are already published.",
-                icon=":material/check_circle:",
-            )
-            st.button(
-                f"View all {len(automatic_activities)} published activities",
-                icon=":material/visibility:",
-                type="primary",
-                key=f"catalog-batch-view-{selected_file.name}",
-                on_click=_filter_published_catalog,
-                args=(batch["country"], batch["city"]),
-            )
-    display = pd.DataFrame([{key: value for key, value in row.items() if key not in {"source_url", "candidate"}} for row in rows])
+                if activity_id(batch["city"], row["Name"]) in activity_by_id
+                else "",
+                "Review note": row["Review note"],
+            }
+            for row in rows
+        ]
+    )
     event = st.dataframe(
         display,
         hide_index=True,
         on_select="rerun",
         selection_mode="multi-row",
-        key="candidate-table",
+        key=f"candidate-table-{selected_file.name}",
     )
-    selected_rows = event.selection.rows
-    selected_candidate_ids = _selected_candidate_ids(rows, selected_rows)
-    candidate_signature = "-".join(sorted(selected_candidate_ids)) or "none"
-    if selected_candidate_ids:
-        st.warning(
-            f"{len(selected_candidate_ids)} selected source candidate(s) will be removed from this batch only."
+    selected_candidate_ids = _selected_candidate_ids(rows, event.selection.rows)
+    selected_activities = [
+        activity_by_id[activity_id(batch["city"], row["Name"])]
+        for row in rows
+        if row["candidate"].get("wikidata_id") in selected_candidate_ids
+        and activity_id(batch["city"], row["Name"]) in activity_by_id
+    ]
+    selected_eligible = [
+        activity for activity in selected_activities if activity.id not in published_ids
+    ]
+    selection_signature = "-".join(sorted(selected_candidate_ids)) or "none"
+
+    with st.container(border=True):
+        st.markdown("**Selected places**")
+        st.caption(
+            f"{len(automatic_activities)} candidates have safe, Pydantic-valid drafts. "
+            f"{len(automatically_skipped)} are excluded automatically (for example hotels or transport)."
         )
-    else:
-        st.caption("Select source candidates above to enable batch removal.")
-    remove_confirmed = st.checkbox(
-        "I reviewed the selected source candidates and want to remove them from this batch.",
-        key=f"confirm-batch-delete-{selected_file.name}-{candidate_signature}",
-        disabled=not selected_candidate_ids,
-    )
-    if st.button(
-        "Remove selected candidates from this batch",
-        icon=":material/delete_sweep:",
-        type="primary",
-        disabled=not selected_candidate_ids or not remove_confirmed,
-        key=f"batch-delete-{selected_file.name}",
-    ):
-        removed = delete_candidates_from_batch(selected_file, selected_candidate_ids)
-        st.success(f"Removed {removed} source candidate(s) from {selected_file.name}.")
-        st.rerun()
-    candidate = _selected_candidate(rows, selected_rows)
-    if candidate is None:
-        st.caption("Select one place to complete its planning details.")
-        return
-    draft = draft_activity(candidate)
-    st.subheader(f"Review {candidate['name']}")
-    if candidate.get("review_flags"):
-        st.warning(" ".join(candidate["review_flags"]), icon=":material/flag:")
-    with st.form(f"activity-editor-{candidate['wikidata_id']}", border=True):
-        name = st.text_input("Activity name", value=candidate["name"])
-        category = st.selectbox("Primary category", ["museum", "historic_site", "landmark", "architecture", "park", "food_market", "university_campus", "outdoor"], index=["museum", "historic_site", "landmark", "architecture", "park", "food_market", "university_campus", "outdoor"].index(draft.category))
-        category_tags = st.multiselect("Additional category tags", ["cultural", "religious_site", "outdoor", "architecture", "food", "shopping"], default=list(draft.category_tags), accept_new_options=True)
-        interests = st.multiselect("Interest tags", INTEREST_OPTIONS, default=list(draft.interests), accept_new_options=True)
-        left, right = st.columns(2)
-        with left:
-            walking = st.segmented_control("Walking", list(WalkingLevel), default=WalkingLevel(draft.walking_level), format_func=lambda item: item.value.title())
-            duration = st.number_input("Typical visit (hours)", min_value=0.5, max_value=12.0, value=draft.duration_hours, step=0.5)
-            indoor = st.checkbox("Primarily indoors", value=draft.indoor)
-        with right:
-            budget = st.segmented_control("Budget", list(BudgetLevel), default=BudgetLevel(draft.budget_level), format_func=lambda item: item.value.title())
-            reservation = st.checkbox("Advance reservation normally needed", value=draft.reservation_required)
-            family = st.checkbox("Family-friendly", value=True)
-        accessibility = st.text_input("Accessibility notes", value="Check the official visitor information before visiting.")
-        description = st.text_area("Short factual description", value=f"A visitor experience in {batch['city']}.")
-        source_url = st.text_input("Verification URL", value=candidate["source_url"])
-        save = st.form_submit_button("Validate and add to catalog", icon=":material/add_circle:", type="primary")
-    if save:
-        try:
-            activity = build_activity(candidate, batch["city"], batch["country"], {
-                "name": name, "category": category, "category_tags": category_tags, "interests": interests,
-                "walking_level": walking, "budget_level": budget, "duration_hours": duration,
-                "indoor": indoor, "family_friendly": family, "reservation_required": reservation,
-                "accessibility_notes": accessibility, "description": description, "source_url": source_url,
-            })
-            save_activity(activity)
-            st.success(f"{activity.name} is now a validated TripSync activity.")
-        except (ValidationError, ValueError) as error:
-            st.error(str(error), icon=":material/error:")
+        if selected_candidate_ids:
+            st.caption(f"{len(selected_candidate_ids)} retrieved place(s) selected.")
+        else:
+            st.caption("Select one or more retrieved places above to enable an action.")
+        previous_result = st.session_state.get(batch_result_key)
+        if previous_result:
+            st.success(previous_result, icon=":material/check_circle:")
+        add_tab, remove_tab = st.tabs(
+            ["Add to published", "Remove from batch"],
+            key=f"batch-actions-{selected_file.name}",
+            on_change="rerun",
+        )
+        if add_tab.open:
+            with add_tab:
+                st.caption(
+                    "Select every eligible row in the table to add the entire eligible batch. "
+                    "Existing published activities are skipped."
+                )
+                if st.button(
+                    f"Add {len(selected_eligible)} selected eligible candidate(s)",
+                    icon=":material/library_add:",
+                    type="primary",
+                    disabled=not selected_eligible,
+                    key=f"catalog-batch-add-{selected_file.name}",
+                ):
+                    added, duplicates = save_activities(selected_eligible)
+                    st.session_state[batch_result_key] = (
+                        f"Added {len(added)} activities to the catalog. "
+                        f"Skipped {len(duplicates)} existing duplicates."
+                    )
+                    _filter_published_catalog(batch["country"], batch["city"])
+                    st.rerun()
+        if remove_tab.open:
+            with remove_tab:
+                st.caption("Removal changes only this raw retrieval batch, not published activities.")
+                confirmed = st.checkbox(
+                    "I want to remove the selected retrieved places.",
+                    key=f"confirm-batch-delete-{selected_file.name}-{selection_signature}",
+                    disabled=not selected_candidate_ids,
+                )
+                if st.button(
+                    "Remove selected retrieved places",
+                    icon=":material/delete_sweep:",
+                    type="primary",
+                    disabled=not selected_candidate_ids or not confirmed,
+                    key=f"batch-delete-{selected_file.name}",
+                ):
+                    removed = delete_candidates_from_batch(selected_file, selected_candidate_ids)
+                    st.success(f"Removed {removed} retrieved place(s) from this batch.")
+                    st.rerun()
 
 
 def render_catalog_workspace() -> None:
-    """Render the protected, two-part catalog management workspace."""
+    """Render separate views for live activities and fetched source candidates."""
 
     if not _catalog_access_allowed():
         return
     st.markdown('<div class="ts-section-label">Build the catalog</div>', unsafe_allow_html=True)
     st.title("Curate places your travelers will love")
-    st.caption("Manage the live catalog separately from fetching and reviewing source candidates.")
-    published_tab, batch_tab = st.tabs(
+    st.caption("Manage published activities separately from fetching and reviewing source candidates.")
+    published_tab, fetch_tab = st.tabs(
         ["Published activities", "Fetch & batch curate"],
         key="catalog-workspace-tabs",
         on_change="rerun",
@@ -443,6 +420,6 @@ def render_catalog_workspace() -> None:
     if published_tab.open:
         with published_tab:
             _render_published_catalog()
-    if batch_tab.open:
-        with batch_tab:
-            _render_batch_curation()
+    if fetch_tab.open:
+        with fetch_tab:
+            _render_catalog_import()

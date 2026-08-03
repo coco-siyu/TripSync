@@ -208,6 +208,8 @@ step and how to run a different country.
 ## Live demo and project evidence
 
 - **Public demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
+- **CI:** GitHub Actions runs the full unit suite on every push and pull request,
+  including automated catalog-review pull requests.
 - **RAG boundary:** [docs/rag.md](docs/rag.md)
 - **Catalog curation standard:** [docs/curation-standard.md](docs/curation-standard.md)
 - **Scheduled catalog ingestion:** [docs/catalog-ingestion.md](docs/catalog-ingestion.md)
