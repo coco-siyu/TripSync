@@ -29,12 +29,13 @@ Then configure:
 
 ```dotenv
 OPENAI_API_KEY=replace-with-your-api-key
-OPENAI_MODEL=gpt-5.6-luna
+OPENAI_MODEL=gpt-5.6-terra
 ```
 
-`OPENAI_MODEL` is optional. TripSync defaults to `gpt-5.6-luna`, the cost-sensitive
-GPT-5.6 model. A later LLM evaluation will compare model and prompt configurations
-before selecting the final production default.
+`OPENAI_MODEL` is optional. TripSync defaults to `gpt-5.6-terra`, selected after
+the recorded live contract and held-out robustness comparisons in
+[`evaluation/README.md`](../evaluation/README.md). You may override it for a
+local experiment without changing the product default.
 
 ## Structured output
 
@@ -59,7 +60,7 @@ The output schema requires:
 The implementation follows OpenAI's
 [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)
 and uses a model documented to support both the
-[Responses API and Structured Outputs](https://developers.openai.com/api/docs/models/gpt-5.6-luna).
+[Responses API and Structured Outputs](https://developers.openai.com/api/docs/models/gpt-5.6-terra).
 
 ## Guardrails and current boundary
 

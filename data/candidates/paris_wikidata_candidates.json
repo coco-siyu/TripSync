@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-03T05:21:02.264028+00:00",
+  "city": "Paris",
+  "country": "France",
+  "source": {
+    "name": "Wikidata Query Service",
+    "query_url": "https://query.wikidata.org/sparql",
+    "city_wikidata_id": "Q90",
+    "license": "CC0 for Wikidata structured data",
+    "attribution": "Data sourced from Wikidata."
+  },
+  "candidates": [
+    {
+      "wikidata_id": "Q161741",
+      "name": "1st arrondissement of Paris",
+      "latitude": 48.859947,
+      "longitude": 2.342059,
+      "source_url": "https://www.wikidata.org/wiki/Q161741",
+      "wikidata_types": [
+        "city district",
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/1st_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Jardin%20des%20Tuileries%203%2C%20Paris%20September%202013.jpg"
+    },
+    {
+      "wikidata_id": "Q63167656",
+      "name": "2019 fire at Notre-Dame de Paris",
+      "latitude": 48.853,
+      "longitude": 2.3498,
+      "source_url": "https://www.wikidata.org/wiki/Q63167656",
+      "wikidata_types": [
+        "structure fire"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Notre-Dame_fire",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Incendie%20Notre%20Dame%20de%20Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q64436",
+      "name": "Arc de Triomphe",
+      "latitude": 48.87378,
+      "longitude": 2.29504,
+      "source_url": "https://www.wikidata.org/wiki/Q64436",
+      "wikidata_types": [
+        "triumphal arch"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Arc_de_Triomphe",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arc%20de%20Triomphe%2C%20Paris%2021%20October%202010.jpg"
+    },
+    {
+      "wikidata_id": "Q550",
+      "name": "avenue des Champs-Élysées",
+      "latitude": 48.86967,
+      "longitude": 2.30786,
+      "source_url": "https://www.wikidata.org/wiki/Q550",
+      "wikidata_types": [
+        "avenue",
+        "boulevard"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Champs-%C3%89lys%C3%A9es",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Avenue%20des%20Champs-%C3%89lys%C3%A9es%2C%20Paris%203%20October%202010.jpg"
+    },
+    {
+      "wikidata_id": "Q1865480",
+      "name": "Bastille",
+      "latitude": 48.853333,
+      "longitude": 2.369167,
+      "source_url": "https://www.wikidata.org/wiki/Q1865480",
+      "wikidata_types": [
+        "castle",
+        "destroyed building or structure",
+        "prison"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bastille",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Bastille%20Exterior%201790%20or%201791.jpg"
+    },
+    {
+      "wikidata_id": "Q193563",
+      "name": "Bibliothèque nationale de France",
+      "latitude": 48.833611111,
+      "longitude": 2.375833333,
+      "source_url": "https://www.wikidata.org/wiki/Q193563",
+      "wikidata_types": [
+        "catalog",
+        "national library",
+        "organization",
+        "publishing house"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access and visitor relevance."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Biblioth%C3%A8que_nationale_de_France",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Biblioth%C3%A8que%20Mitterrand%20Mai%202022.jpg"
+    },
+    {
+      "wikidata_id": "Q178065",
+      "name": "Centre Georges Pompidou",
+      "latitude": 48.860642,
+      "longitude": 2.352245,
+      "source_url": "https://www.wikidata.org/wiki/Q178065",
+      "wikidata_types": [
+        "collection",
+        "cultural center",
+        "museum",
+        "museum building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Centre_Pompidou",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Montmartre%20Blick%20aufs%20Centre%20Georges-Pompidou.jpg"
+    },
+    {
+      "wikidata_id": "Q18718876",
+      "name": "Charlie Hebdo shooting",
+      "latitude": 48.859166666,
+      "longitude": 2.370277777,
+      "source_url": "https://www.wikidata.org/wiki/Q18718876",
+      "wikidata_types": [
+        "mass shooting",
+        "terrorist attack"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Charlie_Hebdo_shooting",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Charlie-Hebdo-2015-11.JPG"
+    },
+    {
+      "wikidata_id": "Q524289",
+      "name": "Conservatoire national des Arts et Métiers",
+      "latitude": 48.866944444,
+      "longitude": 2.354444444,
+      "source_url": "https://www.wikidata.org/wiki/Q524289",
+      "wikidata_types": [
+        "higher education institution",
+        "school"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Conservatoire_national_des_arts_et_m%C3%A9tiers",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/P1020032%20Paris%20III%20CNAM%20entr%C3%A9e%20rue%20Saint-Martin%20reductwk.JPG"
+    },
+    {
+      "wikidata_id": "Q243",
+      "name": "Eiffel Tower",
+      "latitude": 48.858296,
+      "longitude": 2.294479,
+      "source_url": "https://www.wikidata.org/wiki/Q243",
+      "wikidata_types": [
+        "architectural landmark",
+        "lattice tower",
+        "observation tower"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Eiffel_Tower",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Tour%20Eiffel%20Wikimedia%20Commons.jpg"
+    },
+    {
+      "wikidata_id": "Q43605",
+      "name": "French Open",
+      "latitude": 48.847166666,
+      "longitude": 2.24925,
+      "source_url": "https://www.wikidata.org/wiki/Q43605",
+      "wikidata_types": [
+        "recurring tennis tournament"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/French_Open",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Court%20Philippe%20Chatrier%202023%20cropped.jpg"
+    },
+    {
+      "wikidata_id": "Q19675",
+      "name": "Louvre Museum",
+      "latitude": 48.861111111,
+      "longitude": 2.335833333,
+      "source_url": "https://www.wikidata.org/wiki/Q19675",
+      "wikidata_types": [
+        "archaeological museum",
+        "art museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Louvre",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Cour%20Napol%C3%A9on%20at%20night%20-%20Louvre.jpg"
+    },
+    {
+      "wikidata_id": "Q186115",
+      "name": "Montmartre",
+      "latitude": 48.886944444,
+      "longitude": 2.341111111,
+      "source_url": "https://www.wikidata.org/wiki/Q186115",
+      "wikidata_types": [
+        "district",
+        "hill",
+        "neighborhood"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Montmartre",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/View%20from%20Notre-Dame%20de%20Paris%2C%2024%20June%202014%20004.jpg"
+    },
+    {
+      "wikidata_id": "Q23402",
+      "name": "Musée d'Orsay",
+      "latitude": 48.859972,
+      "longitude": 2.326527,
+      "source_url": "https://www.wikidata.org/wiki/Q23402",
+      "wikidata_types": [
+        "art museum",
+        "national museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mus%C3%A9e_d%27Orsay",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Gare%20d%27Orsay%20%2849570190081%29.jpg"
+    },
+    {
+      "wikidata_id": "Q2981",
+      "name": "Notre-Dame de Paris",
+      "latitude": 48.853,
+      "longitude": 2.3498,
+      "source_url": "https://www.wikidata.org/wiki/Q2981",
+      "wikidata_types": [
+        "Catholic cathedral",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Notre-Dame_de_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Notre-Dame%20de%20Paris%202013-07-24.jpg"
+    },
+    {
+      "wikidata_id": "Q21479779",
+      "name": "November 2015 Paris attacks",
+      "latitude": 48.863027777,
+      "longitude": 2.370638888,
+      "source_url": "https://www.wikidata.org/wiki/Q21479779",
+      "wikidata_types": [
+        "coordinated terrorist attack"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/November_2015_Paris_attacks",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Shootings%20-%20The%20day%20after%20%2822593744177%29.jpg"
+    },
+    {
+      "wikidata_id": "Q134102",
+      "name": "Organisation internationale de la Francophonie",
+      "latitude": 48.86,
+      "longitude": 2.30333333,
+      "source_url": "https://www.wikidata.org/wiki/Q134102",
+      "wikidata_types": [
+        "intergovernmental organization",
+        "language-based geopolitical organization"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Organisation_internationale_de_la_Francophonie",
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q187840",
+      "name": "Palais Garnier",
+      "latitude": 48.871944444,
+      "longitude": 2.331666666,
+      "source_url": "https://www.wikidata.org/wiki/Q187840",
+      "wikidata_types": [
+        "opera house"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palais_Garnier",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Palais%20Garnier%202010-04-06%2016.55.07.jpg"
+    },
+    {
+      "wikidata_id": "Q193431",
+      "name": "Parc des Princes",
+      "latitude": 48.84145,
+      "longitude": 2.25305,
+      "source_url": "https://www.wikidata.org/wiki/Q193431",
+      "wikidata_types": [
+        "multi-purpose sports venue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Parc_des_Princes",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Parc%20des%20Princes%201.jpg"
+    },
+    {
+      "wikidata_id": "Q50716",
+      "name": "Paris Métro",
+      "latitude": 48.856944444,
+      "longitude": 2.351388888,
+      "source_url": "https://www.wikidata.org/wiki/Q50716",
+      "wikidata_types": [
+        "rapid transit"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Paris_Metro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Pont%20de%20Bir-Hakeim%2C%20may%202025.jpg"
+    },
+    {
+      "wikidata_id": "Q311",
+      "name": "Père Lachaise Cemetery",
+      "latitude": 48.861111111,
+      "longitude": 2.394166666,
+      "source_url": "https://www.wikidata.org/wiki/Q311",
+      "wikidata_types": [
+        "cemetery"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/P%C3%A8re_Lachaise_Cemetery",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Main%20gate%20of%20the%20P%C3%A8re-Lachaise%20Cemetery%2C%20Paris%2013%20June%202014.jpg"
+    },
+    {
+      "wikidata_id": "Q1471",
+      "name": "Seine",
+      "latitude": 49.434722222,
+      "longitude": 0.1175,
+      "source_url": "https://www.wikidata.org/wiki/Q1471",
+      "wikidata_types": [
+        "river"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Seine",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/The%20Seine%20as%20seen%20from%20the%20Eiffel%20Tower%2C%20June%202002.jpg"
+    },
+    {
+      "wikidata_id": "Q209842",
+      "name": "University of Paris",
+      "latitude": 48.8486,
+      "longitude": 2.34333,
+      "source_url": "https://www.wikidata.org/wiki/Q209842",
+      "wikidata_types": [
+        "academic institution",
+        "former entity",
+        "university in France"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Universite%20Paris%20I%20Pantheon-Sorbonne.jpg"
+    },
+    {
+      "wikidata_id": "Q188190",
+      "name": "Élysée Palace",
+      "latitude": 48.870277777,
+      "longitude": 2.316388888,
+      "source_url": "https://www.wikidata.org/wiki/Q188190",
+      "wikidata_types": [
+        "city palace",
+        "official residence"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/%C3%89lys%C3%A9e_Palace",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Secretary%20Pompeo%20Arrives%20to%20Meet%20with%20French%20Foreign%20Minister%20Le%20Drian%20in%20Paris%20%2850610423656%29%20%28cropped%29.jpg"
+    }
+  ],
+  "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
+}

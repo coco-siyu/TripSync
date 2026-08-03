@@ -8,7 +8,9 @@ from pathlib import Path
 from evaluation.llm import (
     LlmCaseResult,
     LlmEvaluationReport,
+    compare_models,
     evaluate_llm_cases,
+    format_model_comparison,
     format_report,
     load_llm_cases,
 )
@@ -85,6 +87,19 @@ class LlmEvaluationTests(unittest.TestCase):
         self.assertEqual(sum(case.kind == "proposal" for case in cases), 8)
         self.assertEqual(report.schema_pass_rate, 1.0)
         self.assertEqual(report.proposal_applicability_rate, 1.0)
+
+    def test_model_comparison_reports_tie_for_identical_fixture_contracts(self) -> None:
+        reports = compare_models(
+            load_activities(),
+            load_llm_cases()[:2],
+            ["model-a", "model-b"],
+        )
+
+        rendered = format_model_comparison(reports)
+
+        self.assertEqual([report.model for report in reports], ["model-a", "model-b"])
+        self.assertIn("model-a", rendered)
+        self.assertIn("Measured contract result: tie", rendered)
 
 
 if __name__ == "__main__":

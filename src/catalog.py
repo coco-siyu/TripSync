@@ -9,13 +9,16 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
+from src.draft_curation import automatic_activity_fields, automatic_curation_reason
 from src.models import Activity
+from src.supabase_store import delete_in, is_configured, select, upsert_many
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE_DIRECTORY = REPOSITORY_ROOT / "data" / "candidates"
 ACTIVITY_CATALOG_PATH = REPOSITORY_ROOT / "data" / "activities.json"
 SAMPLE_ACTIVITY_PATH = REPOSITORY_ROOT / "data" / "sample_activities.json"
+SUPABASE_CATALOG_TABLE = "catalog_activities"
 
 
 def candidate_files() -> list[Path]:
@@ -62,21 +65,173 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
     })
 
 
-def load_curated_activities(path: Path = ACTIVITY_CATALOG_PATH) -> list[Activity]:
+def _uses_supabase(path: Path) -> bool:
+    """Use the shared catalog only when its optional client is available.
+
+    Keeping this check local makes a developer checkout with configured secrets
+    but without ``pip install -r requirements.txt`` safely use the JSON fallback.
+    Streamlit Cloud installs the declared dependency and therefore uses Supabase.
+    """
+
+    if path != ACTIVITY_CATALOG_PATH or not is_configured():
+        return False
+    try:
+        from supabase import create_client  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _load_local_activities(path: Path) -> list[Activity]:
     if not path.exists():
         return []
     raw = json.loads(path.read_text(encoding="utf-8"))
     return [Activity.model_validate(item) for item in raw]
 
 
+def _remote_rows(activities: list[Activity]) -> list[dict[str, Any]]:
+    return [
+        {
+            "activity_id": activity.id,
+            "activity_json": activity.model_dump(mode="json"),
+        }
+        for activity in activities
+    ]
+
+
+def load_curated_activities(path: Path = ACTIVITY_CATALOG_PATH) -> list[Activity]:
+    """Load the shared catalog, seeding it from the packaged file once if empty."""
+
+    if not _uses_supabase(path):
+        return _load_local_activities(path)
+    rows = select(SUPABASE_CATALOG_TABLE, order="activity_id")
+    if rows:
+        return [Activity.model_validate(row["activity_json"]) for row in rows]
+    seed = _load_local_activities(path)
+    upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows(seed), conflict="activity_id")
+    return seed
+
+
 def save_activity(activity: Activity, path: Path = ACTIVITY_CATALOG_PATH) -> None:
     """Append a validated activity atomically, refusing duplicate IDs."""
 
-    activities = load_curated_activities(path)
-    if activity.id in {existing.id for existing in activities}:
+    added, duplicates = save_activities([activity], path)
+    if duplicates:
         raise ValueError(f"{activity.name} is already in the curated catalog")
-    activities.append(activity)
-    _write_activities(activities, path)
+
+
+def update_activity(activity: Activity, path: Path = ACTIVITY_CATALOG_PATH) -> None:
+    """Replace an existing validated activity while preserving its stable ID."""
+
+    existing = load_curated_activities(path)
+    if activity.id not in {entry.id for entry in existing}:
+        raise ValueError(f"{activity.name} is not in the curated catalog")
+    if _uses_supabase(path):
+        upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows([activity]), conflict="activity_id")
+        return
+    updated = [activity if entry.id == activity.id else entry for entry in existing]
+    _write_activities(updated, path)
+
+
+def auto_curate_candidates(
+    candidates: list[dict[str, Any]],
+    city: str,
+    country: str,
+) -> tuple[list[Activity], dict[str, str]]:
+    """Turn safe imported candidates into validated batch-review activities.
+
+    Excluded candidates are returned with a human-readable reason. Successful
+    records have already passed the same Activity Pydantic contract as manual
+    additions, but still retain their source URL for later review.
+    """
+
+    activities: list[Activity] = []
+    skipped: dict[str, str] = {}
+    for candidate in candidates:
+        name = str(candidate.get("name", "Unnamed candidate"))
+        reason = automatic_curation_reason(candidate)
+        if reason:
+            skipped[name] = reason
+            continue
+        fields = automatic_activity_fields(candidate, city)
+        if fields is None:
+            skipped[name] = "Auto-skip: no safe draft fields were available."
+            continue
+        try:
+            activities.append(build_activity(candidate, city, country, fields))
+        except (KeyError, ValueError) as error:
+            skipped[name] = f"Auto-skip: {error}"
+    return activities, skipped
+
+
+def save_activities(
+    activities_to_add: list[Activity],
+    path: Path = ACTIVITY_CATALOG_PATH,
+) -> tuple[list[Activity], list[str]]:
+    """Atomically add a validated batch, returning added and duplicate IDs."""
+
+    existing = load_curated_activities(path)
+    known_ids = {activity.id for activity in existing}
+    added: list[Activity] = []
+    duplicate_ids: list[str] = []
+    for activity in activities_to_add:
+        if activity.id in known_ids:
+            duplicate_ids.append(activity.id)
+            continue
+        known_ids.add(activity.id)
+        existing.append(activity)
+        added.append(activity)
+    if added:
+        if _uses_supabase(path):
+            upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows(added), conflict="activity_id")
+        else:
+            _write_activities(existing, path)
+    return added, duplicate_ids
+
+
+def delete_activities(
+    activity_ids: list[str],
+    path: Path = ACTIVITY_CATALOG_PATH,
+) -> int:
+    """Delete selected validated records from the local canonical catalog."""
+
+    ids = set(activity_ids)
+    if not ids:
+        return 0
+    activities = load_curated_activities(path)
+    retained = [activity for activity in activities if activity.id not in ids]
+    removed = len(activities) - len(retained)
+    if removed:
+        if _uses_supabase(path):
+            delete_in(SUPABASE_CATALOG_TABLE, "activity_id", list(ids))
+        else:
+            _write_activities(retained, path)
+    return removed
+
+
+def delete_candidates_from_batch(path: Path, candidate_ids: list[str]) -> int:
+    """Remove unwanted source candidates from one review batch atomically."""
+
+    ids = set(candidate_ids)
+    if not ids:
+        return 0
+    document = load_candidate_batch(path)
+    candidates = document["candidates"]
+    retained = [
+        candidate for candidate in candidates
+        if candidate.get("wikidata_id") not in ids
+    ]
+    removed = len(candidates) - len(retained)
+    if not removed:
+        return 0
+    document["candidates"] = retained
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(document, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary, path)
+    return removed
 
 
 def _write_activities(activities: list[Activity], path: Path) -> None:

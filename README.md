@@ -76,9 +76,10 @@ SUPABASE_SECRET_KEY=your-server-side-secret
 TRIPSYNC_ADMIN_PASSWORD=choose-a-dashboard-password
 ```
 
-The first two values store saved trips and feedback server-side. The dashboard
-password protects **Feedback insights**. Without Supabase credentials, TripSync
-uses the local SQLite fallback in `data/`.
+The first two values store saved trips, feedback, and the shared activity catalog
+server-side. The dashboard password protects **Feedback insights** and **Curate
+catalog**. Without Supabase credentials, TripSync uses the local SQLite fallback
+in `data/`.
 
 Saved plans are deliberately scoped to the current anonymous browser session.
 That prevents one public visitor from seeing another visitor's plans. Supporting
@@ -154,10 +155,39 @@ completeness, and proposal applicability—not subjective travel-writing quality
 
 ## Data and curation
 
-`data/activities.json` is the canonical, validated activity catalog. Raw external
-candidate imports remain under `data/candidates/` for review. The curation rules
-are in [docs/curation-standard.md](docs/curation-standard.md), and retrieval
-behavior is in [docs/retrieval.md](docs/retrieval.md).
+`data/activities.json` is the local seed and fallback for the validated activity
+catalog. When Supabase is configured, the first catalog access seeds its shared
+`catalog_activities` table from this file; future additions and deletions persist
+there across Streamlit Cloud restarts. Raw external candidate imports remain
+under `data/candidates/` for review. The curation rules are in
+[docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior
+is in [docs/retrieval.md](docs/retrieval.md).
+
+### Batch curation
+
+The **Curate catalog** workspace supports a fast human-in-the-loop workflow:
+it filters the published catalog by country and city, bulk-adds safe
+Pydantic-validated drafts from a candidate batch, and bulk-deletes selected
+records only after confirmation. Hotels, airports, transport stations, and
+untyped records are automatically excluded from bulk promotion.
+
+The same workflow is available as a script. It fetches source candidates and
+prepares a review batch without changing the catalog by default:
+
+```bash
+python -m src.catalog_batch --city Venice --country Italy --limit 50
+```
+
+After reviewing the candidate file or the Curation workspace, explicitly
+publish the batch with:
+
+```bash
+python -m src.catalog_batch --city Venice --country Italy --limit 50 --apply
+```
+
+This is deliberate: automation prepares and validates many records at once,
+but it does not silently claim that a place is currently open, accessible, or a
+good fit for every traveler.
 
 ## Live demo and project evidence
 

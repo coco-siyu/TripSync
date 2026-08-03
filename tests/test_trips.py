@@ -16,7 +16,10 @@ class SavedTripsTests(unittest.TestCase):
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory) / "trips.db"
-            with patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database):
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
                 saved = save_trip(trip, {"selected_activity_ids": ["rome_pantheon"]})
                 records = list_saved_trips()
         self.assertEqual(records[0].trip, trip)
@@ -26,7 +29,10 @@ class SavedTripsTests(unittest.TestCase):
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory) / "trips.db"
-            with patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database):
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
                 saved = save_trip(trip, {"selected_activity_ids": ["rome_pantheon"]})
                 updated = save_trip(
                     trip,

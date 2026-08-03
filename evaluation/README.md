@@ -145,6 +145,44 @@ to the configured OpenAI model and reports the same contract metrics:
 .venv/bin/python -m evaluation.llm --live
 ```
 
+### Model comparison
+
+Compare two candidate OpenAI models on the identical 20-case contract suite
+before changing `OPENAI_MODEL` in the product:
+
+```bash
+.venv/bin/python -m evaluation.llm --live --compare-models model-a model-b
+```
+
+Repeat the comparison against the separately held-out suite:
+
+```bash
+.venv/bin/python -m evaluation.llm --cases evaluation/llm_holdout_cases.json --live \
+  --compare-models model-a model-b
+```
+
+The comparison reports schema, grounding, completeness, and proposal
+applicability side by side. A single measured winner is identified only when it
+has the higher average hard-contract score; a tie remains a tie, so cost and the
+human-quality rubric decide the product default rather than an invented ranking.
+
+### Recorded model selection — 2026-08-02
+
+TripSync compared `gpt-5.6-luna` and `gpt-5.6-terra` using the same live cases.
+Terra is the product default because it won both measured suites:
+
+| Suite | Model | Schema | Grounding | Complete | Applicable |
+|---|---|---:|---:|---:|---:|
+| 20-case contract | Luna | 0.950 | 0.950 | 0.950 | 0.900 |
+| 20-case contract | Terra | 1.000 | 1.000 | 1.000 | 1.000 |
+| 12-case held-out robustness | Luna | 0.833 | 0.833 | 0.833 | 0.750 |
+| 12-case held-out robustness | Terra | 1.000 | 1.000 | 1.000 | 0.875 |
+
+Terra still had one held-out adjustment that was not applicable. This selection
+therefore improves measured reliability; it does not claim that all future
+travel suggestions are perfect. Deterministic grounding and applicability checks
+remain the final guardrails.
+
 Use `--json` with either mode for a machine-readable report. A live pass proves
 contract compliance for that run; human review is still needed to assess creative
 quality, factual nuance, and whether an option is genuinely useful to travelers.

@@ -34,7 +34,7 @@ from src.proposals import (
 )
 
 
-DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
+DEFAULT_OPENAI_MODEL = "gpt-5.6-terra"
 
 
 load_dotenv()

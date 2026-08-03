@@ -30,6 +30,15 @@ create table if not exists public.overall_experience_feedback (
   primary key (session_id, itinerary_id)
 );
 
+-- Shared, Pydantic-validated activity catalog. This is edited only through
+-- the admin-protected Curate catalog workspace.
+create table if not exists public.catalog_activities (
+  activity_id text primary key,
+  activity_json jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.saved_trips enable row level security;
 alter table public.llm_feedback enable row level security;
 alter table public.overall_experience_feedback enable row level security;
+alter table public.catalog_activities enable row level security;

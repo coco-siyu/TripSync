@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-01T01:33:50.808872+00:00",
+  "generated_at": "2026-08-03T04:01:04.159491+00:00",
   "city": "Venice",
   "country": "Italy",
   "source": {
@@ -41,19 +41,6 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Antonio%20Contin%20-%20Ponte%20dei%20sospiri%20%28Venice%29.jpg"
     },
     {
-      "wikidata_id": "Q52439",
-      "name": "Burano",
-      "latitude": 45.485555555,
-      "longitude": 12.4175,
-      "source_url": "https://www.wikidata.org/wiki/Q52439",
-      "wikidata_types": [
-        "island"
-      ],
-      "review_flags": [],
-      "wikipedia_url": "https://en.wikipedia.org/wiki/Burano",
-      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Burano%20Vendig%20Aug%202021%204.jpg"
-    },
-    {
       "wikidata_id": "Q820872",
       "name": "Ca' d'Oro",
       "latitude": 45.440555555,
@@ -68,21 +55,6 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_d%27Oro",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ca%27%20d%27Oro%20facciata.jpg"
-    },
-    {
-      "wikidata_id": "Q1546906",
-      "name": "Ca' Foscari University of Venice",
-      "latitude": 45.434464,
-      "longitude": 12.3266,
-      "source_url": "https://www.wikidata.org/wiki/Q1546906",
-      "wikidata_types": [
-        "university"
-      ],
-      "review_flags": [
-        "Institution: verify visitor access or a campus-tour experience."
-      ],
-      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_Foscari_University_of_Venice",
-      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/%28Venice%29%20Ca%27%20Foscari.jpg"
     },
     {
       "wikidata_id": "Q35191",
@@ -311,6 +283,19 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Torcello",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venezia%20-%20Torcello%2001.JPG"
+    },
+    {
+      "wikidata_id": "Q1262248",
+      "name": "Venetian Arsenal",
+      "latitude": 45.435277777,
+      "longitude": 12.353055555,
+      "source_url": "https://www.wikidata.org/wiki/Q1262248",
+      "wikidata_types": [
+        "naval arsenal"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venetian_Arsenal",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arsenal%20-%20Venice%2C%20Italy%20-%20panoramio.jpg"
     },
     {
       "wikidata_id": "Q76925",

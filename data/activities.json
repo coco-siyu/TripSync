@@ -5,6 +5,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "sculpture",
@@ -26,6 +27,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -48,6 +50,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "park",
+    "category_tags": [],
     "interests": [
       "nature",
       "relaxation",
@@ -70,6 +73,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -92,6 +96,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -114,6 +119,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "sculpture",
@@ -135,6 +141,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "history",
@@ -157,6 +164,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "history",
       "architecture",
@@ -179,6 +187,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "photography",
@@ -201,6 +210,7 @@
     "city": "Florence",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "culture",
@@ -222,6 +232,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -244,6 +255,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "history",
@@ -266,6 +278,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "shopping",
@@ -288,6 +301,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "music",
       "culture",
@@ -310,6 +324,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -332,6 +347,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "culture",
@@ -353,6 +369,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "photography",
@@ -374,6 +391,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -396,6 +414,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "history",
       "architecture",
@@ -418,6 +437,7 @@
     "city": "Milan",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "history",
@@ -440,6 +460,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "outdoor",
+    "category_tags": [],
     "interests": [
       "history",
       "cycling",
@@ -461,6 +482,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "ancient rome",
       "history",
@@ -483,6 +505,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "sculpture",
@@ -504,6 +527,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "history",
@@ -525,6 +549,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "history",
       "architecture",
@@ -546,6 +571,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "industrial design",
@@ -567,6 +593,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "ancient rome",
       "history",
@@ -589,6 +616,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "history",
       "architecture",
@@ -610,6 +638,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "architecture",
       "history",
@@ -631,6 +660,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "culture",
       "history"
@@ -651,6 +681,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "archaeological_site",
+    "category_tags": [],
     "interests": [
       "history",
       "archaeology",
@@ -672,6 +703,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "food_market",
+    "category_tags": [],
     "interests": [
       "food",
       "local culture",
@@ -693,6 +725,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "historic_site",
+    "category_tags": [],
     "interests": [
       "ancient rome",
       "archaeology",
@@ -715,6 +748,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "neighborhood",
+    "category_tags": [],
     "interests": [
       "food",
       "culture",
@@ -736,6 +770,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "landmark",
+    "category_tags": [],
     "interests": [
       "architecture",
       "photography",
@@ -757,6 +792,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "museum",
+    "category_tags": [],
     "interests": [
       "art",
       "history",
@@ -778,6 +814,7 @@
     "city": "Rome",
     "country": "Italy",
     "category": "park",
+    "category_tags": [],
     "interests": [
       "nature",
       "relaxation",
@@ -792,5 +829,557 @@
     "reservation_required": false,
     "description": "Large landscaped public park with gardens, fountains, viewpoints, and cultural venues.",
     "source_url": "https://www.turismoroma.it/en/places/villa-borghese"
+  },
+  {
+    "id": "venice_biblioteca_nazionale_marciana",
+    "name": "Biblioteca Nazionale Marciana",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "museum",
+    "category_tags": [
+      "cultural"
+    ],
+    "interests": [
+      "art",
+      "culture",
+      "history"
+    ],
+    "walking_level": "moderate",
+    "budget_level": "moderate",
+    "duration_hours": 2.0,
+    "indoor": true,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": true,
+    "description": "Visit Biblioteca Nazionale Marciana, a curated museum experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q578460"
+  },
+  {
+    "id": "venice_bridge_of_sighs",
+    "name": "Bridge of Sighs",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Bridge of Sighs, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q52517"
+  },
+  {
+    "id": "venice_ca_d_oro",
+    "name": "Ca' d'Oro",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "museum",
+    "category_tags": [
+      "cultural"
+    ],
+    "interests": [
+      "art",
+      "culture",
+      "history"
+    ],
+    "walking_level": "moderate",
+    "budget_level": "moderate",
+    "duration_hours": 2.0,
+    "indoor": true,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": true,
+    "description": "Visit Ca' d'Oro, a curated museum experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q820872"
+  },
+  {
+    "id": "venice_carnival_of_venice",
+    "name": "Carnival of Venice",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Carnival of Venice, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q35191"
+  },
+  {
+    "id": "venice_doge_s_palace",
+    "name": "Doge's Palace",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "museum",
+    "category_tags": [
+      "cultural"
+    ],
+    "interests": [
+      "art",
+      "culture",
+      "history"
+    ],
+    "walking_level": "moderate",
+    "budget_level": "moderate",
+    "duration_hours": 2.0,
+    "indoor": true,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": true,
+    "description": "Visit Doge's Palace, a curated museum experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q189883"
+  },
+  {
+    "id": "venice_gallerie_dell_accademia",
+    "name": "Gallerie dell'Accademia",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "museum",
+    "category_tags": [
+      "cultural"
+    ],
+    "interests": [
+      "art",
+      "culture",
+      "history"
+    ],
+    "walking_level": "moderate",
+    "budget_level": "moderate",
+    "duration_hours": 2.0,
+    "indoor": true,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": true,
+    "description": "Visit Gallerie dell'Accademia, a curated museum experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q338330"
+  },
+  {
+    "id": "venice_giudecca",
+    "name": "Giudecca",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Giudecca, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q52435"
+  },
+  {
+    "id": "venice_grand_canal",
+    "name": "Grand Canal",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Grand Canal, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q309243"
+  },
+  {
+    "id": "venice_lido_di_venezia",
+    "name": "Lido di Venezia",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Lido di Venezia, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q226221"
+  },
+  {
+    "id": "venice_mestre",
+    "name": "Mestre",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Mestre, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q541405"
+  },
+  {
+    "id": "venice_murano",
+    "name": "Murano",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Murano, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q52437"
+  },
+  {
+    "id": "venice_piazza_san_marco",
+    "name": "Piazza San Marco",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Piazza San Marco, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q217527"
+  },
+  {
+    "id": "venice_rialto_bridge",
+    "name": "Rialto Bridge",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Rialto Bridge, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q52505"
+  },
+  {
+    "id": "venice_san_michele",
+    "name": "San Michele",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit San Michele, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q844263"
+  },
+  {
+    "id": "venice_santa_maria_della_salute",
+    "name": "Santa Maria della Salute",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "historic_site",
+    "category_tags": [
+      "religious_site"
+    ],
+    "interests": [
+      "architecture",
+      "history",
+      "religion"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": true,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Santa Maria della Salute, a curated historic site experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q52531"
+  },
+  {
+    "id": "venice_st_mark_s_basilica",
+    "name": "St Mark's Basilica",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "historic_site",
+    "category_tags": [
+      "religious_site"
+    ],
+    "interests": [
+      "architecture",
+      "history",
+      "religion"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": true,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit St Mark's Basilica, a curated historic site experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q172988"
+  },
+  {
+    "id": "venice_st_mark_s_campanile",
+    "name": "St Mark's Campanile",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit St Mark's Campanile, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q754194"
+  },
+  {
+    "id": "venice_teatro_la_fenice",
+    "name": "Teatro La Fenice",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Teatro La Fenice, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q223942"
+  },
+  {
+    "id": "venice_torcello",
+    "name": "Torcello",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Torcello, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q52441"
+  },
+  {
+    "id": "venice_venetian_arsenal",
+    "name": "Venetian Arsenal",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Venetian Arsenal, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q1262248"
+  },
+  {
+    "id": "venice_venetian_lagoon",
+    "name": "Venetian Lagoon",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Venetian Lagoon, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q76925"
+  },
+  {
+    "id": "venice_venice_biennale",
+    "name": "Venice Biennale",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Venice Biennale, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q205751"
+  },
+  {
+    "id": "venice_venice_film_festival",
+    "name": "Venice Film Festival",
+    "city": "Venice",
+    "country": "Italy",
+    "category": "landmark",
+    "category_tags": [
+      "outdoor"
+    ],
+    "interests": [
+      "history",
+      "architecture",
+      "photography"
+    ],
+    "walking_level": "low",
+    "budget_level": "free",
+    "duration_hours": 1.0,
+    "indoor": false,
+    "family_friendly": true,
+    "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+    "reservation_required": false,
+    "description": "Visit Venice Film Festival, a curated landmark experience in Venice.",
+    "source_url": "https://www.wikidata.org/wiki/Q49024"
   }
 ]

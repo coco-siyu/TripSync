@@ -29,6 +29,12 @@ FeedbackTargetType = Literal[
 FeedbackRating = Literal["up", "down"]
 
 
+def _uses_supabase(database_path: Path) -> bool:
+    """Keep explicitly supplied paths local (useful for exports and tests)."""
+
+    return database_path == DEFAULT_FEEDBACK_DATABASE_PATH and is_configured()
+
+
 @dataclass(frozen=True)
 class FeedbackRecord:
     """One organizer's local rating of one generated LLM output."""
@@ -112,7 +118,7 @@ def record_feedback(
         comment=cleaned_comment,
         created_at=created_at,
     )
-    if is_configured():
+    if _uses_supabase(database_path):
         upsert(
             "llm_feedback",
             {
@@ -156,7 +162,7 @@ def list_feedback(
 ) -> list[FeedbackRecord]:
     """Return local feedback rows for future human-review analysis."""
 
-    if is_configured():
+    if _uses_supabase(database_path):
         return [
             FeedbackRecord(
                 row["session_id"], row["target_type"], row["target_id"],
@@ -207,7 +213,7 @@ def record_overall_experience_feedback(
         comment=cleaned_comment,
         created_at=datetime.now(UTC).isoformat(),
     )
-    if is_configured():
+    if _uses_supabase(database_path):
         upsert(
             "overall_experience_feedback",
             {
@@ -273,7 +279,7 @@ def list_overall_experience_feedback(
 ) -> list[OverallExperienceRecord]:
     """Return stored overall experience ratings for human-review analysis."""
 
-    if is_configured():
+    if _uses_supabase(database_path):
         return [
             OverallExperienceRecord(
                 row["session_id"], row["itinerary_id"], row["helpfulness"],

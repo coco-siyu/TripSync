@@ -15,6 +15,7 @@ from evaluation.itinerary import ItineraryEvaluationCase, load_itinerary_cases
 from evaluation.retrieval import load_activities
 from src.llm import (
     NarrationGenerationError,
+    configured_model,
     generate_itinerary_change_proposals,
     generate_itinerary_narrative,
 )
@@ -61,6 +62,7 @@ class LlmEvaluationReport:
     completeness_rate: float
     proposal_applicability_rate: float
     cases: tuple[LlmCaseResult, ...]
+    model: str | None = None
 
 
 def load_llm_cases(path: Path = DEFAULT_CASES_PATH) -> list[LlmEvaluationCase]:
@@ -168,6 +170,7 @@ def evaluate_llm_cases(
     cases: Sequence[LlmEvaluationCase],
     *,
     live: bool = False,
+    model: str | None = None,
     suite_name: str = DEFAULT_SUITE_NAME,
 ) -> LlmEvaluationReport:
     """Run free fixtures or paid live model outputs against one named suite."""
@@ -189,7 +192,9 @@ def evaluate_llm_cases(
         try:
             if case.kind == "narration":
                 output = (
-                    generate_itinerary_narrative(source_case.trip, candidates, plan)
+                    generate_itinerary_narrative(
+                        source_case.trip, candidates, plan, model=model
+                    )
                     if live
                     else _fixture_narrative(plan)
                 )
@@ -221,6 +226,7 @@ def evaluate_llm_cases(
                         candidates,
                         plan,
                         case.request or "Suggest a grounded adjustment.",
+                        model=model,
                     )
                     if live
                     else _fixture_proposals(plan, candidates)
@@ -278,6 +284,34 @@ def evaluate_llm_cases(
             else 1.0
         ),
         cases=tuple(results),
+        model=(model or configured_model()) if live else model,
+    )
+
+
+def compare_models(
+    activities: Sequence[Activity],
+    cases: Sequence[LlmEvaluationCase],
+    models: Sequence[str],
+    *,
+    live: bool = False,
+    suite_name: str = DEFAULT_SUITE_NAME,
+) -> tuple[LlmEvaluationReport, ...]:
+    """Evaluate two or more named model strategies on identical cases."""
+
+    normalized_models = tuple(model.strip() for model in models if model.strip())
+    if len(normalized_models) < 2:
+        raise ValueError("provide at least two non-blank model names to compare")
+    if len(normalized_models) != len(set(normalized_models)):
+        raise ValueError("model names to compare must be distinct")
+    return tuple(
+        evaluate_llm_cases(
+            activities,
+            cases,
+            live=live,
+            model=model,
+            suite_name=suite_name,
+        )
+        for model in normalized_models
     )
 
 
@@ -294,6 +328,8 @@ def format_report(report: LlmEvaluationReport) -> str:
         f"Completeness rate: {report.completeness_rate:.3f}",
         f"Proposal applicability rate: {report.proposal_applicability_rate:.3f}",
     ]
+    if report.model:
+        lines.insert(1, f"Model: {report.model}")
     needs_review = [
         result
         for result in report.cases
@@ -328,11 +364,65 @@ def format_report(report: LlmEvaluationReport) -> str:
     return "\n".join(lines)
 
 
+def format_model_comparison(reports: Sequence[LlmEvaluationReport]) -> str:
+    """Format a transparent comparison of hard contract metrics."""
+
+    if len(reports) < 2:
+        raise ValueError("at least two reports are required for a comparison")
+    lines = [
+        "TripSync LLM model comparison (live)",
+        "Model | Schema | Grounding | Complete | Applicable",
+        "--- | ---: | ---: | ---: | ---:",
+    ]
+    for report in reports:
+        lines.append(
+            " | ".join(
+                (
+                    report.model or "unknown",
+                    f"{report.schema_pass_rate:.3f}",
+                    f"{report.grounding_pass_rate:.3f}",
+                    f"{report.completeness_rate:.3f}",
+                    f"{report.proposal_applicability_rate:.3f}",
+                )
+            )
+        )
+    contract_scores = {
+        report.model or "unknown": (
+            report.schema_pass_rate
+            + report.grounding_pass_rate
+            + report.completeness_rate
+            + report.proposal_applicability_rate
+        )
+        / 4
+        for report in reports
+    }
+    best_score = max(contract_scores.values())
+    winners = [model for model, score in contract_scores.items() if score == best_score]
+    if len(winners) == 1:
+        lines.append(f"Measured contract winner: {winners[0]} ({best_score:.3f}).")
+    else:
+        lines.append(
+            "Measured contract result: tie. Use cost and the human-quality rubric "
+            "before changing the product default."
+        )
+    return "\n".join(lines)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Evaluate TripSync LLM narration and itinerary adjustments."
     )
     parser.add_argument("--live", action="store_true", help="Call OpenAI for all cases.")
+    parser.add_argument(
+        "--model",
+        help="Optional model override for one live evaluation run.",
+    )
+    parser.add_argument(
+        "--compare-models",
+        nargs=2,
+        metavar=("MODEL_A", "MODEL_B"),
+        help="Run the same paid live suite against two named models.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     parser.add_argument(
         "--cases",
@@ -345,10 +435,26 @@ def main() -> None:
     )
     args = parser.parse_args()
     suite_name = "held-out robustness" if args.cases.name == "llm_holdout_cases.json" else "contract"
+    if args.compare_models:
+        if not args.live:
+            parser.error("--compare-models requires --live because it calls OpenAI")
+        reports = compare_models(
+            load_activities(),
+            load_llm_cases(args.cases),
+            args.compare_models,
+            live=True,
+            suite_name=suite_name,
+        )
+        if args.json:
+            print(json.dumps([report_as_dict(report) for report in reports], indent=2))
+        else:
+            print(format_model_comparison(reports))
+        return
     report = evaluate_llm_cases(
         load_activities(),
         load_llm_cases(args.cases),
         live=args.live,
+        model=args.model,
         suite_name=suite_name,
     )
     if args.json:

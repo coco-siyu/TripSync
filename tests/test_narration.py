@@ -276,8 +276,8 @@ class NarrationTests(unittest.TestCase):
                     self.plan,
                 )
 
-    def test_default_model_is_cost_aware_gpt_5_6_option(self) -> None:
-        self.assertEqual(DEFAULT_OPENAI_MODEL, "gpt-5.6-luna")
+    def test_default_model_is_the_evaluated_gpt_5_6_option(self) -> None:
+        self.assertEqual(DEFAULT_OPENAI_MODEL, "gpt-5.6-terra")
 
 
 if __name__ == "__main__":
