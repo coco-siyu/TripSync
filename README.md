@@ -6,7 +6,7 @@ recommendations and a reviewable itinerary.
 
 **Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
 
-### Why I built it
+## Why I built it
 
 The idea came from planning trips with family and friends. Coordinating everyone’s
 interests, pace, budgets, food needs, and non-negotiable must-dos is often harder
