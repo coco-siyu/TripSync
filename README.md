@@ -7,6 +7,7 @@ itinerary the group can review together. Expects to reduce time and friction in 
 The current version of TripSync was built to meet the LLM Zoomcamp project requirements. It is still an early prototype, and I plan to add more features and improve the experience over time.
 
 **Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
+
 For the demo, the password for the Feedback insights and Curate catalog pages is:
 
 ```bash
