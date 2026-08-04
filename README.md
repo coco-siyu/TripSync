@@ -4,7 +4,14 @@ TripSync is a group travel planner for people who may have different things in m
 pace, and must-dos, then turns them into activity recommendations and an
 itinerary the group can review together. Expects to reduce time and friction in the planning process.
 
+The current version of TripSync was built to meet the LLM Zoomcamp project requirements. It is still an early prototype, and I plan to add more features and improve the experience over time.
+
 **Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
+For the demo, the password for the Feedback insights and Curate catalog pages is:
+
+```bash
+admin
+```
 
 ## Why I built it
 
