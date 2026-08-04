@@ -4,6 +4,16 @@ TripSync is an AI-assisted group travel planner. It turns a group's interests,
 walking comfort, budget, food needs, pace, and must-dos into explainable activity
 recommendations and a reviewable itinerary.
 
+**Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
+
+### Why I built it
+
+The idea came from planning trips with family and friends. Coordinating everyone’s
+interests, pace, budgets, food needs, and non-negotiable must-dos is often harder
+than choosing the destination itself. I wanted one shared place to collect those
+preferences, make the trade-offs visible, and build a plan that gives every
+traveler a meaningful say.
+
 It is built as an end-to-end LLM application for the LLM Zoomcamp project: a
 curated knowledge base is retrieved first, deterministic logic makes the planning
 decisions, and an LLM adds grounded narration and adjustment ideas under a strict
@@ -29,24 +39,7 @@ structured-output contract.
   configured; SQLite is the local-development fallback.
 - Includes an admin-protected feedback dashboard with five privacy-safe charts
   and JSON export.
-
-## How the system works
-
-```mermaid
-flowchart LR
-    A["Traveler preferences"] --> B["Retrieve city catalog"]
-    B --> C["Explainable group-fit scoring"]
-    C --> D["Deterministic itinerary planner"]
-    D --> E["Grounded LLM story / adjustment options"]
-    E --> F["Organizer review and explicit approval"]
-    F --> G["Supabase / local saved trip and feedback"]
-```
-
-The LLM receives only the validated trip, eligible catalog records, and current
-plan. Pydantic schemas plus deterministic grounding validation reject invented
-activity IDs, duplicate stops, moved activities, and invalid output structures.
-Read the full RAG boundary in [docs/rag.md](docs/rag.md).
-
+  
 ## Local setup
 
 Requires Python 3.12 or later.
