@@ -1,45 +1,43 @@
 # TripSync
 
-TripSync is an AI-assisted group travel planner. It turns a group's interests,
-walking comfort, budget, food needs, pace, and must-dos into explainable activity
-recommendations and a reviewable itinerary.
+TripSync is a group travel planner for people who may have different things in minds. It collects everyone's interests, walking comfort, budget, food needs,
+pace, and must-dos, then turns them into activity recommendations and an
+itinerary the group can review together. Expects to reduce time and friction in the planning process.
 
 **Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
 
 ## Why I built it
 
-The idea came from planning trips with family and friends. Coordinating everyone’s
-interests, pace, budgets, food needs, and non-negotiable must-dos is often harder
-than choosing the destination itself. I wanted one shared place to collect those
-preferences, make the trade-offs visible, and build a plan that gives every
-traveler a meaningful say.
+The idea came from planning trips with family and friends. Getting everyone to
+agree on a pace, budget, food needs, and a few non-negotiable places can be more
+difficult than picking the destination. I wanted one shared place where people
+could put those preferences down, see the trade-offs, and make a plan together.
 
-It is built as an end-to-end LLM application for the LLM Zoomcamp project: a
-curated knowledge base is retrieved first, deterministic logic makes the planning
-decisions, and an LLM adds grounded narration and adjustment ideas under a strict
-structured-output contract.
+It retrieves from a curated activity
+catalog first, uses deterministic rules for the actual planning decisions, and
+uses an LLM for a grounded trip story and adjustment ideas. The LLM has to return
+structured output, and the app checks it before showing anything to the user.
 
 ## What it does
 
-- Collects validated preferences for 2–6 travelers and trips of 1–5 days.
-- Retrieves from a curated catalog for Rome, Florence, Milan, and Naples using
-  text, vector, or hybrid retrieval.
-- Scores activities for shared interests, walking and budget fit, must-dos, and
-  fairness across the group.
-- Shows Top 5, must-do, all, and rejected activity views; users can manage a
-  shortlist before generating the itinerary.
-- Builds a deterministic itinerary with daily pace, duration, transition, and
-  duplicate-prevention rules.
-- Lets the organizer reject, replace, or add activities. Recommendations that
-  exceed the pace limit require explicit confirmation and remain visibly marked
-  as over pace.
-- Uses the OpenAI Responses API only for a grounded itinerary story and
-  organizer-approved adjustment options; the LLM cannot silently change a plan.
-- Saves trips, LLM feedback, and overall-plan ratings to Supabase when it is
-  configured; SQLite is the local-development fallback.
-- Includes an admin-protected feedback dashboard with five privacy-safe charts
-  and JSON export.
-  
+- Supports groups of 2 to 6 travelers and trips of 1 to 5 days.
+- Searches a curated catalog for Rome, Florence, Milan, and Naples with text,
+  vector, or hybrid retrieval.
+- Ranks activities by shared interests, walking and budget fit, must-dos, and
+  whether the plan treats the group fairly.
+- Lets users look through the top five, must-dos, all activities, and rejected
+  activities before building an itinerary.
+- Builds the itinerary with rules for pace, duration, transitions, and duplicate
+  stops.
+- Lets the organizer reject, replace, or add activities. If an option pushes a
+  day beyond its pace limit, the app asks for confirmation and labels it clearly.
+- Uses the OpenAI Responses API for a grounded trip story and optional adjustment
+  ideas. The LLM cannot change a plan without the organizer approving it.
+- Stores trips, LLM feedback, and overall ratings in Supabase when it is set up.
+  SQLite is the fallback for local development.
+- Includes an admin-protected feedback dashboard with five charts and a JSON
+  export.
+
 ## Local setup
 
 Requires Python 3.12 or later.
@@ -53,15 +51,14 @@ streamlit run app.py
 ```
 
 Set `OPENAI_API_KEY` in `.env` to enable trip stories and LLM adjustment ideas.
-The deterministic recommendation and itinerary flow works without making an API
-call. Never commit `.env` or `.streamlit/secrets.toml`.
+You can use the recommendation and itinerary flow without an API call. Never
+commit `.env` or `.streamlit/secrets.toml`.
 
 ### Shared persistence and feedback dashboard
 
-For shared persistence, create a Supabase project, run
-[`supabase/schema.sql`](supabase/schema.sql) once in its SQL Editor, then add
-these server-only values to `.env` locally and your Streamlit Cloud secrets in
-production:
+To keep trips and feedback between app restarts, create a Supabase project and
+run [`supabase/schema.sql`](supabase/schema.sql) once in its SQL Editor. Then add
+these values to your local `.env` file and to Streamlit Cloud secrets:
 
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
@@ -69,29 +66,27 @@ SUPABASE_SECRET_KEY=your-server-side-secret
 TRIPSYNC_ADMIN_PASSWORD=choose-a-dashboard-password
 ```
 
-The first two values store saved trips, feedback, and the shared activity catalog
-server-side. The dashboard password protects **Feedback insights** and **Curate
-catalog**. Without Supabase credentials, TripSync uses the local SQLite fallback
-in `data/`.
+The first two values store saved trips, feedback, and the shared activity catalog.
+The password protects the Feedback insights and Curate catalog pages. Without
+Supabase credentials, TripSync uses local SQLite data in `data/`.
 
-Saved plans are deliberately scoped to the current anonymous browser session.
-That prevents one public visitor from seeing another visitor's plans. Supporting
-the same person's history across devices would require an authentication step.
+Saved plans belong to the current anonymous browser session. This keeps one
+visitor from seeing another visitor's plans. Keeping a person's history across
+devices would need authentication.
 
 ## Run with Docker Compose
 
-Docker Compose starts the complete local app and retains the local SQLite
-fallback state in a named volume. It also forwards any optional OpenAI,
-Supabase, and dashboard variables from `.env`.
+Docker Compose starts the local app and keeps the SQLite fallback state in a
+named volume. It also passes through any OpenAI, Supabase, and dashboard values
+from `.env`.
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Open <http://localhost:8501>. Stop it with `Ctrl+C`; add `-d` to run it in the
-background. Remove the local fallback volume only when you intentionally want
-to erase it:
+Open <http://localhost:8501>. Stop it with `Ctrl+C`, or add `-d` to run it in
+the background. Only remove the local fallback volume if you want to erase it:
 
 ```bash
 docker compose down --volumes
@@ -105,7 +100,7 @@ Build the image (the semantic retrieval model is downloaded during the build):
 docker build -t tripsync .
 ```
 
-Run it with an OpenAI key and a named volume for the local fallback state:
+Run it with an OpenAI key and a named volume for local fallback state:
 
 ```bash
 docker run --rm -p 8501:8501 \
@@ -114,11 +109,11 @@ docker run --rm -p 8501:8501 \
   tripsync
 ```
 
-Open <http://localhost:8501>. The catalog is included in the image; the mounted
+Open <http://localhost:8501>. The image includes the catalog. The mounted
 `tripsync-state` volume stores only SQLite fallback state. On a hosted platform,
-set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, Supabase credentials, and
-the dashboard password) through that platform's secrets manager, never in the
-repository.
+set `OPENAI_API_KEY`, and optionally `OPENAI_MODEL`, Supabase credentials, and
+the dashboard password, through that platform's secrets manager. Do not put them
+in the repository.
 
 ## Evaluation
 
@@ -141,28 +136,29 @@ python -m evaluation.llm --cases evaluation/llm_holdout_cases.json --live
 python -m unittest discover -s tests -q
 ```
 
-The current retrieval and itinerary baseline results are documented in
+The retrieval and itinerary baseline results are in
 [evaluation/README.md](evaluation/README.md). The 20 contract cases and 12
-held-out LLM robustness cases measure schema compliance, grounding,
-completeness, and proposal applicability—not subjective travel-writing quality.
+held-out LLM robustness cases check schema compliance, grounding, completeness,
+and whether a proposal can be applied. They do not try to score how pleasant the
+travel writing sounds.
 
 ## Data and curation
 
-`data/activities.json` is the local seed and fallback for the validated activity
-catalog. When Supabase is configured, the first catalog access seeds its shared
-`catalog_activities` table from this file; future additions and deletions persist
-there across Streamlit Cloud restarts. Raw external candidate imports remain
-under `data/candidates/` for review. The curation rules are in
-[docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior
-is in [docs/retrieval.md](docs/retrieval.md).
+`data/activities.json` is the seed and local fallback for the validated activity
+catalog. When Supabase is configured, the first catalog access copies this file
+into the shared `catalog_activities` table. Later additions and deletions remain
+there across Streamlit Cloud restarts. Raw external candidates stay in
+`data/candidates/` until someone reviews them. The curation rules are in
+[docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior is
+in [docs/retrieval.md](docs/retrieval.md).
 
 ### Batch curation
 
-The **Curate catalog** workspace supports a fast human-in-the-loop workflow:
-it filters the published catalog by country and city, bulk-adds safe
-Pydantic-validated drafts from a candidate batch, and bulk-deletes selected
-records only after confirmation. Hotels, airports, transport stations, and
-untyped records are automatically excluded from bulk promotion.
+The Curate catalog workspace has a human review step. You can filter published
+activities by country and city, add safe Pydantic-validated drafts from a batch,
+and delete selected records after confirming the action. The batch curation step
+automatically leaves out hotels, airports, transport stations, and untyped
+records.
 
 The same workflow is available as a script. It fetches source candidates and
 prepares a review batch without changing the catalog by default:
@@ -178,18 +174,17 @@ publish the batch with:
 python -m src.catalog_batch --city Venice --country Italy --limit 50 --apply
 ```
 
-This is deliberate: automation prepares and validates many records at once,
-but it does not silently claim that a place is currently open, accessible, or a
-good fit for every traveler.
+The automation can prepare and validate many records at once, but it does not
+claim that a place is currently open, accessible, or right for every traveler.
 
 ### Scheduled candidate retrieval
 
-The project also includes a `dlt` ingestion pipeline and weekly GitHub Actions
-workflow. Its versioned popular-destination queue starts with Italian cities,
-Paris, Barcelona, London, Kyoto, and New York City. It retrieves raw Wikidata
-candidates, records local provenance in DuckDB, and opens a review pull request.
-It does **not** publish activities automatically. The weekly workflow rotates
-through three active destinations; a manual run processes the entire queue.
+The project also has a `dlt` ingestion pipeline and a weekly GitHub Actions
+workflow. Its versioned destination queue starts with Italian cities, Paris,
+Barcelona, London, Kyoto, and New York City. The workflow retrieves raw Wikidata
+candidates, records provenance in DuckDB, and opens a pull request for review.
+It does not publish activities automatically. Each weekly run rotates through
+three active destinations. A manual run processes the entire queue.
 
 ```bash
 python -m src.catalog_dlt --limit 50
@@ -198,20 +193,19 @@ python -m src.catalog_dlt --limit 50
 See [docs/catalog-ingestion.md](docs/catalog-ingestion.md) for the human review
 step and how to run a different country.
 
-## Live demo and project evidence
+## Project evidence
 
-- **Public demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
-- **CI:** GitHub Actions runs the full unit suite on every push and pull request,
-  including automated catalog-review pull requests.
-- **RAG boundary:** [docs/rag.md](docs/rag.md)
-- **Catalog curation standard:** [docs/curation-standard.md](docs/curation-standard.md)
-- **Scheduled catalog ingestion:** [docs/catalog-ingestion.md](docs/catalog-ingestion.md)
-- **Retrieval comparison and itinerary evaluation:** [evaluation/README.md](evaluation/README.md)
+- Public demo: [tripsync.streamlit.app](https://tripsync.streamlit.app/)
+- CI: GitHub Actions runs the full unit suite on pushes and pull requests,
+  including catalog review pull requests.
+- RAG boundary: [docs/rag.md](docs/rag.md)
+- Catalog curation standard: [docs/curation-standard.md](docs/curation-standard.md)
+- Scheduled catalog ingestion: [docs/catalog-ingestion.md](docs/catalog-ingestion.md)
+- Retrieval comparison and itinerary evaluation: [evaluation/README.md](evaluation/README.md)
 
-The project includes text, vector, and hybrid retrieval benchmarks against the
-same labelled cases. Hybrid retrieval is the product default because it combines
-exact preference matching with semantic similarity; the evaluation document
-reports the trade-offs rather than hiding them behind a single score.
+The project compares text, vector, and hybrid retrieval on the same labelled
+cases. Hybrid retrieval is the default because it handles both exact preference
+matches and semantic similarity. The evaluation document shows the trade-offs.
 
 ## Project layout
 
@@ -231,11 +225,10 @@ supabase/schema.sql    Shared persistence schema
 
 TripSync is a planning prototype, not a booking tool. It does not provide live
 opening hours, ticket availability, prices, routes, hotel or flight search, or
-payments. Duration and pace values are curated planning estimates. The SQLite
-fallback is appropriate for local use. The current shared Supabase setup has no
-accounts, so saved-trip history remains session-scoped. A fuller production
-version would add authentication, live opening-hours/ticket sources, and
-user-controlled data deletion.
+payments. Duration and pace are curated estimates. SQLite is for local use. The
+shared Supabase setup has no accounts, so saved-trip history stays tied to one
+browser session. A production version would need authentication, live visitor
+information, and user-controlled data deletion.
 
 ## License
 
