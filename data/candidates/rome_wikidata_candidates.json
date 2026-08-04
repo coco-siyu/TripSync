@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-01T00:57:14.271559+00:00",
+  "generated_at": "2026-08-03T17:43:50.382060+00:00",
   "city": "Rome",
   "country": "Italy",
   "source": {
@@ -11,6 +11,37 @@
     "attribution": "Data sourced from Wikidata."
   },
   "candidates": [
+    {
+      "wikidata_id": "Q1463845",
+      "name": "410 sack of Rome",
+      "latitude": 41.89,
+      "longitude": 12.48,
+      "source_url": "https://www.wikidata.org/wiki/Q1463845",
+      "wikidata_types": [
+        "looting",
+        "sack"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sack_of_Rome_(410)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Sack%20of%20Rome%20by%20the%20Visigoths%20on%2024%20August%20410%20by%20JN%20Sylvestre%201890.jpg"
+    },
+    {
+      "wikidata_id": "Q506234",
+      "name": "Altare della Patria",
+      "latitude": 41.894722222,
+      "longitude": 12.483055555,
+      "source_url": "https://www.wikidata.org/wiki/Q506234",
+      "wikidata_types": [
+        "historical civil building museum",
+        "historical park museum",
+        "Italian national museum",
+        "military museum building",
+        "museum for an artifact of industrial archaeology"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Victor_Emmanuel_II_Monument",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Altare%20della%20Patria%20%28Roma%29.jpg"
+    },
     {
       "wikidata_id": "Q189417",
       "name": "Appian Way",
@@ -26,6 +57,22 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Appian%20Way.jpg"
     },
     {
+      "wikidata_id": "Q623612",
+      "name": "Ara Pacis",
+      "latitude": 41.906388888,
+      "longitude": 12.475555555,
+      "source_url": "https://www.wikidata.org/wiki/Q623612",
+      "wikidata_types": [
+        "archaeological site",
+        "arula (altar)",
+        "museum",
+        "shrine"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ara_Pacis",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ara%20Pacis%20%28SW%29.jpg"
+    },
+    {
       "wikidata_id": "Q5786",
       "name": "Arch of Constantine",
       "latitude": 41.889828,
@@ -39,6 +86,37 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Arch_of_Constantine",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arch%20of%20Constantine%20%28Rome%29%20-%20South%20side%2C%20from%20Via%20triumphalis.jpg"
+    },
+    {
+      "wikidata_id": "Q162353",
+      "name": "Arch of Septimius Severus (Roman Forum)",
+      "latitude": 41.892777777,
+      "longitude": 12.484722222,
+      "source_url": "https://www.wikidata.org/wiki/Q162353",
+      "wikidata_types": [
+        "archaeological site",
+        "cultural property",
+        "feature",
+        "ruins",
+        "triumphal arch"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Arch_of_Septimius_Severus",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arch%20of%20Septimius%20Severus.jpg"
+    },
+    {
+      "wikidata_id": "Q723887",
+      "name": "Arch of Titus",
+      "latitude": 41.890717,
+      "longitude": 12.488585,
+      "source_url": "https://www.wikidata.org/wiki/Q723887",
+      "wikidata_types": [
+        "archaeological site",
+        "triumphal arch"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Arch_of_Titus",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arch%20Titus%2C%20Forum%20Romanum%2C%20Rome%2C%20Italy.jpg"
     },
     {
       "wikidata_id": "Q84090",
@@ -116,6 +194,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Caelian%20Hill.jpg"
     },
     {
+      "wikidata_id": "Q242839",
+      "name": "Campus Martius",
+      "latitude": 41.89777778,
+      "longitude": 12.47722222,
+      "source_url": "https://www.wikidata.org/wiki/Q242839",
+      "wikidata_types": [
+        "terrain"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Campus_Martius",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Campus%20Martius.jpg"
+    },
+    {
       "wikidata_id": "Q34925",
       "name": "Capitoline Hill",
       "latitude": 41.893333333,
@@ -161,6 +252,34 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Castel%20Sant%27Angelo%20at%20Night.jpg"
     },
     {
+      "wikidata_id": "Q719794",
+      "name": "Church of the Gesù",
+      "latitude": 41.895833333,
+      "longitude": 12.479722222,
+      "source_url": "https://www.wikidata.org/wiki/Q719794",
+      "wikidata_types": [
+        "Catholic church building",
+        "church building",
+        "Jesuit church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Church_of_the_Ges%C3%B9",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Jesus%20Church.jpg"
+    },
+    {
+      "wikidata_id": "Q728399",
+      "name": "Cinecittà",
+      "latitude": 41.85,
+      "longitude": 12.566667,
+      "source_url": "https://www.wikidata.org/wiki/Q728399",
+      "wikidata_types": [
+        "film studio"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Cinecitt%C3%A0",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ingressostorico%20cinecitta.jpg"
+    },
+    {
       "wikidata_id": "Q207808",
       "name": "Circus Maximus",
       "latitude": 41.8859,
@@ -175,6 +294,49 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Circus%20Maximus%202025.jpg"
     },
     {
+      "wikidata_id": "Q746102",
+      "name": "Cloaca Maxima",
+      "latitude": 41.888888888,
+      "longitude": 12.480277777,
+      "source_url": "https://www.wikidata.org/wiki/Q746102",
+      "wikidata_types": [
+        "archaeological site",
+        "drain",
+        "sewer network"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Cloaca_Maxima",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/040227%20tevere16CloacaMaxima.jpg"
+    },
+    {
+      "wikidata_id": "Q265384",
+      "name": "Column of Marcus Aurelius",
+      "latitude": 41.900833333,
+      "longitude": 12.48,
+      "source_url": "https://www.wikidata.org/wiki/Q265384",
+      "wikidata_types": [
+        "victory column"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Column_of_Marcus_Aurelius",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Colonna%20di%20Marco%20aurelio%20-%20Frontale.jpg"
+    },
+    {
+      "wikidata_id": "Q1333433",
+      "name": "Ecstasy of Saint Teresa",
+      "latitude": 41.904722222,
+      "longitude": 12.494166666,
+      "source_url": "https://www.wikidata.org/wiki/Q1333433",
+      "wikidata_types": [
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ecstasy_of_Saint_Teresa",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ecstasy%20of%20Saint%20Teresa%20September%202015-2a.jpg"
+    },
+    {
       "wikidata_id": "Q211233",
       "name": "Esquiline Hill",
       "latitude": 41.895555555,
@@ -186,6 +348,62 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Esquiline_Hill",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/A%20handbook%20of%20Rome%20and%20the%20Campagna%20%281899%29%20%2814762604401%29.jpg"
+    },
+    {
+      "wikidata_id": "Q216568",
+      "name": "Imperial fora",
+      "latitude": 41.89444444,
+      "longitude": 12.48555556,
+      "source_url": "https://www.wikidata.org/wiki/Q216568",
+      "wikidata_types": [
+        "archaeological site"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Imperial_fora",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Fori-imperiali-big-1-.jpg"
+    },
+    {
+      "wikidata_id": "Q848394",
+      "name": "Lateran Palace",
+      "latitude": 41.886666666,
+      "longitude": 12.505277777,
+      "source_url": "https://www.wikidata.org/wiki/Q848394",
+      "wikidata_types": [
+        "city palace",
+        "Palazzo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Lateran_Palace",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Western%20facade%20Palazzo%20del%20Laterano%202006-09-07.jpg"
+    },
+    {
+      "wikidata_id": "Q770847",
+      "name": "Mausoleum of Augustus",
+      "latitude": 41.90611,
+      "longitude": 12.47639,
+      "source_url": "https://www.wikidata.org/wiki/Q770847",
+      "wikidata_types": [
+        "archaeological site",
+        "roman mausoleum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mausoleum_of_Augustus",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Photographs%20of%20the%20Mausoleum%20of%20Augustus%2014%20%28cropped%29.jpg"
+    },
+    {
+      "wikidata_id": "Q848386",
+      "name": "Palazzo Farnese",
+      "latitude": 41.894694444,
+      "longitude": 12.470805555,
+      "source_url": "https://www.wikidata.org/wiki/Q848386",
+      "wikidata_types": [
+        "city palace",
+        "palace",
+        "Palazzo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Farnese",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palais%20Farnese.jpg"
     },
     {
       "wikidata_id": "Q99309",
@@ -210,6 +428,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Pantheon%20%28Rome%29%20-%20Right%20side%20and%20front.jpg"
     },
     {
+      "wikidata_id": "Q15124814",
+      "name": "Piazza di Spagna",
+      "latitude": 41.90595,
+      "longitude": 12.48205833,
+      "source_url": "https://www.wikidata.org/wiki/Q15124814",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_di_Spagna",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Scalinata%20della%20Trinit%C3%A0%20dei%20Monti.jpg"
+    },
+    {
       "wikidata_id": "Q463400",
       "name": "Piazza Navona",
       "latitude": 41.89871,
@@ -221,6 +452,35 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_Navona",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paolo%20Monti%20-%20Servizio%20fotografico%20%28Roma%2C%201966%29%20-%20BEIC%206329173.jpg"
+    },
+    {
+      "wikidata_id": "Q874832",
+      "name": "piazza Venezia",
+      "latitude": 41.89639,
+      "longitude": 12.4825,
+      "source_url": "https://www.wikidata.org/wiki/Q874832",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_Venezia",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20Venezia%20a%20Roma.jpg"
+    },
+    {
+      "wikidata_id": "Q467025",
+      "name": "Pontifical Gregorian University",
+      "latitude": 41.898888888,
+      "longitude": 12.484722222,
+      "source_url": "https://www.wikidata.org/wiki/Q467025",
+      "wikidata_types": [
+        "Jesuit university",
+        "pontifical university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Pontifical_Gregorian_University",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/832RomaUnivGregoriana.JPG"
     },
     {
       "wikidata_id": "Q207896",
@@ -249,6 +509,20 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Quirinal_Palace",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Quirinale%20palazzo%20e%20obelisco%20con%20dioscuri%20Roma.jpg"
+    },
+    {
+      "wikidata_id": "Q754485",
+      "name": "Roma Termini railway station",
+      "latitude": 41.900648,
+      "longitude": 12.501755,
+      "source_url": "https://www.wikidata.org/wiki/Q754485",
+      "wikidata_types": [
+        "central station",
+        "dead-end railway station"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Roma_Termini_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Termini%20Station%20Rome%20%289554051681%29.jpg"
     },
     {
       "wikidata_id": "Q180212",
@@ -283,6 +557,20 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Inaugurazione%20metro%20B1.jpg"
     },
     {
+      "wikidata_id": "Q542070",
+      "name": "San Pietro in Vincoli",
+      "latitude": 41.893872222,
+      "longitude": 12.493069444,
+      "source_url": "https://www.wikidata.org/wiki/Q542070",
+      "wikidata_types": [
+        "church building",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Pietro_in_Vincoli",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Pietro%20in%20Vincoli%20-%20Roma%2C%20facciata.jpg"
+    },
+    {
       "wikidata_id": "Q209344",
       "name": "Sapienza University of Rome",
       "latitude": 41.903333333,
@@ -297,6 +585,33 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Sapienza_University_of_Rome",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Sapienza%20entrance%20%2820040201351%29.jpg"
+    },
+    {
+      "wikidata_id": "Q281330",
+      "name": "Servian Wall",
+      "latitude": 41.901666666,
+      "longitude": 12.501666666,
+      "source_url": "https://www.wikidata.org/wiki/Q281330",
+      "wikidata_types": [
+        "archaeological site",
+        "defensive wall"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Servian_Wall",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ripa%20-%20le%20mura%20a%20via%20di%20sant%20anselmo%20051211-06.JPG"
+    },
+    {
+      "wikidata_id": "Q848072",
+      "name": "Spanish Steps",
+      "latitude": 41.90611,
+      "longitude": 12.48278,
+      "source_url": "https://www.wikidata.org/wiki/Q848072",
+      "wikidata_types": [
+        "monumental staircase"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Spanish_Steps",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Scalinata%20della%20Trinit%C3%A0%20dei%20Monti.jpg"
     },
     {
       "wikidata_id": "Q159884",
@@ -314,6 +629,22 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Stadio_Olimpico",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Stadio%20Olimpico%202024.jpg"
+    },
+    {
+      "wikidata_id": "Q753791",
+      "name": "Temple of Vesta",
+      "latitude": 41.891707,
+      "longitude": 12.486206,
+      "source_url": "https://www.wikidata.org/wiki/Q753791",
+      "wikidata_types": [
+        "ancient Roman structure",
+        "archaeological site",
+        "Roman temple",
+        "temple"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Temple_of_Vesta",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Temple%20of%20Vesta%203D.jpg"
     },
     {
       "wikidata_id": "Q192784",
@@ -361,6 +692,22 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Trevi%20Fountain%20-%20Roma.jpg"
     },
     {
+      "wikidata_id": "Q4005890",
+      "name": "Università degli Studi ''Guglielmo Marconi''",
+      "latitude": 41.9073701,
+      "longitude": 12.4624389,
+      "source_url": "https://www.wikidata.org/wiki/Q4005890",
+      "wikidata_types": [
+        "distance education university",
+        "university in italy"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Guglielmo_Marconi_University",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Unimarconi.jpeg"
+    },
+    {
       "wikidata_id": "Q26319",
       "name": "Università degli Studi Niccolò Cusano",
       "latitude": 41.911848,
@@ -374,6 +721,20 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Universit%C3%A0_degli_Studi_Niccol%C3%B2_Cusano",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Campus%20Unicusano.jpg"
+    },
+    {
+      "wikidata_id": "Q677935",
+      "name": "Veii",
+      "latitude": 42.023888888,
+      "longitude": 12.401388888,
+      "source_url": "https://www.wikidata.org/wiki/Q677935",
+      "wikidata_types": [
+        "ancient city",
+        "archaeological site"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Veii",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Colonne%20di%20Veio%20a%20palazzo%20Wedekind.JPG"
     },
     {
       "wikidata_id": "Q216085",
