@@ -94,6 +94,22 @@ def _filter_published_catalog(country: str, city: str) -> None:
     st.session_state["catalog-city-filter"] = city
 
 
+def _show_catalog_write_error(error: Exception) -> None:
+    """Turn a missing shared-catalog migration into an actionable UI message."""
+
+    if "catalog_activities" in str(error):
+        st.error(
+            "The shared catalog table has not been created in Supabase yet. "
+            "Run `supabase/schema.sql` in the Supabase SQL Editor, then try again.",
+            icon=":material/database_off:",
+        )
+        return
+    st.error(
+        "TripSync could not update the shared catalog. Check the Supabase connection and try again.",
+        icon=":material/cloud_off:",
+    )
+
+
 def _activity_categories(current: str) -> list[str]:
     options = [
         "museum", "historic_site", "landmark", "architecture", "park",
@@ -168,6 +184,8 @@ def _render_published_activity_editor(activity: Activity) -> None:
             st.rerun()
         except (ValidationError, ValueError) as error:
             st.error(str(error), icon=":material/error:")
+        except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+            _show_catalog_write_error(error)
 
 
 def _render_published_catalog() -> None:
@@ -261,9 +279,12 @@ def _render_published_catalog() -> None:
                 disabled=not selected_ids or not confirmed,
                 key="published-catalog-delete",
             ):
-                removed = delete_activities(selected_ids)
-                st.success(f"Removed {removed} activity record(s) from the catalog.")
-                st.rerun()
+                try:
+                    removed = delete_activities(selected_ids)
+                    st.success(f"Removed {removed} activity record(s) from the catalog.")
+                    st.rerun()
+                except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+                    _show_catalog_write_error(error)
 
 
 def _render_catalog_import() -> None:
@@ -377,13 +398,16 @@ def _render_catalog_import() -> None:
                     disabled=not selected_eligible,
                     key=f"catalog-batch-add-{selected_file.name}",
                 ):
-                    added, duplicates = save_activities(selected_eligible)
-                    st.session_state[batch_result_key] = (
-                        f"Added {len(added)} activities to the catalog. "
-                        f"Skipped {len(duplicates)} existing duplicates."
-                    )
-                    _filter_published_catalog(batch["country"], batch["city"])
-                    st.rerun()
+                    try:
+                        added, duplicates = save_activities(selected_eligible)
+                        st.session_state[batch_result_key] = (
+                            f"Added {len(added)} activities to the catalog. "
+                            f"Skipped {len(duplicates)} existing duplicates."
+                        )
+                        _filter_published_catalog(batch["country"], batch["city"])
+                        st.rerun()
+                    except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+                        _show_catalog_write_error(error)
         if remove_tab.open:
             with remove_tab:
                 st.caption("Removal changes only this raw retrieval batch, not published activities.")

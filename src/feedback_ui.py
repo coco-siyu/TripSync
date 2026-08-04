@@ -6,6 +6,7 @@ import json
 import hmac
 import os
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -37,6 +38,15 @@ def _dashboard_chart_data(feedback: list, overall: list) -> dict[str, pd.DataFra
         name: pd.DataFrame(rows)
         for name, rows in data.items()
     }
+
+
+def _show_chart(chart: alt.Chart) -> None:
+    """Render charts with deliberate padding inside their dashboard cards."""
+
+    st.altair_chart(
+        chart.properties(padding={"left": 16, "right": 16, "top": 8, "bottom": 8}).configure_view(stroke=None),
+        width="stretch",
+    )
 
 
 def render_feedback_insights() -> None:
@@ -81,9 +91,12 @@ def render_feedback_insights() -> None:
     feedback, overall = _load_dashboard_records()
     insights = build_feedback_insights(feedback, overall)
 
-    with st.container(horizontal=True):
+    overall_count, generated_count, comment_count = st.columns(3)
+    with overall_count:
         st.metric("Overall plan ratings", insights.overall_response_count, border=True)
+    with generated_count:
         st.metric("Story + suggestion ratings", insights.generated_feedback_count, border=True)
+    with comment_count:
         st.metric("Written comments", len(insights.comments), border=True)
 
     if not insights.overall_response_count and not insights.generated_feedback_count:
@@ -94,19 +107,24 @@ def render_feedback_insights() -> None:
         return
 
     st.subheader("Overall experience")
-    with st.container(horizontal=True):
+    helpfulness, clarity, group_fit = st.columns(3)
+    with helpfulness:
         st.metric("Helpful for planning", _rating_label(insights.helpfulness_average), border=True)
+    with clarity:
         st.metric("Clear and easy to use", _rating_label(insights.clarity_average), border=True)
+    with group_fit:
         st.metric("Fits the group", _rating_label(insights.group_fit_average), border=True)
 
     st.subheader("Thumb feedback")
     st.caption("A compact count for each generated experience.")
-    with st.container(horizontal=True):
+    stories, adjustments = st.columns(2)
+    with stories:
         st.metric(
             "Trip stories",
             f"{insights.story_up} helpful · {insights.story_down} not useful",
             border=True,
         )
+    with adjustments:
         st.metric(
             "Adjustment suggestions",
             f"{insights.adjustment_up} helpful · {insights.adjustment_down} not useful",
@@ -122,12 +140,13 @@ def render_feedback_insights() -> None:
         with st.container(border=True):
             st.markdown("**Feedback received over time**")
             daily = chart_data["daily_submissions"]
-            st.line_chart(
-                daily,
-                x="Date",
-                y="Submissions",
-                color="Feedback type",
-                height=260,
+            _show_chart(
+                alt.Chart(daily).mark_line(point=True).encode(
+                    x=alt.X("Date:T", axis=alt.Axis(title=None, labelAngle=0)),
+                    y=alt.Y("Submissions:Q", axis=alt.Axis(title=None)),
+                    color=alt.Color("Feedback type:N", legend=alt.Legend(orient="bottom")),
+                    tooltip=["Date:T", "Feedback type:N", "Submissions:Q"],
+                ).properties(height=230)
             )
     with right:
         with st.container(border=True):
@@ -136,12 +155,12 @@ def render_feedback_insights() -> None:
             if helpful_rates.empty:
                 st.caption("Rate a story or suggestion to populate this chart.")
             else:
-                st.bar_chart(
-                    helpful_rates,
-                    x="Experience",
-                    y="Helpful rate",
-                    color="#5BA7D6",
-                    height=260,
+                _show_chart(
+                    alt.Chart(helpful_rates).mark_bar(color="#5BA7D6").encode(
+                        x=alt.X("Helpful rate:Q", axis=alt.Axis(title=None), scale=alt.Scale(domain=[0, 100])),
+                        y=alt.Y("Experience:N", axis=alt.Axis(title=None, labelLimit=150)),
+                        tooltip=["Experience:N", "Helpful rate:Q"],
+                    ).properties(height=230)
                 )
 
     left, right = st.columns(2)
@@ -152,13 +171,17 @@ def render_feedback_insights() -> None:
             if thumbs.empty:
                 st.caption("No generated-experience ratings yet.")
             else:
-                st.bar_chart(
-                    thumbs,
-                    x="Experience",
-                    y="Responses",
-                    color="Rating",
-                    stack=False,
-                    height=260,
+                _show_chart(
+                    alt.Chart(thumbs).mark_bar().encode(
+                        x=alt.X("Responses:Q", axis=alt.Axis(title=None)),
+                        y=alt.Y("Experience:N", axis=alt.Axis(title=None, labelLimit=150)),
+                        yOffset=alt.YOffset("Rating:N"),
+                        color=alt.Color(
+                            "Rating:N",
+                            scale=alt.Scale(domain=["Helpful", "Not useful"], range=["#5BA7D6", "#D7897F"]),
+                        ),
+                        tooltip=["Experience:N", "Rating:N", "Responses:Q"],
+                    ).properties(height=230)
                 )
     with right:
         with st.container(border=True):
@@ -167,12 +190,12 @@ def render_feedback_insights() -> None:
             if averages.empty:
                 st.caption("Rate a complete plan to populate this chart.")
             else:
-                st.bar_chart(
-                    averages,
-                    x="Rating",
-                    y="Average score",
-                    color="#5BA7D6",
-                    height=260,
+                _show_chart(
+                    alt.Chart(averages).mark_bar(color="#5BA7D6").encode(
+                        x=alt.X("Rating:N", axis=alt.Axis(title=None, labelAngle=0)),
+                        y=alt.Y("Average score:Q", axis=alt.Axis(title=None), scale=alt.Scale(domain=[0, 5])),
+                        tooltip=["Rating:N", "Average score:Q"],
+                    ).properties(height=230)
                 )
 
     with st.container(border=True):
@@ -181,13 +204,14 @@ def render_feedback_insights() -> None:
         if not overall:
             st.caption("Rate a complete plan to populate this chart.")
         else:
-            st.bar_chart(
-                distribution,
-                x="Score",
-                y="Responses",
-                color="Rating",
-                stack=False,
-                height=280,
+            _show_chart(
+                alt.Chart(distribution).mark_bar().encode(
+                    x=alt.X("Score:O", axis=alt.Axis(title=None, labelAngle=0)),
+                    xOffset=alt.XOffset("Rating:N"),
+                    y=alt.Y("Responses:Q", axis=alt.Axis(title=None)),
+                    color=alt.Color("Rating:N"),
+                    tooltip=["Score:O", "Rating:N", "Responses:Q"],
+                ).properties(height=250)
             )
     with st.container(horizontal=True):
         st.download_button(

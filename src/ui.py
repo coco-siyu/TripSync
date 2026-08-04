@@ -621,7 +621,7 @@ def _apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         .st-key-travelers-shell {
-            background: var(--mint);
+            background: var(--paper);
             border: 1px solid rgba(47,90,73,0.16);
             color: #173D2E;
         }
@@ -2462,8 +2462,13 @@ def _render_results_step() -> None:
         )
         return
 
+    retrieval_label = (
+        "Text retrieval fallback"
+        if retrieval_response.semantic_fallback
+        else f"{RETRIEVAL_MODE.title()} retrieval"
+    )
     st.caption(
-        f"{RETRIEVAL_MODE.title()} retrieval found {len(retrieval_response.results)} relevant "
+        f"{retrieval_label} found {len(retrieval_response.results)} relevant "
         f"activities from {len(retrieval_response.destination_activity_ids)} "
         "destination records."
     )
