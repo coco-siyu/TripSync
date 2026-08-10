@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-03T05:21:02.264028+00:00",
+  "generated_at": "2026-08-10T06:46:08.753804+00:00",
   "city": "Paris",
   "country": "France",
   "source": {
@@ -11,6 +11,58 @@
     "attribution": "Data sourced from Wikidata."
   },
   "candidates": [
+    {
+      "wikidata_id": "Q163948",
+      "name": "10ᵗʰ arrondissement of Paris",
+      "latitude": 48.875508333,
+      "longitude": 2.357852777,
+      "source_url": "https://www.wikidata.org/wiki/Q163948",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/10th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Saint-Vincent-de-Paul-Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q169293",
+      "name": "11th arrondissement of Paris",
+      "latitude": 48.858677777,
+      "longitude": 2.379305555,
+      "source_url": "https://www.wikidata.org/wiki/Q169293",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/11th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Bataclan%20theater%2C%20Paris%20January%202011.jpg"
+    },
+    {
+      "wikidata_id": "Q171689",
+      "name": "12th arrondissement of Paris",
+      "latitude": 48.840808333,
+      "longitude": 2.388183333,
+      "source_url": "https://www.wikidata.org/wiki/Q171689",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/12th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/P1340917%20Paris%20XII%20avenue%20Daumesnil%20Viaduc%20des%20Arts%20rwk.jpg"
+    },
+    {
+      "wikidata_id": "Q187153",
+      "name": "14th arrondissement of Paris",
+      "latitude": 48.833022222,
+      "longitude": 2.326888888,
+      "source_url": "https://www.wikidata.org/wiki/Q187153",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/14th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Observatoire%20de%20Paris.jpg"
+    },
     {
       "wikidata_id": "Q161741",
       "name": "1st arrondissement of Paris",
@@ -24,6 +76,126 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/1st_arrondissement_of_Paris",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Jardin%20des%20Tuileries%203%2C%20Paris%20September%202013.jpg"
+    },
+    {
+      "wikidata_id": "Q63167656",
+      "name": "2019 fire at Notre-Dame de Paris",
+      "latitude": 48.853,
+      "longitude": 2.3498,
+      "source_url": "https://www.wikidata.org/wiki/Q63167656",
+      "wikidata_types": [
+        "structure fire"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Notre-Dame_fire",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Incendie%20Notre%20Dame%20de%20Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q209549",
+      "name": "2nd arrondissement of Paris",
+      "latitude": 48.86688,
+      "longitude": 2.34047,
+      "source_url": "https://www.wikidata.org/wiki/Q209549",
+      "wikidata_types": [
+        "city district",
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/2nd_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/ParisMairie2%C3%A8me.JPG"
+    },
+    {
+      "wikidata_id": "Q223140",
+      "name": "3rd arrondissement of Paris",
+      "latitude": 48.864027,
+      "longitude": 2.361531,
+      "source_url": "https://www.wikidata.org/wiki/Q223140",
+      "wikidata_types": [
+        "city district",
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/3rd_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Statue%20place%20R%C3%A9publique%20Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q230127",
+      "name": "4th arrondissement of Paris",
+      "latitude": 48.855555555,
+      "longitude": 2.355555555,
+      "source_url": "https://www.wikidata.org/wiki/Q230127",
+      "wikidata_types": [
+        "city district",
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/4th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/France%2C%20Paris%20Biblioth%C3%A8que%20de%20l%27Arsenal%20October%2018%2C%202012.jpg"
+    },
+    {
+      "wikidata_id": "Q238723",
+      "name": "5th arrondissement of Paris",
+      "latitude": 48.847222222,
+      "longitude": 2.344444444,
+      "source_url": "https://www.wikidata.org/wiki/Q238723",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/5th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Panth%C3%A9on%2C%20Paris%2025%20March%202012.jpg"
+    },
+    {
+      "wikidata_id": "Q245546",
+      "name": "6th arrondissement of Paris",
+      "latitude": 48.850530555,
+      "longitude": 2.332233333,
+      "source_url": "https://www.wikidata.org/wiki/Q245546",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/6th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/P1090420%20Paris%20VI%20place%20Saint-Sulpice%20rwk.JPG"
+    },
+    {
+      "wikidata_id": "Q259463",
+      "name": "7th arrondissement of Paris",
+      "latitude": 48.859166666,
+      "longitude": 2.312777777,
+      "source_url": "https://www.wikidata.org/wiki/Q259463",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/7th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%207.jpg"
+    },
+    {
+      "wikidata_id": "Q270230",
+      "name": "8th arrondissement of Paris",
+      "latitude": 48.874166666,
+      "longitude": 2.311111111,
+      "source_url": "https://www.wikidata.org/wiki/Q270230",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/8th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Place%20de%20la%20Concorde%203%2C%20Paris%20June%202010.jpg"
+    },
+    {
+      "wikidata_id": "Q275118",
+      "name": "9th arrondissement of Paris",
+      "latitude": 48.878280555,
+      "longitude": 2.336966666,
+      "source_url": "https://www.wikidata.org/wiki/Q275118",
+      "wikidata_types": [
+        "municipal arrondissement of France"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/9th_arrondissement_of_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Facade%20of%20Op%C3%A9ra%20Garnier%2C%20France%202011.jpg"
     },
     {
       "wikidata_id": "Q64436",
@@ -102,6 +274,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Montmartre%20Blick%20aufs%20Centre%20Georges-Pompidou.jpg"
     },
     {
+      "wikidata_id": "Q217925",
+      "name": "Champ de Mars",
+      "latitude": 48.85613,
+      "longitude": 2.29803,
+      "source_url": "https://www.wikidata.org/wiki/Q217925",
+      "wikidata_types": [
+        "urban park"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Champ_de_Mars",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/MG-Paris-Champ%20de%20Mars.jpg"
+    },
+    {
       "wikidata_id": "Q18718876",
       "name": "Charlie Hebdo shooting",
       "latitude": 48.859166666,
@@ -145,6 +330,38 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Tour%20Eiffel%20Wikimedia%20Commons.jpg"
     },
     {
+      "wikidata_id": "Q29293",
+      "name": "ESCP Business School",
+      "latitude": 52.524195,
+      "longitude": 13.289203,
+      "source_url": "https://www.wikidata.org/wiki/Q29293",
+      "wikidata_types": [
+        "business school",
+        "educational institution",
+        "private university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/ESCP_Business_School",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Escp-Paris.jpg"
+    },
+    {
+      "wikidata_id": "Q188771",
+      "name": "French Academy of Sciences",
+      "latitude": 48.8574,
+      "longitude": 2.337,
+      "source_url": "https://www.wikidata.org/wiki/Q188771",
+      "wikidata_types": [
+        "academy of sciences",
+        "archives",
+        "national academy"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/French_Academy_of_Sciences",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Institut%20France.jpg"
+    },
+    {
       "wikidata_id": "Q43605",
       "name": "French Open",
       "latitude": 48.847166666,
@@ -156,6 +373,19 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/French_Open",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Court%20Philippe%20Chatrier%202023%20cropped.jpg"
+    },
+    {
+      "wikidata_id": "Q188977",
+      "name": "Les Invalides",
+      "latitude": 48.855,
+      "longitude": 2.3125,
+      "source_url": "https://www.wikidata.org/wiki/Q188977",
+      "wikidata_types": [
+        "building complex"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Les_Invalides",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/H%C3%B4tel%20des%20Invalides%20-%2020150801%2016h09%20%2810630%29.jpg"
     },
     {
       "wikidata_id": "Q19675",
@@ -185,6 +415,20 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Montmartre",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/View%20from%20Notre-Dame%20de%20Paris%2C%2024%20June%202014%20004.jpg"
+    },
+    {
+      "wikidata_id": "Q151030",
+      "name": "Moulin Rouge",
+      "latitude": 48.884167,
+      "longitude": 2.332222,
+      "source_url": "https://www.wikidata.org/wiki/Q151030",
+      "wikidata_types": [
+        "cabaret",
+        "music venue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Moulin_Rouge",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Moulin%20Rouge%2C%2017%20April%202011.jpg"
     },
     {
       "wikidata_id": "Q23402",
@@ -255,6 +499,20 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Palais%20Garnier%202010-04-06%2016.55.07.jpg"
     },
     {
+      "wikidata_id": "Q188856",
+      "name": "Panthéon",
+      "latitude": 48.846198,
+      "longitude": 2.3461054,
+      "source_url": "https://www.wikidata.org/wiki/Q188856",
+      "wikidata_types": [
+        "church building",
+        "mausoleum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Panth%C3%A9on",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Panth%C3%A9on%2C%20Paris%2025%20March%202012.jpg"
+    },
+    {
       "wikidata_id": "Q193431",
       "name": "Parc des Princes",
       "latitude": 48.84145,
@@ -281,6 +539,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Pont%20de%20Bir-Hakeim%2C%20may%202025.jpg"
     },
     {
+      "wikidata_id": "Q189503",
+      "name": "place de la Concorde",
+      "latitude": 48.8656331,
+      "longitude": 2.3212357,
+      "source_url": "https://www.wikidata.org/wiki/Q189503",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Place_de_la_Concorde",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Place%20de%20la%20Concorde%20from%20the%20Eiffel%20Tower%2C%20Paris%20April%202011.jpg"
+    },
+    {
       "wikidata_id": "Q311",
       "name": "Père Lachaise Cemetery",
       "latitude": 48.861111111,
@@ -294,6 +565,36 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Main%20gate%20of%20the%20P%C3%A8re-Lachaise%20Cemetery%2C%20Paris%2013%20June%202014.jpg"
     },
     {
+      "wikidata_id": "Q28785",
+      "name": "Sacré-Cœur",
+      "latitude": 48.88665,
+      "longitude": 2.34295,
+      "source_url": "https://www.wikidata.org/wiki/Q28785",
+      "wikidata_types": [
+        "church building",
+        "expiatory temple",
+        "minor basilica",
+        "votive church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sacr%C3%A9-C%C5%93ur,_Paris",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Le%20sacre%20coeur.jpg"
+    },
+    {
+      "wikidata_id": "Q193193",
+      "name": "Sainte Chapelle",
+      "latitude": 48.855369,
+      "longitude": 2.345028,
+      "source_url": "https://www.wikidata.org/wiki/Q193193",
+      "wikidata_types": [
+        "chapel",
+        "secularized church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sainte-Chapelle",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Sainte%20Chapelle%20East%20View%2002.JPG"
+    },
+    {
       "wikidata_id": "Q1471",
       "name": "Seine",
       "latitude": 49.434722222,
@@ -305,6 +606,34 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Seine",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/The%20Seine%20as%20seen%20from%20the%20Eiffel%20Tower%2C%20June%202002.jpg"
+    },
+    {
+      "wikidata_id": "Q214654",
+      "name": "Sorbonne",
+      "latitude": 48.84864,
+      "longitude": 2.34356,
+      "source_url": "https://www.wikidata.org/wiki/Q214654",
+      "wikidata_types": [
+        "higher education institution",
+        "school building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sorbonne_(building)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/P1300735%20Paris%20V%20chapelle%20La%20Sorbonne%20rwk.jpg"
+    },
+    {
+      "wikidata_id": "Q234364",
+      "name": "Tuileries Palace",
+      "latitude": 48.862222222,
+      "longitude": 2.331111111,
+      "source_url": "https://www.wikidata.org/wiki/Q234364",
+      "wikidata_types": [
+        "destroyed building or structure",
+        "palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Tuileries_Palace",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Tuileries%20jardin%201867.jpg"
     },
     {
       "wikidata_id": "Q209842",
@@ -336,6 +665,19 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/%C3%89lys%C3%A9e_Palace",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Secretary%20Pompeo%20Arrives%20to%20Meet%20with%20French%20Foreign%20Minister%20Le%20Drian%20in%20Paris%20%2850610423656%29%20%28cropped%29.jpg"
+    },
+    {
+      "wikidata_id": "Q190063",
+      "name": "île de la Cité",
+      "latitude": 48.854722222,
+      "longitude": 2.3475,
+      "source_url": "https://www.wikidata.org/wiki/Q190063",
+      "wikidata_types": [
+        "river island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/%C3%8Ele_de_la_Cit%C3%A9",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Paris%20Notre%20Dame%20DSC00732.jpg"
     }
   ],
   "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."
