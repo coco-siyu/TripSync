@@ -16,12 +16,19 @@ from src.catalog import load_curated_activities
 from src.ui import (
     build_sample_trip,
     build_trip_request,
+    combine_interest_tags,
     format_duration,
     parse_tag_text,
 )
 
 
 class PreferenceFlowHelpersTests(unittest.TestCase):
+    def test_combine_interest_tags_keeps_preset_and_typed_entries(self) -> None:
+        self.assertEqual(
+            combine_interest_tags(["art"], ["Renaissance painting", " art "]),
+            ["art", "renaissance painting"],
+        )
+
     def test_parse_tag_text_normalizes_and_deduplicates(self) -> None:
         self.assertEqual(
             parse_tag_text(" Colosseum, vatican museums, COLOSSEUM, "),

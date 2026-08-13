@@ -124,6 +124,20 @@ def parse_tag_text(value: str) -> list[str]:
     return tags
 
 
+def combine_interest_tags(*groups: list[str]) -> list[str]:
+    """Combine preset and typed interests into one normalized, unique list."""
+
+    seen: set[str] = set()
+    interests: list[str] = []
+    for group in groups:
+        for value in group:
+            normalized = value.strip().lower()
+            if normalized and normalized not in seen:
+                interests.append(normalized)
+                seen.add(normalized)
+    return interests
+
+
 def format_duration(hours: float) -> str:
     """Format activity duration with correct singular/plural grammar."""
 
@@ -991,6 +1005,16 @@ def _traveler_input(index: int) -> dict[str, Any]:
             help="Choose at least one interest.",
             width="stretch",
         )
+        custom_interests = st.multiselect(
+            "Add your own interests",
+            options=[],
+            key=f"traveler_custom_interests_{index}",
+            placeholder="Optional · type ‘Renaissance painting’ then press Enter",
+            accept_new_options=True,
+            max_selections=12,
+            help="Use a specific phrase when the preset interests do not describe the trip you want.",
+            label_visibility="collapsed",
+        )
         walking_tolerance = st.segmented_control(
             "Walking tolerance",
             ["low", "moderate", "high"],
@@ -1017,7 +1041,7 @@ def _traveler_input(index: int) -> dict[str, Any]:
 
     return {
         "name": name,
-        "interests": interests or [],
+        "interests": combine_interest_tags(interests or [], custom_interests),
         "walking_tolerance": walking_tolerance,
         "food_restrictions": food_restrictions,
         "must_do_activities": must_do_activities,
