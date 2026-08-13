@@ -98,6 +98,34 @@ class CatalogImportTests(unittest.TestCase):
         self.assertEqual([candidate.name for candidate in candidates], ["Example University"])
         self.assertIn("verify visitor access", candidates[0].review_flags[0])
 
+    def test_filters_events_and_organisations_before_the_review_batch(self) -> None:
+        payload = {
+            "results": {
+                "bindings": [
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q1"},
+                        "itemLabel": {"value": "November 2015 Paris attacks"},
+                        "coord": {"value": "Point(2.3 48.8)"},
+                        "typeLabel": {"value": "terrorist attack"},
+                    },
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q2"},
+                        "itemLabel": {"value": "Example Organisation"},
+                        "coord": {"value": "Point(2.3 48.8)"},
+                        "typeLabel": {"value": "international organization"},
+                    },
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q3"},
+                        "itemLabel": {"value": "Example Palace"},
+                        "coord": {"value": "Point(2.3 48.8)"},
+                        "typeLabel": {"value": "palace"},
+                    },
+                ]
+            }
+        }
+
+        self.assertEqual([item.name for item in parse_candidates(payload)], ["Example Palace"])
+
     def test_writes_review_only_document(self) -> None:
         city = supported_city("Rome")
         with tempfile.TemporaryDirectory() as temporary_directory:

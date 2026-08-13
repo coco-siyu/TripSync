@@ -9,7 +9,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from src.draft_curation import automatic_activity_fields, automatic_curation_reason
+from src.draft_curation import automatic_activity_fields, automatic_curation_reason, classify_candidate
 from src.models import Activity
 from src.supabase_store import delete_in, is_configured, select, upsert_many
 
@@ -166,6 +166,42 @@ def auto_curate_candidates(
             activities.append(build_activity(candidate, city, country, fields))
         except (KeyError, ValueError) as error:
             skipped[name] = f"Auto-skip: {error}"
+    return activities, skipped
+
+
+def review_curate_candidates(
+    candidates: list[dict[str, Any]],
+    city: str,
+    country: str,
+) -> tuple[list[Activity], dict[str, str]]:
+    """Create editable Pydantic-valid drafts for curator-approved edge cases."""
+
+    activities: list[Activity] = []
+    skipped: dict[str, str] = {}
+    for candidate in candidates:
+        name = str(candidate.get("name", "Unnamed candidate"))
+        decision = classify_candidate(candidate)
+        if decision.outcome != "review":
+            skipped[name] = decision.reason
+            continue
+        # Review items use the same conservative defaults as automatic items,
+        # but only after an explicit curator selection in the UI.
+        from src.draft_curation import draft_activity
+        draft = draft_activity(candidate)
+        fields = {
+            "name": name.strip(), "category": draft.category,
+            "category_tags": list(draft.category_tags), "interests": list(draft.interests),
+            "walking_level": draft.walking_level, "budget_level": draft.budget_level,
+            "duration_hours": draft.duration_hours, "indoor": draft.indoor,
+            "family_friendly": True, "reservation_required": draft.reservation_required,
+            "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
+            "description": f"Visit {name}, a curated {draft.category.replace('_', ' ')} experience in {city}.",
+            "source_url": candidate.get("source_url"),
+        }
+        try:
+            activities.append(build_activity(candidate, city, country, fields))
+        except (KeyError, ValueError) as error:
+            skipped[name] = str(error)
     return activities, skipped
 
 

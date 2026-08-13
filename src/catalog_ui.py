@@ -4,42 +4,21 @@ from __future__ import annotations
 
 import hmac
 import os
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 from pydantic import ValidationError
 
 from src.catalog import (
-    activity_id,
     auto_curate_candidates,
-    candidate_files,
-    delete_candidates_from_batch,
     delete_activities,
-    load_candidate_batch,
     load_curated_activities,
     save_activities,
     update_activity,
 )
-from src.catalog_import import CatalogImportError, fetch_candidates, resolve_city, write_candidate_file
+from src.catalog_import import CatalogImportError, fetch_candidates, resolve_city
 from src.models import Activity, BudgetLevel, WalkingLevel
 from src.ui import INTEREST_OPTIONS
-
-
-def _candidate_rows(batch: dict) -> list[dict]:
-    return [
-        {"Name": item["name"], "Types": ", ".join(item.get("wikidata_types", [])),
-         "Review note": " ".join(item.get("review_flags", [])) or "Ready to review",
-         "source_url": item["source_url"], "candidate": item}
-        for item in batch["candidates"]
-    ]
-
-
-def _candidate_batch_label(path: Path) -> str:
-    """Describe a review batch with travel context instead of a JSON filename."""
-
-    batch = load_candidate_batch(path)
-    return f"{batch['city']}, {batch['country']} · {len(batch['candidates'])} retrieved places"
 
 
 def _catalog_access_allowed() -> bool:
@@ -74,16 +53,6 @@ def _selected_activity_ids(activities: list, selected_rows: list[int]) -> list[s
         activities[index].id
         for index in selected_rows
         if isinstance(index, int) and 0 <= index < len(activities)
-    ]
-
-
-def _selected_candidate_ids(rows: list[dict], selected_rows: list[int]) -> list[str]:
-    """Return stable Wikidata IDs for selected raw candidates."""
-
-    return [
-        rows[index]["candidate"]["wikidata_id"]
-        for index in selected_rows
-        if isinstance(index, int) and 0 <= index < len(rows)
     ]
 
 
@@ -288,12 +257,12 @@ def _render_published_catalog() -> None:
 
 
 def _render_catalog_import() -> None:
-    """Fetch a batch, then select raw candidates to publish or discard."""
+    """Fetch one city and publish quality-approved attractions directly."""
 
     st.subheader("Fetch and batch curate")
     st.caption(
-        "Fetch a city or choose a review batch. Select places in the table, then add the "
-        "eligible ones to the published catalog or remove unsuitable source candidates."
+        "Fetch a city once. Clear visitor attractions are validated and published immediately; "
+        "hotels, transport, organisations, and event records are filtered out before they reach the catalog."
     )
 
     with st.container(border=True, key="catalog-query"):
@@ -307,125 +276,22 @@ def _render_catalog_import() -> None:
                 with st.spinner(f"Finding places in {city_name}…"):
                     city = resolve_city(city_name, country_name)
                     candidates = fetch_candidates(city, limit=limit)
-                    path = write_candidate_file(city, candidates, Path("data/candidates"))
-                st.success(f"Saved {len(candidates)} candidates to {path.name}.")
+                    activities, skipped = auto_curate_candidates(
+                        [candidate.__dict__ for candidate in candidates], city.name, city.country
+                    )
+                    published_ids = {activity.id for activity in load_curated_activities()}
+                    ready = [activity for activity in activities if activity.id not in published_ids]
+                    added, duplicates = save_activities(ready)
+                st.success(
+                    f"Published {len(added)} quality-approved attraction(s). "
+                    f"Skipped {len(duplicates)} existing record(s) and held {len(skipped)} borderline record(s)."
+                )
+                _filter_published_catalog(city.country, city.name)
             except CatalogImportError as error:
                 st.error(str(error), icon=":material/cloud_off:")
+            except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+                _show_catalog_write_error(error)
 
-    files = candidate_files()
-    if not files:
-        st.info("Fetch a city above to start a review batch.", icon=":material/search:")
-        return
-    selected_file = st.selectbox("Candidate batch", files, format_func=_candidate_batch_label)
-    batch = load_candidate_batch(selected_file)
-    rows = _candidate_rows(batch)
-    automatic_activities, automatically_skipped = auto_curate_candidates(
-        [row["candidate"] for row in rows], batch["city"], batch["country"]
-    )
-    activity_by_id = {activity.id: activity for activity in automatic_activities}
-    published_ids = {activity.id for activity in load_curated_activities()}
-    batch_result_key = f"catalog-batch-result-{selected_file.name}"
-    st.subheader("Retrieved places")
-    st.caption("Use the checkbox in the table header to select every place in this batch.")
-    display = pd.DataFrame(
-        [
-            {
-                "Name": row["Name"],
-                "City": batch["city"],
-                "Country": batch["country"],
-                "Category": activity_by_id.get(
-                    activity_id(batch["city"], row["Name"]), None
-                ).category.replace("_", " ")
-                if activity_id(batch["city"], row["Name"]) in activity_by_id
-                else "Not eligible",
-                "Interests": ", ".join(
-                    activity_by_id[activity_id(batch["city"], row["Name"])].interests
-                )
-                if activity_id(batch["city"], row["Name"]) in activity_by_id
-                else "",
-                "Review note": row["Review note"],
-            }
-            for row in rows
-        ]
-    )
-    event = st.dataframe(
-        display,
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="multi-row",
-        key=f"candidate-table-{selected_file.name}",
-    )
-    selected_candidate_ids = _selected_candidate_ids(rows, event.selection.rows)
-    selected_activities = [
-        activity_by_id[activity_id(batch["city"], row["Name"])]
-        for row in rows
-        if row["candidate"].get("wikidata_id") in selected_candidate_ids
-        and activity_id(batch["city"], row["Name"]) in activity_by_id
-    ]
-    selected_eligible = [
-        activity for activity in selected_activities if activity.id not in published_ids
-    ]
-    selection_signature = "-".join(sorted(selected_candidate_ids)) or "none"
-
-    with st.container(border=True):
-        st.markdown("**Selected places**")
-        st.caption(
-            f"{len(automatic_activities)} candidates have safe, Pydantic-valid drafts. "
-            f"{len(automatically_skipped)} are excluded automatically (for example hotels or transport)."
-        )
-        if selected_candidate_ids:
-            st.caption(f"{len(selected_candidate_ids)} retrieved place(s) selected.")
-        else:
-            st.caption("Select one or more retrieved places above to enable an action.")
-        previous_result = st.session_state.get(batch_result_key)
-        if previous_result:
-            st.success(previous_result, icon=":material/check_circle:")
-        add_tab, remove_tab = st.tabs(
-            ["Add to published", "Remove from batch"],
-            key=f"batch-actions-{selected_file.name}",
-            on_change="rerun",
-        )
-        if add_tab.open:
-            with add_tab:
-                st.caption(
-                    "Select every eligible row in the table to add the entire eligible batch. "
-                    "Existing published activities are skipped."
-                )
-                if st.button(
-                    f"Add {len(selected_eligible)} selected eligible candidate(s)",
-                    icon=":material/library_add:",
-                    type="primary",
-                    disabled=not selected_eligible,
-                    key=f"catalog-batch-add-{selected_file.name}",
-                ):
-                    try:
-                        added, duplicates = save_activities(selected_eligible)
-                        st.session_state[batch_result_key] = (
-                            f"Added {len(added)} activities to the catalog. "
-                            f"Skipped {len(duplicates)} existing duplicates."
-                        )
-                        _filter_published_catalog(batch["country"], batch["city"])
-                        st.rerun()
-                    except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
-                        _show_catalog_write_error(error)
-        if remove_tab.open:
-            with remove_tab:
-                st.caption("Removal changes only this raw retrieval batch, not published activities.")
-                confirmed = st.checkbox(
-                    "I want to remove the selected retrieved places.",
-                    key=f"confirm-batch-delete-{selected_file.name}-{selection_signature}",
-                    disabled=not selected_candidate_ids,
-                )
-                if st.button(
-                    "Remove selected retrieved places",
-                    icon=":material/delete_sweep:",
-                    type="primary",
-                    disabled=not selected_candidate_ids or not confirmed,
-                    key=f"batch-delete-{selected_file.name}",
-                ):
-                    removed = delete_candidates_from_batch(selected_file, selected_candidate_ids)
-                    st.success(f"Removed {removed} retrieved place(s) from this batch.")
-                    st.rerun()
 
 
 def render_catalog_workspace() -> None:

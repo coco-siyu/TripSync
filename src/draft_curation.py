@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
+import unicodedata
+from typing import Literal
 
 
-AUTO_EXCLUDED_TYPE_TERMS = (
+REJECT_TYPE_TERMS = (
     "hotel",
     "hostel",
     "guest house",
@@ -17,6 +20,80 @@ AUTO_EXCLUDED_TYPE_TERMS = (
     "airfield",
     "railway station",
     "bus station",
+    "metro",
+    "subway",
+    "tram stop",
+    "ferry terminal",
+    "railway",
+    "organisation",
+    "organization",
+    "company",
+    "hospital",
+    "prison",
+    "military base",
+    "power station",
+    "human settlement",
+    "administrative territorial entity",
+    "municipal arrondissement",
+    "locality",
+)
+
+REJECT_NAME_TERMS = (
+    " airport",
+    " attacks",
+    " attack",
+    " massacre",
+    " disaster",
+    " earthquake",
+    " terrorist",
+    " organisation",
+    " organization",
+    " metro",
+)
+
+REVIEW_TYPE_TERMS = (
+    "university",
+    "college",
+    "library",
+    "stadium",
+    "cemetery",
+    "island",
+    "canal",
+    "river",
+    "neighbourhood",
+    "neighborhood",
+    "district",
+    "quarter",
+    "artwork",
+    "sculpture",
+    "annual event",
+    "festival",
+    "carnival",
+)
+
+AUTO_PUBLISH_TYPE_TERMS = (
+    "museum",
+    "art gallery",
+    "palace",
+    "castle",
+    "cathedral",
+    "basilica",
+    "church",
+    "historic site",
+    "archaeological",
+    "monument",
+    "landmark",
+    "bridge",
+    "garden",
+    "park",
+    "market",
+    "theatre",
+    "theater",
+    "opera house",
+    "tower",
+    "fountain",
+    "square",
+    "triumphal arch",
 )
 
 
@@ -30,6 +107,61 @@ class ActivityDraft:
     duration_hours: float
     indoor: bool
     reservation_required: bool
+
+
+@dataclass(frozen=True)
+class CandidateQualityDecision:
+    """A transparent, deterministic decision for an imported place."""
+
+    outcome: Literal["reject", "auto_publish", "review"]
+    confidence: float
+    reason: str
+
+
+def _normalise(value: str) -> str:
+    """Make simple source labels comparable without losing the original value."""
+
+    plain = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return " ".join(plain.casefold().split())
+
+
+def _matches_any(text: str, terms: tuple[str, ...]) -> str | None:
+    return next((term for term in terms if term in text), None)
+
+
+def classify_candidate(candidate: dict) -> CandidateQualityDecision:
+    """Classify source candidates before a person needs to inspect them.
+
+    The gate deliberately makes no claims about opening hours, ticket prices, or
+    access. It only decides whether a Wikidata record resembles a visitor
+    activity, clearly does not, or needs a human to make that distinction.
+    """
+
+    name = _normalise(str(candidate.get("name", "")))
+    types = _normalise(" ".join(str(item) for item in candidate.get("wikidata_types", [])))
+    identifier = str(candidate.get("wikidata_id", ""))
+    combined = f"{name} {types}"
+
+    if re.fullmatch(r"q\d+", name):
+        return CandidateQualityDecision("reject", 0.99, "Source record has no usable visitor-facing name.")
+    matched = _matches_any(types, REJECT_TYPE_TERMS)
+    if matched:
+        return CandidateQualityDecision("reject", 0.99, f"Type indicates {matched}, not a visitor activity.")
+    matched = _matches_any(combined, REJECT_NAME_TERMS)
+    if matched:
+        return CandidateQualityDecision("reject", 0.98, "Name describes transport, an organisation, or a tragic event.")
+    if not types:
+        return CandidateQualityDecision("reject", 0.95, "Wikidata supplied no type to verify visitor relevance.")
+    matched = _matches_any(types, AUTO_PUBLISH_TYPE_TERMS)
+    if matched:
+        has_wikipedia = bool(candidate.get("wikipedia_url"))
+        confidence = 0.95 if has_wikipedia else 0.86
+        evidence = "with an English Wikipedia record" if has_wikipedia else "with a clear Wikidata type"
+        return CandidateQualityDecision("auto_publish", confidence, f"Recognised {matched} {evidence}.")
+    matched = _matches_any(types, REVIEW_TYPE_TERMS)
+    if matched:
+        return CandidateQualityDecision("review", 0.65, f"{matched.title()} needs context before it becomes a trip activity.")
+    return CandidateQualityDecision("review", 0.5, "Type is not yet in TripSync's trusted attraction rules.")
 
 
 def draft_activity(candidate: dict) -> ActivityDraft:
@@ -50,13 +182,11 @@ def draft_activity(candidate: dict) -> ActivityDraft:
 def automatic_curation_reason(candidate: dict) -> str | None:
     """Return why an imported record must not be auto-promoted, if any."""
 
-    types = " ".join(candidate.get("wikidata_types", [])).casefold()
-    matched = next((term for term in AUTO_EXCLUDED_TYPE_TERMS if term in types), None)
-    if matched:
-        return f"Auto-skip: Wikidata type indicates {matched}, not a visitor activity."
-    if not types.strip():
-        return "Auto-skip: Wikidata supplied no place type to classify."
-    return None
+    decision = classify_candidate(candidate)
+    if decision.outcome == "auto_publish":
+        return None
+    prefix = "Auto-skip" if decision.outcome == "reject" else "Needs review"
+    return f"{prefix}: {decision.reason}"
 
 
 def automatic_activity_fields(candidate: dict, city: str) -> dict | None:
@@ -67,7 +197,7 @@ def automatic_activity_fields(candidate: dict, city: str) -> dict | None:
     venue is currently open or bookable.
     """
 
-    if automatic_curation_reason(candidate):
+    if classify_candidate(candidate).outcome != "auto_publish":
         return None
     draft = draft_activity(candidate)
     name = candidate["name"].strip()

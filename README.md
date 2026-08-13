@@ -155,51 +155,46 @@ travel writing sounds.
 `data/activities.json` is the seed and local fallback for the validated activity
 catalog. When Supabase is configured, the first catalog access copies this file
 into the shared `catalog_activities` table. Later additions and deletions remain
-there across Streamlit Cloud restarts. Raw external candidates stay in
-`data/candidates/` until someone reviews them. The curation rules are in
-[docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior is
-in [docs/retrieval.md](docs/retrieval.md).
+there across Streamlit Cloud restarts. Historical candidate files in
+`data/candidates/` are optional audit artifacts; they are not required for
+ingestion. The curation rules are in
+[docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior
+is in [docs/retrieval.md](docs/retrieval.md).
 
-### Batch curation
+### One-off city import
 
-The Curate catalog workspace has a human review step. You can filter published
-activities by country and city, add safe Pydantic-validated drafts from a batch,
-and delete selected records after confirming the action. The batch curation step
-automatically leaves out hotels, airports, transport stations, and untyped
-records.
+The Curate catalog workspace is primarily for managing the live catalog: filter
+published activities by country and city, edit their planning fields, and delete
+selected records after confirming the action. Its optional city form is a direct
+import: clear, Pydantic-validated attractions are published immediately, while
+hotels, airports, transport, organisations, tragic events, and uncertain places
+are not added.
 
-The same workflow is available as a script. It fetches source candidates and
-prepares a review batch without changing the catalog by default:
-
-```bash
-python -m src.catalog_batch --city Venice --country Italy --limit 50
-```
-
-After reviewing the candidate file or the Curation workspace, explicitly
-publish the batch with:
+For an on-demand city outside the scheduled destination queue, use:
 
 ```bash
-python -m src.catalog_batch --city Venice --country Italy --limit 50 --apply
+python -m src.catalog_dlt --cities Venice --country Italy --limit 50
 ```
 
-The automation can prepare and validate many records at once, but it does not
-claim that a place is currently open, accessible, or right for every traveler.
+The automation filters clear non-activities and publishes only recognised,
+Pydantic-valid attractions. It does not claim that a place is currently open,
+accessible, or right for every traveler.
 
 ### Scheduled candidate retrieval
 
 The project also has a `dlt` ingestion pipeline and a weekly GitHub Actions
 workflow. Its versioned destination queue starts with Italian cities, Paris,
-Barcelona, London, Kyoto, and New York City. The workflow retrieves raw Wikidata
-candidates, records provenance in DuckDB, and opens a pull request for review.
-It does not publish activities automatically. Each weekly run rotates through
-three active destinations. A manual run processes the entire queue.
+Barcelona, London, Kyoto, and New York City. The workflow rotates through three
+active destinations, filters obvious non-visitor records, records provenance in
+DuckDB, and publishes only clear, Pydantic-valid attractions to the shared
+catalog. A manual run processes the entire queue.
 
 ```bash
 python -m src.catalog_dlt --limit 50
 ```
 
-See [docs/catalog-ingestion.md](docs/catalog-ingestion.md) for the human review
-step and how to run a different country.
+See [docs/catalog-ingestion.md](docs/catalog-ingestion.md) for the quality gate,
+the scheduled workflow, and how to run a different country.
 
 ## Project evidence
 

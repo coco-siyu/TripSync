@@ -20,6 +20,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from src.draft_curation import classify_candidate
+
 
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 WIKIDATA_ENTITY_URL = "https://www.wikidata.org/wiki/"
@@ -224,15 +226,16 @@ def parse_candidates(payload: dict[str, Any]) -> list[CatalogCandidate]:
     candidates = []
     for candidate in candidates_by_id.values():
         types = candidate.pop("types")
-        if _is_transport_infrastructure(types):
-            continue
-        candidates.append(
-            CatalogCandidate(
+        candidate_record = CatalogCandidate(
                 **candidate,
                 wikidata_types=tuple(sorted(types, key=str.casefold)),
                 review_flags=_review_flags(types),
             )
-        )
+        # Keep raw review batches focused. We retain only records a traveller
+        # could plausibly visit or records whose visitor relevance is unclear.
+        # Clear non-activities are rejected before reaching the admin UI.
+        if classify_candidate(candidate_record.__dict__).outcome != "reject":
+            candidates.append(candidate_record)
     return sorted(candidates, key=lambda candidate: (candidate.name.casefold(), candidate.wikidata_id))
 
 
@@ -248,7 +251,10 @@ def fetch_candidates(
     if retries < 0:
         raise ValueError("retries must not be negative")
 
-    query = build_query(city, limit=limit)
+    # Query a little wider than the requested result count so records rejected
+    # by the quality gate do not leave the curator with a sparse batch.
+    source_limit = min(limit * 3, 250)
+    query = build_query(city, limit=source_limit)
     request = Request(
         f"{WIKIDATA_SPARQL_URL}?{urlencode({'query': query, 'format': 'json'})}",
         headers={
@@ -280,7 +286,7 @@ def fetch_candidates(
 
     if not isinstance(payload, dict):
         raise ValueError("Wikidata response must be a JSON object")
-    return parse_candidates(payload)
+    return parse_candidates(payload)[:limit]
 
 
 def write_candidate_file(

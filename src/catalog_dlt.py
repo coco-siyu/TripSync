@@ -1,8 +1,8 @@
-"""Scheduled, review-only catalog ingestion using dlt and DuckDB.
+"""Scheduled quality-gated catalog ingestion using dlt and DuckDB.
 
-The pipeline records what was retrieved from Wikidata and writes the same raw
-candidate batches that the Curate catalog workspace expects.  It deliberately
-does not call ``save_activities``: publishing remains a human approval step.
+The pipeline records Wikidata provenance, filters obvious non-activities, and
+publishes only deterministic, Pydantic-valid visitor attractions. Ambiguous
+records are counted for audit but do not become a routine curation task.
 """
 
 from __future__ import annotations
@@ -15,22 +15,14 @@ from typing import Callable, Iterable
 
 import dlt
 
-from src.catalog import CANDIDATE_DIRECTORY
-from src.catalog_import import CatalogCandidate, CitySource, fetch_candidates, resolve_city, write_candidate_file
+from src.catalog import auto_curate_candidates, save_activities
+from src.catalog_import import CatalogCandidate, CitySource, fetch_candidates, resolve_city
+from src.draft_curation import classify_candidate
 from src.destination_queue import DEFAULT_DESTINATION_QUEUE_PATH, DestinationQueueItem, load_destination_queue
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DESTINATION = REPOSITORY_ROOT / "data" / "tripsync_ingestion.duckdb"
-
-
-def _candidate_batch_label(path: Path) -> str:
-    """Use a portable label for the human-review batch location."""
-
-    try:
-        return str(path.relative_to(REPOSITORY_ROOT))
-    except ValueError:
-        return str(path)
 
 
 def rotate_destinations(
@@ -60,11 +52,10 @@ def rotate_destinations(
 def candidate_records(
     city: CitySource,
     candidates: Iterable[CatalogCandidate],
-    candidate_path: Path,
     *,
     retrieved_at: str,
 ) -> list[dict[str, object]]:
-    """Return provenance records for dlt without treating candidates as published."""
+    """Return provenance records for dlt without retaining local JSON batches."""
 
     records: list[dict[str, object]] = []
     for candidate in candidates:
@@ -76,8 +67,7 @@ def candidate_records(
                 "country": city.country,
                 "city_wikidata_id": city.wikidata_id,
                 "retrieved_at": retrieved_at,
-                "candidate_batch": _candidate_batch_label(candidate_path),
-                "status": "pending_human_review",
+                "quality_outcome": classify_candidate(record).outcome,
             }
         )
         records.append(record)
@@ -88,11 +78,11 @@ def ingest_destinations(
     destinations: Iterable[DestinationQueueItem],
     *,
     limit: int = 50,
-    candidate_directory: Path = CANDIDATE_DIRECTORY,
     destination_path: Path = DEFAULT_DESTINATION,
+    catalog_path: Path | None = None,
     fetcher: Callable[[CitySource], list[CatalogCandidate]] | None = None,
 ) -> dict[str, int]:
-    """Fetch configured destinations, save review files, and append provenance via dlt."""
+    """Fetch configured destinations and publish safe attractions directly."""
 
     if not 1 <= limit <= 250:
         raise ValueError("limit must be between 1 and 250")
@@ -110,12 +100,15 @@ def ingest_destinations(
     for destination in destination_list:
         city = resolve_city(destination.city, destination.country)
         candidates = fetcher(city) if fetcher else fetch_candidates(city, limit=limit)
-        candidate_path = write_candidate_file(city, candidates, candidate_directory)
         retrieved_at = datetime.now(UTC).isoformat()
-        records = candidate_records(city, candidates, candidate_path, retrieved_at=retrieved_at)
+        records = candidate_records(city, candidates, retrieved_at=retrieved_at)
         if records:
             pipeline.run(records, table_name="candidate_runs", write_disposition="append")
-        summary[city.name] = len(candidates)
+        activities, _ = auto_curate_candidates(
+            [asdict(candidate) for candidate in candidates], city.name, city.country
+        )
+        added, _ = save_activities(activities, catalog_path) if catalog_path else save_activities(activities)
+        summary[city.name] = len(added)
     return summary
 
 
@@ -137,12 +130,12 @@ def ingest_cities(
 def main() -> None:
     """Run the scheduled ingestion manually or from GitHub Actions."""
 
-    parser = argparse.ArgumentParser(description="Retrieve review-only attraction batches with dlt.")
+    parser = argparse.ArgumentParser(description="Retrieve quality-screened attractions with dlt.")
     parser.add_argument("--cities", nargs="+", help="One-off city list; requires --country.")
     parser.add_argument("--country", help="Shared country for --cities.")
     parser.add_argument(
         "--destination-queue", type=Path, default=DEFAULT_DESTINATION_QUEUE_PATH,
-        help="Versioned JSON queue used when --cities is omitted.",
+        help="Versioned destination queue used when --cities is omitted.",
     )
     parser.add_argument(
         "--rotate-size", type=int, default=0,
@@ -162,7 +155,7 @@ def main() -> None:
             destinations, limit=arguments.limit
         )
     for city, count in summary.items():
-        print(f"{city}: saved {count} review candidates; none were published.")
+        print(f"{city}: published {count} new quality-approved attractions.")
 
 
 if __name__ == "__main__":

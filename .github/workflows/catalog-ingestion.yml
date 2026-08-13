@@ -1,4 +1,4 @@
-name: Refresh review-only catalog candidates
+name: Refresh quality-screened catalog attractions
 
 on:
   workflow_dispatch:
@@ -6,8 +6,7 @@ on:
     - cron: "17 5 * * 1"
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   retrieve-candidates:
@@ -19,17 +18,8 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Retrieve candidates for review
+      - name: Retrieve and publish quality-screened attractions
         run: python -m src.catalog_dlt --limit 50 --rotate-size 3
-      - name: Open a review pull request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: "chore: refresh catalog review candidates"
-          title: "chore: refresh catalog review candidates"
-          body: |
-            Automated Wikidata retrieval for human review.
-
-            These are raw candidates only; merge does not publish activities.
-          branch: automation/catalog-candidates
-          delete-branch: true
-          add-paths: data/candidates/
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
