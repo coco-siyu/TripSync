@@ -200,7 +200,10 @@ class StreamlitInteractionTests(unittest.TestCase):
 
         self.assertTrue(
             any(
-                caption.value.startswith("Hybrid retrieval found ")
+                caption.value.startswith((
+                    "Hybrid retrieval found ",
+                    "Text retrieval fallback found ",
+                ))
                 and caption.value.endswith(" destination records.")
                 for caption in app.caption
             )

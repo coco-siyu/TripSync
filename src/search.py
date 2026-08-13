@@ -4,19 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Literal, Protocol
 
 import numpy as np
 
 from src.models import Activity, TripRequest
 from src.must_dos import canonicalize_activity_key, matches_must_do
+from src.embeddings import EmbeddingUnavailable, semantic_similarity_scores
 
 
 RetrievalMode = Literal["text", "vector", "hybrid"]
-DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-
-
 class EmbeddingModel(Protocol):
     def encode(self, sentences: Sequence[str], *, normalize_embeddings: bool) -> object: ...
 
@@ -77,15 +74,6 @@ def _trip_query(trip: TripRequest) -> str:
         *[must_do for traveler in trip.travelers for must_do in traveler.must_do_activities],
     ]
     return normalize_search_text(" ".join(terms))
-
-
-@lru_cache(maxsize=1)
-def _embedding_model() -> EmbeddingModel:
-    """Load the local semantic model only when vector retrieval is selected."""
-
-    from sentence_transformers import SentenceTransformer
-
-    return SentenceTransformer(DEFAULT_EMBEDDING_MODEL, local_files_only=True)
 
 
 def _destination_matches(activity: Activity, trip: TripRequest) -> bool:
@@ -231,28 +219,25 @@ def retrieve_activities(
         query = _trip_query(trip)
         if query:
             try:
-                model = embedding_model or _embedding_model()
-                vectors = np.asarray(
-                    model.encode(
-                        [
-                            query,
-                            *[
-                                _activity_document(activity)
-                                for activity in destination_activities
-                            ],
-                        ],
-                        normalize_embeddings=True,
+                if embedding_model is not None:
+                    vectors = np.asarray(
+                        embedding_model.encode(
+                            [query, *[_activity_document(activity) for activity in destination_activities]],
+                            normalize_embeddings=True,
+                        )
                     )
-                )
-            except (ImportError, OSError, RuntimeError):
-                # A fresh cloud instance may not have the optional model cache.
+                    semantic_scores = {
+                        activity.id: float(np.dot(vectors[0], vectors[index]))
+                        for index, activity in enumerate(destination_activities, start=1)
+                    }
+                else:
+                    semantic_scores = semantic_similarity_scores(destination_activities, query)
+            except (EmbeddingUnavailable, OSError, RuntimeError):
+                # Semantic enrichment is optional. Preserve deterministic text
+                # retrieval if a cloud API or embedding store is unavailable.
                 # Preserve the deterministic text results instead of failing the UI.
                 semantic_fallback = True
             else:
-                semantic_scores = {
-                    activity.id: float(np.dot(vectors[0], vectors[index]))
-                    for index, activity in enumerate(destination_activities, start=1)
-                }
                 text_by_id = {result.activity_id: result for result in retrieved}
                 retrieved = []
                 for activity in destination_activities:

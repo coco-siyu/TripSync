@@ -1,4 +1,4 @@
-# Activity text retrieval
+# Activity retrieval
 
 TripSync retrieves a grounded candidate set before calculating group-fit scores.
 Keeping these phases separate makes it possible to evaluate whether the catalog
@@ -6,12 +6,18 @@ returned the right activities independently from how the group ranking orders th
 
 ## Current retrieval inputs
 
-The deterministic MVP uses:
+TripSync uses a hybrid approach:
 
 - destination city and country;
 - each traveler’s normalized interests;
 - each traveler’s recognized must-do activity names or stable IDs;
 - searchable activity names, categories, interest tags, and descriptions.
+
+Published catalog records are embedded once through OpenAI and stored in
+Supabase. A trip query is embedded at search time and compared only with records
+from the requested city and country. Text evidence and recognized must-dos remain
+part of every retrieval result; hosted semantic search improves conceptual matches
+such as `painting` → `art museum` without letting the system invent activities.
 
 Capitalization and punctuation are normalized before comparison. Phrase matching
 uses word boundaries, so a short interest such as `art` does not accidentally match
@@ -27,6 +33,13 @@ an unrelated word such as `party`.
   is returned as an explicit fallback rather than presenting an empty page.
 - If the destination is absent from the catalog, the UI explains the current data
   limitation instead of attempting to score incompatible activities.
+
+## Availability fallback
+
+Semantic enrichment is optional. If OpenAI or the Supabase embedding table is
+unavailable, TripSync continues with deterministic text matching and tells the
+organizer that the fallback is active. This keeps the trip planner usable during
+an outage or before the optional embedding table has been initialized.
 
 ## Ranking boundary
 

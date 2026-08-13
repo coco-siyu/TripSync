@@ -99,6 +99,19 @@ def _remote_rows(activities: list[Activity]) -> list[dict[str, Any]]:
     ]
 
 
+def _try_sync_embeddings(activities: list[Activity]) -> None:
+    """Enrich changed shared records without making catalog writes dependent on AI."""
+
+    try:
+        from src.embeddings import EmbeddingUnavailable, ensure_activity_embeddings
+
+        ensure_activity_embeddings(activities)
+    except (EmbeddingUnavailable, ImportError):
+        # A missing API key, a temporary API error, or a developer's local JSON
+        # catalog should never prevent a validated activity from publishing.
+        return
+
+
 def load_curated_activities(path: Path = ACTIVITY_CATALOG_PATH) -> list[Activity]:
     """Load the shared catalog, seeding it from the packaged file once if empty."""
 
@@ -133,6 +146,7 @@ def update_activity(activity: Activity, path: Path = ACTIVITY_CATALOG_PATH) -> N
         raise ValueError(f"{activity.name} is not in the curated catalog")
     if _uses_supabase(path):
         upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows([activity]), conflict="activity_id")
+        _try_sync_embeddings([activity])
         return
     updated = [activity if entry.id == activity.id else entry for entry in existing]
     _write_activities(updated, path)
@@ -225,6 +239,7 @@ def save_activities(
     if added:
         if _uses_supabase(path):
             upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows(added), conflict="activity_id")
+            _try_sync_embeddings(added)
         else:
             _write_activities(existing, path)
     return added, duplicate_ids

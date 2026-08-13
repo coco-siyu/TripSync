@@ -38,7 +38,20 @@ create table if not exists public.catalog_activities (
   updated_at timestamptz not null default now()
 );
 
+-- Optional hosted semantic-search enrichment. The app stores an embedding for
+-- each published activity and compares only records from the trip's destination.
+-- JSONB avoids a heavy local ML runtime and does not require pgvector for this
+-- small, city-scoped catalog.
+create table if not exists public.catalog_activity_embeddings (
+  activity_id text primary key references public.catalog_activities(activity_id) on delete cascade,
+  embedding_model text not null,
+  content_hash text not null,
+  embedding jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.saved_trips enable row level security;
 alter table public.llm_feedback enable row level security;
 alter table public.overall_experience_feedback enable row level security;
 alter table public.catalog_activities enable row level security;
+alter table public.catalog_activity_embeddings enable row level security;

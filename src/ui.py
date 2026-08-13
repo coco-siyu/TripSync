@@ -2465,7 +2465,11 @@ def _render_results_step() -> None:
     retrieval_label = (
         "Text retrieval fallback"
         if retrieval_response.semantic_fallback
-        else f"{RETRIEVAL_MODE.title()} retrieval"
+        else (
+            "Hosted semantic retrieval"
+            if RETRIEVAL_MODE == "vector"
+            else "Hybrid retrieval"
+        )
     )
     st.caption(
         f"{retrieval_label} found {len(retrieval_response.results)} relevant "

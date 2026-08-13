@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
+from src.embeddings import EmbeddingUnavailable
 from src.models import Activity, TravelerProfile, TripRequest
 from src.search import normalize_search_text, retrieve_activities
 
@@ -77,6 +79,25 @@ def make_trip(
 
 
 class TextRetrievalTests(unittest.TestCase):
+    @patch("src.search.semantic_similarity_scores")
+    def test_hosted_hybrid_retrieval_ranks_semantic_matches(self, semantic_scores) -> None:
+        art = make_activity("rome_art", "Gallery", interests=["art"])
+        food = make_activity("rome_food", "Market", interests=["food"])
+        semantic_scores.return_value = {"rome_art": 0.9, "rome_food": 0.1}
+
+        response = retrieve_activities([food, art], make_trip(interests=["painting"]), mode="hybrid")
+
+        self.assertEqual(response.results[0].activity_id, "rome_art")
+        self.assertFalse(response.semantic_fallback)
+
+    @patch("src.search.semantic_similarity_scores", side_effect=EmbeddingUnavailable("offline"))
+    def test_hosted_semantic_failure_preserves_text_retrieval(self, _semantic_scores) -> None:
+        art = make_activity("rome_art", "Gallery", interests=["art"])
+        response = retrieve_activities([art], make_trip(interests=["art"]), mode="hybrid")
+
+        self.assertTrue(response.semantic_fallback)
+        self.assertEqual([result.activity_id for result in response.results], ["rome_art"])
+
     def test_vector_and_hybrid_rank_semantic_matches_without_downloading_a_model(self) -> None:
         art = make_activity("rome_art", "Gallery", interests=["art"])
         food = make_activity("rome_food", "Market", interests=["food"])

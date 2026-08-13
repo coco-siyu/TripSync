@@ -5,7 +5,7 @@ keeping activity selection and scheduling deterministic.
 
 ## Flow
 
-1. Text retrieval selects grounded activity records from the destination catalog.
+1. Hybrid retrieval selects grounded activity records from the destination catalog.
 2. Group-fit scoring ranks the retrieved candidates.
 3. The deterministic planner builds a constraint-safe itinerary.
 4. The narration prompt supplies the validated trip, the retrieved records for the
@@ -31,6 +31,13 @@ The current RAG source is the curated TripSync catalog: the initial local
 reviewed, corrected, and explicitly published by a human. Wikidata is a
 discovery/provenance source, not unreviewed prompt context.
 
+For semantic matching, TripSync embeds each published activity's name, category,
+tags, interests, and description with OpenAI's `text-embedding-3-small` model.
+The vector is stored beside the activity in Supabase and reused until that source
+text changes. At trip time, the app embeds the combined group-interest query and
+compares it only with activities in the requested destination. The deterministic
+text retriever remains the safe fallback when semantic enrichment is unavailable.
+
 Chunking becomes appropriate if TripSync later ingests long materials such as
 official attraction pages, city guides, accessibility guides, or lengthy
 traveler notes. In that case, split by meaningful sections (for example,
@@ -52,12 +59,17 @@ Then configure:
 ```dotenv
 OPENAI_API_KEY=replace-with-your-api-key
 OPENAI_MODEL=gpt-5.6-terra
+TRIPSYNC_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
 `OPENAI_MODEL` is optional. TripSync defaults to `gpt-5.6-terra`, selected after
 the recorded live contract and held-out robustness comparisons in
 [`evaluation/README.md`](../evaluation/README.md). You may override it for a
 local experiment without changing the product default.
+
+`TRIPSYNC_EMBEDDING_MODEL` is optional. The default is
+`text-embedding-3-small`; it is used only for catalog/search enrichment and does
+not affect itinerary narration or adjustment generation.
 
 ## Structured output
 
