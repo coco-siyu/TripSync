@@ -6,7 +6,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from src.embeddings import activity_embedding_text, ensure_activity_embeddings
+from src.embeddings import _embed_texts, activity_embedding_text, ensure_activity_embeddings
 from src.models import Activity
 
 
@@ -29,6 +29,19 @@ class HostedEmbeddingTests(unittest.TestCase):
         self.assertIn("painting collection", document)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test"}, clear=False)
+    @patch("src.embeddings.OpenAI")
+    def test_embeds_texts_with_hosted_client(self, openai_client) -> None:
+        openai_client.return_value.embeddings.create.return_value.data = [
+            type("Embedding", (), {"embedding": [0.1, 0.2]})()
+        ]
+
+        self.assertEqual(_embed_texts(["quiet cultural afternoon"]), [[0.1, 0.2]])
+        openai_client.return_value.embeddings.create.assert_called_once_with(
+            model="text-embedding-3-small",
+            input=["quiet cultural afternoon"],
+        )
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test"}, clear=False)
     @patch("src.embeddings.is_configured", return_value=True)
     @patch("src.embeddings.select")
     @patch("src.embeddings._embed_texts")
@@ -44,4 +57,3 @@ class HostedEmbeddingTests(unittest.TestCase):
         self.assertEqual(result, {"rome_gallery": [0.1, 0.2]})
         self.assertEqual(embed_texts.call_count, 1)
         upsert_many.assert_called_once()
-

@@ -14,7 +14,7 @@ from typing import Any
 
 import numpy as np
 from dotenv import load_dotenv
-from openai import APIConnectionError, AuthenticationError, OpenAIError, RateLimitError
+from openai import APIConnectionError, AuthenticationError, OpenAI, OpenAIError, RateLimitError
 
 from src.models import Activity
 from src.supabase_store import is_configured, select, upsert_many
