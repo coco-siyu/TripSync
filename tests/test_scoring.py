@@ -112,6 +112,27 @@ class GroupFitScoringTests(unittest.TestCase):
         self.assertGreater(coco_fit.semantic_interest_score, 0)
         self.assertGreater(coco_fit.score, 25)
         self.assertIn("Semantic alignment", coco_fit.explanations[0])
+        self.assertIn("Coco's interests (painting)", coco_fit.explanations[0])
+
+    def test_weak_semantic_similarity_is_explained_without_affecting_score(self) -> None:
+        activity = make_activity("rome_gallery", "Gallery", ["art"])
+        trip = make_trip(
+            [
+                make_traveler("Coco", ["painting", "quiet"]),
+                make_traveler("Sam", ["food"]),
+            ]
+        )
+
+        coco_fit = score_activity(
+            activity,
+            trip,
+            semantic_similarities={"Coco": 0.19},
+        ).traveler_fits[0]
+
+        self.assertEqual(coco_fit.semantic_interest_score, 0)
+        self.assertEqual(coco_fit.score, 25)
+        self.assertIn("painting, quiet", coco_fit.explanations[0])
+        self.assertIn("below the 0.20 scoring threshold", coco_fit.explanations[0])
 
     def test_must_do_match_adds_twenty_points_for_traveler(self) -> None:
         activity = make_activity(

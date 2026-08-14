@@ -135,8 +135,16 @@ def _score_traveler(
         )
     elif semantic_interest_score:
         explanations.append(
-            "Semantic alignment with your typed interests: "
-            f"{semantic_similarity:.2f}."
+            f"Semantic alignment with {traveler.name}'s interests "
+            f"({', '.join(traveler.interests)}): {semantic_similarity:.2f}; "
+            "this contributes to their interest score."
+        )
+    elif semantic_similarity is not None:
+        explanations.append(
+            f"No direct interest match. Semantic similarity to "
+            f"{traveler.name}'s interests ({', '.join(traveler.interests)}) "
+            f"was {semantic_similarity:.2f}, below the "
+            f"{SEMANTIC_INTEREST_THRESHOLD:.2f} scoring threshold."
         )
     else:
         explanations.append("No direct or meaningful semantic interest match.")
