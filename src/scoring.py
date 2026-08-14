@@ -20,7 +20,12 @@ from src.must_dos import matches_must_do
 INTEREST_WEIGHT = 55.0
 WALKING_WEIGHT = 25.0
 MUST_DO_WEIGHT = 20.0
-SEMANTIC_INTEREST_THRESHOLD = 0.20
+# Semantic similarity is useful for free-text preferences, but it is less
+# certain than an explicit catalog tag.  It therefore starts contributing only
+# after a small noise floor and caps below a one-tag direct match (40 points).
+SEMANTIC_INTEREST_FLOOR = 0.18
+SEMANTIC_INTEREST_CEILING = 0.40
+SEMANTIC_INTEREST_MAX_WEIGHT = 30.0
 
 GROUP_AVERAGE_WEIGHT = 0.65
 FAIRNESS_WEIGHT = 0.20
@@ -83,16 +88,22 @@ def _interest_score(matched_interests: Sequence[str]) -> float:
 
 
 def _semantic_interest_score(similarity: float | None) -> float:
-    """Give free-text interests a bounded, explainable semantic contribution."""
+    """Give free-text interests a gradual, bounded semantic contribution.
 
-    if similarity is None or similarity <= SEMANTIC_INTEREST_THRESHOLD:
+    Scores between the noise floor and the ceiling scale linearly from zero to
+    30 points.  This lets a meaningful phrase such as ``painting`` help a
+    gallery score, without allowing semantic similarity to outrank an explicit
+    catalog-tag match worth 40 or 55 points.
+    """
+
+    if similarity is None or similarity <= SEMANTIC_INTEREST_FLOOR:
         return 0.0
     return round(
         min(
-            INTEREST_WEIGHT,
-            (similarity - SEMANTIC_INTEREST_THRESHOLD)
-            / (1 - SEMANTIC_INTEREST_THRESHOLD)
-            * INTEREST_WEIGHT,
+            SEMANTIC_INTEREST_MAX_WEIGHT,
+            (similarity - SEMANTIC_INTEREST_FLOOR)
+            / (SEMANTIC_INTEREST_CEILING - SEMANTIC_INTEREST_FLOOR)
+            * SEMANTIC_INTEREST_MAX_WEIGHT,
         ),
         1,
     )
@@ -137,14 +148,14 @@ def _score_traveler(
         explanations.append(
             f"Semantic alignment with {traveler.name}'s interests "
             f"({', '.join(traveler.interests)}): {semantic_similarity:.2f}; "
-            "this contributes to their interest score."
+            f"adds {semantic_interest_score:.1f} interest points."
         )
     elif semantic_similarity is not None:
         explanations.append(
             f"No direct interest match. Semantic similarity to "
             f"{traveler.name}'s interests ({', '.join(traveler.interests)}) "
             f"was {semantic_similarity:.2f}, below the "
-            f"{SEMANTIC_INTEREST_THRESHOLD:.2f} scoring threshold."
+            f"{SEMANTIC_INTEREST_FLOOR:.2f} scoring floor."
         )
     else:
         explanations.append("No direct or meaningful semantic interest match.")

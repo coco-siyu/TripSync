@@ -7,7 +7,11 @@ import unittest
 from pathlib import Path
 
 from src.models import Activity, TravelerProfile, TripRequest
-from src.scoring import rank_activities, score_activity
+from src.scoring import (
+    SEMANTIC_INTEREST_MAX_WEIGHT,
+    rank_activities,
+    score_activity,
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -113,6 +117,51 @@ class GroupFitScoringTests(unittest.TestCase):
         self.assertGreater(coco_fit.score, 25)
         self.assertIn("Semantic alignment", coco_fit.explanations[0])
         self.assertIn("Coco's interests (painting)", coco_fit.explanations[0])
+        self.assertIn("adds", coco_fit.explanations[0])
+
+    def test_meaningful_semantic_similarity_earns_visible_partial_credit(self) -> None:
+        activity = make_activity("rome_gallery", "Gallery", ["art"])
+        trip = make_trip(
+            [
+                make_traveler("Coco", ["painting"]),
+                make_traveler("Sam", ["food"]),
+            ]
+        )
+
+        coco_fit = score_activity(
+            activity,
+            trip,
+            semantic_similarities={"Coco": 0.24},
+        ).traveler_fits[0]
+
+        self.assertGreater(coco_fit.semantic_interest_score, 5)
+        self.assertLess(coco_fit.semantic_interest_score, 40)
+        self.assertGreater(coco_fit.score, 30)
+
+    def test_semantic_credit_is_capped_below_a_direct_interest_match(self) -> None:
+        activity = make_activity("rome_gallery", "Gallery", ["art"])
+        semantic_trip = make_trip(
+            [
+                make_traveler("Coco", ["painting"]),
+                make_traveler("Sam", ["food"]),
+            ]
+        )
+        direct_trip = make_trip(
+            [
+                make_traveler("Coco", ["art"]),
+                make_traveler("Sam", ["food"]),
+            ]
+        )
+
+        semantic_fit = score_activity(
+            activity,
+            semantic_trip,
+            semantic_similarities={"Coco": 0.60},
+        ).traveler_fits[0]
+        direct_fit = score_activity(activity, direct_trip).traveler_fits[0]
+
+        self.assertEqual(semantic_fit.semantic_interest_score, SEMANTIC_INTEREST_MAX_WEIGHT)
+        self.assertLess(semantic_fit.interest_score, direct_fit.interest_score)
 
     def test_weak_semantic_similarity_is_explained_without_affecting_score(self) -> None:
         activity = make_activity("rome_gallery", "Gallery", ["art"])
@@ -126,13 +175,13 @@ class GroupFitScoringTests(unittest.TestCase):
         coco_fit = score_activity(
             activity,
             trip,
-            semantic_similarities={"Coco": 0.19},
+            semantic_similarities={"Coco": 0.17},
         ).traveler_fits[0]
 
         self.assertEqual(coco_fit.semantic_interest_score, 0)
         self.assertEqual(coco_fit.score, 25)
         self.assertIn("painting, quiet", coco_fit.explanations[0])
-        self.assertIn("below the 0.20 scoring threshold", coco_fit.explanations[0])
+        self.assertIn("below the 0.18 scoring floor", coco_fit.explanations[0])
 
     def test_must_do_match_adds_twenty_points_for_traveler(self) -> None:
         activity = make_activity(
