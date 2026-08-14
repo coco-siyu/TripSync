@@ -1,0 +1,98 @@
+[
+  {
+    "case_id": "rome_painting_collections",
+    "description": "Natural-language art request: painting and sculpture, without using the catalog's art tag.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {"name": "Coco", "interests": ["painting", "sculpture collections"], "walking_tolerance": "moderate"},
+        {"name": "Jack", "interests": ["masterpieces"], "walking_tolerance": "moderate"}
+      ]
+    },
+    "relevant_activity_ids": ["rome_borghese_gallery", "rome_vatican_museums", "rome_capitoline_museums"]
+  },
+  {
+    "case_id": "rome_quiet_cultural_afternoon",
+    "description": "A calmer cultural afternoon with art and greenery rather than a busy landmark crawl.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "relaxed",
+      "travelers": [
+        {"name": "Coco", "interests": ["quiet cultural afternoon"], "walking_tolerance": "low"},
+        {"name": "Jack", "interests": ["gentle gardens"], "walking_tolerance": "low"}
+      ]
+    },
+    "relevant_activity_ids": ["rome_borghese_gallery", "rome_villa_borghese"]
+  },
+  {
+    "case_id": "rome_roman_ruins",
+    "description": "Natural-language request for ancient ruins and the old civic centre.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "moderate",
+      "pace": "balanced",
+      "travelers": [
+        {"name": "Ari", "interests": ["ancient ruins", "imperial Rome"], "walking_tolerance": "high"},
+        {"name": "Bea", "interests": ["archaeological remains"], "walking_tolerance": "high"}
+      ]
+    },
+    "relevant_activity_ids": ["rome_roman_forum", "rome_trajan_s_forum", "rome_colosseum"]
+  },
+  {
+    "case_id": "rome_food_stalls",
+    "description": "A request for casual local bites and a market atmosphere.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 2,
+      "budget_level": "low",
+      "pace": "balanced",
+      "travelers": [
+        {"name": "Emi", "interests": ["casual local bites"], "walking_tolerance": "moderate"},
+        {"name": "Finn", "interests": ["market atmosphere"], "walking_tolerance": "moderate"}
+      ]
+    },
+    "relevant_activity_ids": ["rome_testaccio_market", "rome_trastevere_walk"]
+  },
+  {
+    "case_id": "rome_industrial_art",
+    "description": "A niche request for art in an industrial setting.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 2,
+      "budget_level": "moderate",
+      "pace": "relaxed",
+      "travelers": [
+        {"name": "Mara", "interests": ["art inside an old power station"], "walking_tolerance": "low"},
+        {"name": "Nico", "interests": ["unusual museum spaces"], "walking_tolerance": "moderate"}
+      ]
+    },
+    "relevant_activity_ids": ["rome_centrale_montemartini"]
+  },
+  {
+    "case_id": "rome_green_photo_walk",
+    "description": "A low-key green escape with viewpoints and camera-friendly scenery.",
+    "trip": {
+      "destination": "Rome",
+      "country": "Italy",
+      "days": 3,
+      "budget_level": "free",
+      "pace": "relaxed",
+      "travelers": [
+        {"name": "Gia", "interests": ["green escape", "camera-friendly scenery"], "walking_tolerance": "moderate"},
+        {"name": "Hugo", "interests": ["peaceful viewpoints"], "walking_tolerance": "moderate"}
+      ]
+    },
+    "relevant_activity_ids": ["rome_villa_borghese", "rome_appian_way"]
+  }
+]

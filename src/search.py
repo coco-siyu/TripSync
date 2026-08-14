@@ -39,6 +39,7 @@ class RetrievalResponse:
     destination_activity_ids: tuple[str, ...]
     used_fallback: bool = False
     semantic_fallback: bool = False
+    semantic_unavailable_reason: str | None = None
 
 
 def normalize_search_text(value: str) -> str:
@@ -224,6 +225,7 @@ def retrieve_activities(
     )
 
     semantic_fallback = False
+    semantic_unavailable_reason: str | None = None
     if mode in {"vector", "hybrid"} and destination_activities:
         query = _trip_query(trip)
         if query:
@@ -266,11 +268,12 @@ def retrieve_activities(
                         semantic_scores_by_traveler[traveler.name] = semantic_similarity_scores(
                             destination_activities, traveler_query
                         )
-            except (EmbeddingUnavailable, OSError, RuntimeError):
+            except (EmbeddingUnavailable, OSError, RuntimeError) as error:
                 # Semantic enrichment is optional. Preserve deterministic text
                 # retrieval if a cloud API or embedding store is unavailable.
                 # Preserve the deterministic text results instead of failing the UI.
                 semantic_fallback = True
+                semantic_unavailable_reason = str(error) or type(error).__name__
             else:
                 text_by_id = {result.activity_id: result for result in retrieved}
                 retrieved = []
@@ -330,4 +333,5 @@ def retrieve_activities(
         destination_activity_ids=destination_ids,
         used_fallback=used_fallback,
         semantic_fallback=semantic_fallback,
+        semantic_unavailable_reason=semantic_unavailable_reason,
     )

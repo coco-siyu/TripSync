@@ -49,6 +49,8 @@ class RetrievalCaseResult:
     description: str
     relevant_activity_ids: tuple[str, ...]
     metrics: RankedRetrievalMetrics
+    semantic_fallback: bool
+    semantic_unavailable_reason: str | None
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,7 @@ class RetrievalEvaluationReport:
     hit_rate: float
     mean_reciprocal_rank: float
     mean_recall: float
+    semantic_fallback_count: int
     cases: tuple[RetrievalCaseResult, ...]
 
 
@@ -175,6 +178,8 @@ def evaluate_retrieval(
                 description=case.description,
                 relevant_activity_ids=tuple(case.relevant_activity_ids),
                 metrics=metrics,
+                semantic_fallback=response.semantic_fallback,
+                semantic_unavailable_reason=response.semantic_unavailable_reason,
             )
         )
 
@@ -189,6 +194,9 @@ def evaluate_retrieval(
         ),
         mean_recall=(
             sum(result.metrics.recall for result in results) / case_count
+        ),
+        semantic_fallback_count=sum(
+            result.semantic_fallback for result in results
         ),
         cases=tuple(results),
     )
@@ -238,13 +246,27 @@ def format_report(report: RetrievalEvaluationReport) -> str:
         f"Hit Rate@{report.k}: {report.hit_rate:.3f}",
         f"MRR@{report.k}: {report.mean_reciprocal_rank:.3f}",
         f"Mean Recall@{report.k}: {report.mean_recall:.3f}",
+        (
+            "Semantic retrieval: active"
+            if report.semantic_fallback_count == 0
+            else (
+                "Semantic retrieval: unavailable for "
+                f"{report.semantic_fallback_count}/{report.case_count} case(s); "
+                "those results used text fallback."
+            )
+        ),
         "",
         "Per-case first relevant rank:",
     ]
     for result in report.cases:
         rank = result.metrics.first_relevant_rank
         rank_label = str(rank) if rank is not None else "miss"
-        lines.append(f"- {result.case_id}: {rank_label}")
+        fallback_suffix = (
+            f" (text fallback: {result.semantic_unavailable_reason})"
+            if result.semantic_fallback
+            else ""
+        )
+        lines.append(f"- {result.case_id}: {rank_label}{fallback_suffix}")
     return "\n".join(lines)
 
 
@@ -301,6 +323,12 @@ def main() -> None:
         default=5,
         help="Evaluate the first K retrieved activities (default: 5).",
     )
+    parser.add_argument(
+        "--cases",
+        type=Path,
+        default=DEFAULT_CASES_PATH,
+        help="Path to a labeled retrieval-case JSON file.",
+    )
     parser.add_argument("--mode", choices=["text", "vector", "hybrid"], default="text")
     parser.add_argument(
         "--compare",
@@ -315,7 +343,7 @@ def main() -> None:
     args = parser.parse_args()
 
     activities = load_activities()
-    cases = load_retrieval_cases()
+    cases = load_retrieval_cases(args.cases)
     if args.compare:
         report = compare_retrieval_modes(activities, cases, k=args.k)
         if args.json:

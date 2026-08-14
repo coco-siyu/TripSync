@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from evaluation.retrieval import (
     compare_retrieval_modes,
@@ -72,6 +73,7 @@ class RetrievalBenchmarkTests(unittest.TestCase):
         self.assertGreaterEqual(first_report.hit_rate, 0.9)
         self.assertGreaterEqual(first_report.mean_reciprocal_rank, 0.8)
         self.assertGreaterEqual(first_report.mean_recall, 0.8)
+        self.assertEqual(first_report.semantic_fallback_count, 0)
 
     def test_unknown_ground_truth_id_is_rejected(self) -> None:
         activities = load_activities()
@@ -85,6 +87,23 @@ class RetrievalBenchmarkTests(unittest.TestCase):
             "references unknown activity IDs",
         ):
             evaluate_retrieval(activities, [invalid_case])
+
+    def test_semantic_holdout_cases_are_valid(self) -> None:
+        cases_path = (
+            Path(__file__).resolve().parents[1]
+            / "evaluation"
+            / "retrieval_semantic_cases.json"
+        )
+        cases = load_retrieval_cases(cases_path)
+
+        self.assertEqual(len(cases), 6)
+        self.assertTrue(
+            all(
+                not set(case.trip.travelers[0].interests)
+                & {"art", "history", "food", "nature", "relaxation"}
+                for case in cases
+            )
+        )
 
     def test_comparison_uses_all_modes_with_identical_cases(self) -> None:
         activities = load_activities()

@@ -25,6 +25,25 @@ Compare all three retrieval strategies on exactly the same cases and labels:
 .venv/bin/python -m evaluation.retrieval --compare
 ```
 
+### Natural-language semantic holdout
+
+`retrieval_semantic_cases.json` deliberately uses phrases that do not exactly
+match catalog tags, such as `painting` and `quiet cultural afternoon`. The
+labels were reviewed against the catalog before being added. Run the live
+hybrid retrieval check with:
+
+```bash
+.venv/bin/python -m evaluation.retrieval \
+  --cases evaluation/retrieval_semantic_cases.json \
+  --mode hybrid
+```
+
+This is the practical check for semantic retrieval: an expected art gallery,
+museum, market, or park should appear in the top five even when the wording is
+not a literal tag match. Compare it with `--mode text` to see the semantic
+contribution. It uses the configured OpenAI embedding service and cached
+catalog vectors, so it makes a small API call.
+
 The report includes:
 
 - **Hit Rate@K**: the share of cases with at least one relevant result in the first

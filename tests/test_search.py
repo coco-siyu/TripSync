@@ -96,6 +96,7 @@ class TextRetrievalTests(unittest.TestCase):
         response = retrieve_activities([art], make_trip(interests=["art"]), mode="hybrid")
 
         self.assertTrue(response.semantic_fallback)
+        self.assertEqual(response.semantic_unavailable_reason, "offline")
         self.assertEqual([result.activity_id for result in response.results], ["rome_art"])
 
     def test_vector_and_hybrid_rank_semantic_matches_without_downloading_a_model(self) -> None:
