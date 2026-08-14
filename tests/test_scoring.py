@@ -94,6 +94,25 @@ class GroupFitScoringTests(unittest.TestCase):
             score_activity(irrelevant, self.group).total_score,
         )
 
+    def test_semantic_interest_can_support_a_typed_preference(self) -> None:
+        activity = make_activity("rome_gallery", "Gallery", ["art"])
+        trip = make_trip(
+            [
+                make_traveler("Coco", ["painting"]),
+                make_traveler("Sam", ["food"]),
+            ]
+        )
+
+        coco_fit = score_activity(
+            activity,
+            trip,
+            semantic_similarities={"Coco": 0.60},
+        ).traveler_fits[0]
+
+        self.assertGreater(coco_fit.semantic_interest_score, 0)
+        self.assertGreater(coco_fit.score, 25)
+        self.assertIn("Semantic alignment", coco_fit.explanations[0])
+
     def test_must_do_match_adds_twenty_points_for_traveler(self) -> None:
         activity = make_activity(
             "rome_colosseum",

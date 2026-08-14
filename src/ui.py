@@ -1353,7 +1353,13 @@ def _render_result_card(
 
                 st.markdown("**How it fits each traveler**")
                 for fit in result.traveler_fits:
-                    status = "✓" if fit.matched_interests or fit.must_do_match else "○"
+                    status = (
+                        "✓"
+                        if fit.matched_interests
+                        or fit.semantic_interest_score
+                        or fit.must_do_match
+                        else "○"
+                    )
                     st.markdown(
                         f"**{status} {fit.traveler_name} · {fit.score:.0f}/100**"
                     )
@@ -2436,7 +2442,14 @@ def _render_results_step() -> None:
         activity_by_id[activity_id]
         for activity_id in retrieval_response.destination_activity_ids
     ]
-    results = rank_activities(retrieved_activities, trip)
+    results = rank_activities(
+        retrieved_activities,
+        trip,
+        semantic_similarities_by_activity={
+            retrieved.activity_id: dict(retrieved.semantic_similarities)
+            for retrieved in retrieval_response.results
+        },
+    )
     result_by_activity_id = {
         result.activity_id: result for result in results
     }

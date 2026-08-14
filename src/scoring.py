@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from pydantic import Field
 
@@ -20,6 +20,7 @@ from src.must_dos import matches_must_do
 INTEREST_WEIGHT = 55.0
 WALKING_WEIGHT = 25.0
 MUST_DO_WEIGHT = 20.0
+SEMANTIC_INTEREST_THRESHOLD = 0.20
 
 GROUP_AVERAGE_WEIGHT = 0.65
 FAIRNESS_WEIGHT = 0.20
@@ -45,6 +46,8 @@ class TravelerFit(TripSyncModel):
     traveler_name: str
     score: float = Field(ge=0, le=100)
     interest_score: float = Field(ge=0, le=INTEREST_WEIGHT)
+    semantic_interest_score: float = Field(ge=0, le=INTEREST_WEIGHT)
+    semantic_similarity: float | None = Field(default=None, ge=-1, le=1)
     walking_score: float = Field(ge=0, le=WALKING_WEIGHT)
     must_do_score: float = Field(ge=0, le=MUST_DO_WEIGHT)
     matched_interests: list[str]
@@ -79,6 +82,22 @@ def _interest_score(matched_interests: Sequence[str]) -> float:
     return INTEREST_WEIGHT
 
 
+def _semantic_interest_score(similarity: float | None) -> float:
+    """Give free-text interests a bounded, explainable semantic contribution."""
+
+    if similarity is None or similarity <= SEMANTIC_INTEREST_THRESHOLD:
+        return 0.0
+    return round(
+        min(
+            INTEREST_WEIGHT,
+            (similarity - SEMANTIC_INTEREST_THRESHOLD)
+            / (1 - SEMANTIC_INTEREST_THRESHOLD)
+            * INTEREST_WEIGHT,
+        ),
+        1,
+    )
+
+
 def _must_do_match(activity: Activity, traveler: TravelerProfile) -> bool:
     """Match must-do entries against stable activity names and identifiers."""
 
@@ -91,9 +110,14 @@ def _must_do_match(activity: Activity, traveler: TravelerProfile) -> bool:
 def _score_traveler(
     activity: Activity,
     traveler: TravelerProfile,
+    semantic_similarity: float | None = None,
 ) -> TravelerFit:
     matched_interests = sorted(set(activity.interests) & set(traveler.interests))
-    interest_score = _interest_score(matched_interests)
+    direct_interest_score = _interest_score(matched_interests)
+    semantic_interest_score = (
+        0.0 if matched_interests else _semantic_interest_score(semantic_similarity)
+    )
+    interest_score = max(direct_interest_score, semantic_interest_score)
 
     walking_compatible = (
         _WALKING_RANK[activity.walking_level]
@@ -109,8 +133,13 @@ def _score_traveler(
         explanations.append(
             f"Matches interests: {', '.join(matched_interests)}."
         )
+    elif semantic_interest_score:
+        explanations.append(
+            "Semantic alignment with your typed interests: "
+            f"{semantic_similarity:.2f}."
+        )
     else:
-        explanations.append("No direct interest match.")
+        explanations.append("No direct or meaningful semantic interest match.")
 
     if walking_compatible:
         explanations.append(
@@ -130,6 +159,8 @@ def _score_traveler(
         traveler_name=traveler.name,
         score=round(interest_score + walking_score + must_do_score, 1),
         interest_score=interest_score,
+        semantic_interest_score=semantic_interest_score,
+        semantic_similarity=semantic_similarity,
         walking_score=walking_score,
         must_do_score=must_do_score,
         matched_interests=matched_interests,
@@ -161,7 +192,12 @@ def _score_budget(
     )
 
 
-def score_activity(activity: Activity, trip: TripRequest) -> GroupFitResult:
+def score_activity(
+    activity: Activity,
+    trip: TripRequest,
+    *,
+    semantic_similarities: Mapping[str, float] | None = None,
+) -> GroupFitResult:
     """Score one destination-compatible activity for the complete group."""
 
     if activity.city.casefold() != trip.destination.casefold():
@@ -176,7 +212,12 @@ def score_activity(activity: Activity, trip: TripRequest) -> GroupFitResult:
         )
 
     traveler_fits = [
-        _score_traveler(activity, traveler) for traveler in trip.travelers
+        _score_traveler(
+            activity,
+            traveler,
+            (semantic_similarities or {}).get(traveler.name),
+        )
+        for traveler in trip.travelers
     ]
     traveler_scores = [fit.score for fit in traveler_fits]
 
@@ -191,7 +232,10 @@ def score_activity(activity: Activity, trip: TripRequest) -> GroupFitResult:
     )
 
     coverage_count = sum(
-        bool(fit.matched_interests) or fit.must_do_match for fit in traveler_fits
+        bool(fit.matched_interests)
+        or bool(fit.semantic_interest_score)
+        or fit.must_do_match
+        for fit in traveler_fits
     )
     tradeoffs = [
         (
@@ -222,10 +266,19 @@ def score_activity(activity: Activity, trip: TripRequest) -> GroupFitResult:
 def rank_activities(
     activities: Sequence[Activity],
     trip: TripRequest,
+    *,
+    semantic_similarities_by_activity: Mapping[str, Mapping[str, float]] | None = None,
 ) -> list[GroupFitResult]:
     """Score and rank activities with stable tie-breaking."""
 
-    results = [score_activity(activity, trip) for activity in activities]
+    results = [
+        score_activity(
+            activity,
+            trip,
+            semantic_similarities=(semantic_similarities_by_activity or {}).get(activity.id),
+        )
+        for activity in activities
+    ]
     return sorted(
         results,
         key=lambda result: (

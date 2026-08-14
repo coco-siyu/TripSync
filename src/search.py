@@ -8,7 +8,7 @@ from typing import Literal, Protocol
 
 import numpy as np
 
-from src.models import Activity, TripRequest
+from src.models import Activity, TravelerProfile, TripRequest
 from src.must_dos import canonicalize_activity_key, matches_must_do
 from src.embeddings import EmbeddingUnavailable, semantic_similarity_scores
 
@@ -28,6 +28,7 @@ class RetrievedActivity:
     matched_travelers: tuple[str, ...]
     must_do_owners: tuple[str, ...]
     reasons: tuple[str, ...]
+    semantic_similarities: tuple[tuple[str, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,14 @@ def _trip_query(trip: TripRequest) -> str:
         *[must_do for traveler in trip.travelers for must_do in traveler.must_do_activities],
     ]
     return normalize_search_text(" ".join(terms))
+
+
+def _traveler_query(traveler: TravelerProfile) -> str:
+    """Return preference text belonging to one traveler."""
+
+    return normalize_search_text(
+        " ".join([*traveler.interests, *traveler.must_do_activities])
+    )
 
 
 def _destination_matches(activity: Activity, trip: TripRequest) -> bool:
@@ -232,6 +241,31 @@ def retrieve_activities(
                     }
                 else:
                     semantic_scores = semantic_similarity_scores(destination_activities, query)
+                semantic_scores_by_traveler: dict[str, dict[str, float]] = {}
+                for traveler in trip.travelers:
+                    traveler_query = _traveler_query(traveler)
+                    if not traveler_query:
+                        continue
+                    if embedding_model is not None:
+                        traveler_vectors = np.asarray(
+                            embedding_model.encode(
+                                [
+                                    traveler_query,
+                                    *[_activity_document(activity) for activity in destination_activities],
+                                ],
+                                normalize_embeddings=True,
+                            )
+                        )
+                        semantic_scores_by_traveler[traveler.name] = {
+                            activity.id: float(
+                                np.dot(traveler_vectors[0], traveler_vectors[index])
+                            )
+                            for index, activity in enumerate(destination_activities, start=1)
+                        }
+                    else:
+                        semantic_scores_by_traveler[traveler.name] = semantic_similarity_scores(
+                            destination_activities, traveler_query
+                        )
             except (EmbeddingUnavailable, OSError, RuntimeError):
                 # Semantic enrichment is optional. Preserve deterministic text
                 # retrieval if a cloud API or embedding store is unavailable.
@@ -255,6 +289,15 @@ def retrieve_activities(
                         matched_travelers=text_result.matched_travelers if text_result else (),
                         must_do_owners=must_do_owners,
                         reasons=tuple(reasons),
+                        semantic_similarities=tuple(
+                            (
+                                traveler.name,
+                                semantic_scores_by_traveler.get(traveler.name, {}).get(
+                                    activity.id, 0.0
+                                ),
+                            )
+                            for traveler in trip.travelers
+                        ),
                     ))
                 retrieved.sort(
                     key=lambda result: (-result.relevance_score, result.activity_id)
