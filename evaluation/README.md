@@ -1,5 +1,56 @@
 # Evaluation
 
+## End-to-end group-fit benchmark
+
+`group_fit.py` tests the complete recommendation path: retrieve grounded
+activities, calculate the per-traveler fit, then check the final Top 5. The
+ten reviewed scenarios cover Rome, Florence, Milan, and Venice, including
+mixed-interest and free-text preference groups.
+
+Run the deterministic baseline without API calls:
+
+```bash
+.venv/bin/python -m evaluation.group_fit --mode text
+```
+
+Run the live semantic version when `OPENAI_API_KEY` and Supabase credentials
+are configured:
+
+```bash
+.venv/bin/python -m evaluation.group_fit --mode hybrid
+```
+
+### group_fit_cases.json
+`evaluation/group_fit_cases.json`
+Ten reviewed “known-good” trip scenarios across Rome, Florence, Milan, and Venice. 
+```bash
+Each includes:
+the group’s preferences
+activities that should reasonably appear in the Top 5
+activities expected to serve each named traveler
+This is the regular benchmark—the one we use to catch accidental regressions during development.
+```
+### Held-out group-fit scenarios
+
+`group_fit_holdout_cases.json` is a separate, reviewed set of six group requests.
+It is not used as the day-to-day regression target, so it helps show whether ranking
+quality generalizes beyond the original benchmark.
+
+```bash
+# Free, deterministic baseline
+.venv/bin/python -m evaluation.group_fit --holdout --mode text
+
+# Live semantic comparison; requires OPENAI_API_KEY and the embedding store
+.venv/bin/python -m evaluation.group_fit --holdout --mode hybrid
+```
+
+Compare the Top-5 hit rate, expected-activity recall, and traveler target coverage.
+The semantic run should improve coverage for requests whose language does not exactly
+match the catalog tags.
+
+The report includes Top-5 relevance, rank quality, expected-activity recall,
+and whether each traveler receives one of their reviewed target activities.
+
 ## Retrieval baseline
 
 The reproducible benchmark contains labeled Rome, Florence, and Milan trip

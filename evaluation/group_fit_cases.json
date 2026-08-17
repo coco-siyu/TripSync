@@ -1,0 +1,77 @@
+// Ten reviewed “known-good” trip scenarios across Rome, Florence, Milan, and Venice. Each includes:
+// the group’s preferences
+// activities that should reasonably appear in the Top 5
+// activities expected to serve each named traveler
+// This is the regular benchmark—the one we use to catch accidental regressions during development.
+[
+  {
+    "case_id": "rome_painting_and_architecture",
+    "description": "A painting-focused traveler and an architecture-focused traveler in Rome.",
+    "trip": {"destination": "Rome", "country": "Italy", "days": 3, "budget_level": "moderate", "pace": "balanced", "travelers": [{"name": "Coco", "interests": ["painting"], "walking_tolerance": "moderate"}, {"name": "Jack", "interests": ["architecture"], "walking_tolerance": "moderate"}]},
+    "expected_top_activity_ids": ["rome_borghese_gallery", "rome_capitoline_museums", "rome_pantheon"],
+    "expected_activity_ids_by_traveler": {"Coco": ["rome_borghese_gallery", "rome_capitoline_museums"], "Jack": ["rome_pantheon", "rome_arch_of_constantine", "rome_borghese_gallery"]}
+  },
+  {
+    "case_id": "rome_food_and_history",
+    "description": "A food-lover and history-lover should both find a grounded choice.",
+    "trip": {"destination": "Rome", "country": "Italy", "days": 3, "budget_level": "low", "pace": "balanced", "travelers": [{"name": "Mia", "interests": ["food"], "walking_tolerance": "low"}, {"name": "Noah", "interests": ["history"], "walking_tolerance": "moderate"}]},
+    "expected_top_activity_ids": ["rome_testaccio_market", "rome_trastevere_walk", "rome_pantheon"],
+    "expected_activity_ids_by_traveler": {"Mia": ["rome_testaccio_market", "rome_trastevere_walk"], "Noah": ["rome_pantheon", "rome_arch_of_constantine", "rome_capitoline_museums"]}
+  },
+  {
+    "case_id": "rome_ancient_ruins_group",
+    "description": "Two travelers interested in ancient Rome and archaeology.",
+    "trip": {"destination": "Rome", "country": "Italy", "days": 3, "budget_level": "moderate", "pace": "packed", "travelers": [{"name": "Ari", "interests": ["ancient ruins"], "walking_tolerance": "high"}, {"name": "Bea", "interests": ["archaeology"], "walking_tolerance": "high"}]},
+    "expected_top_activity_ids": ["rome_roman_forum", "rome_colosseum", "rome_trajan_s_forum"],
+    "expected_activity_ids_by_traveler": {"Ari": ["rome_roman_forum", "rome_colosseum", "rome_trajan_s_forum"], "Bea": ["rome_roman_forum", "rome_trajan_s_forum", "rome_circus_maximus"]}
+  },
+  {
+    "case_id": "rome_low_walking_culture",
+    "description": "A relaxed, low-walking cultural group in Rome.",
+    "trip": {"destination": "Rome", "country": "Italy", "days": 2, "budget_level": "moderate", "pace": "relaxed", "travelers": [{"name": "Ivy", "interests": ["art"], "walking_tolerance": "low"}, {"name": "Leo", "interests": ["religion"], "walking_tolerance": "low"}]},
+    "expected_top_activity_ids": ["rome_pantheon", "rome_borghese_gallery", "rome_vatican_museums"],
+    "expected_activity_ids_by_traveler": {"Ivy": ["rome_borghese_gallery", "rome_capitoline_museums"], "Leo": ["rome_pantheon", "rome_vatican_museums"]}
+  },
+  {
+    "case_id": "florence_art_and_sculpture",
+    "description": "An art and sculpture-focused Florence group.",
+    "trip": {"destination": "Florence", "country": "Italy", "days": 3, "budget_level": "moderate", "pace": "balanced", "travelers": [{"name": "Nia", "interests": ["art"], "walking_tolerance": "low"}, {"name": "Owen", "interests": ["sculpture"], "walking_tolerance": "moderate"}]},
+    "expected_top_activity_ids": ["florence_galleria_dell_accademia", "florence_bargello_national_museum", "florence_uffizi_gallery"],
+    "expected_activity_ids_by_traveler": {"Nia": ["florence_galleria_dell_accademia", "florence_uffizi_gallery"], "Owen": ["florence_galleria_dell_accademia", "florence_bargello_national_museum"]}
+  },
+  {
+    "case_id": "florence_architecture_and_photos",
+    "description": "A Florence pairing focused on architecture and photography.",
+    "trip": {"destination": "Florence", "country": "Italy", "days": 2, "budget_level": "moderate", "pace": "balanced", "travelers": [{"name": "Pia", "interests": ["architecture"], "walking_tolerance": "moderate"}, {"name": "Quinn", "interests": ["photography"], "walking_tolerance": "low"}]},
+    "expected_top_activity_ids": ["florence_ponte_vecchio", "florence_florence_baptistery", "florence_florence_cathedral"],
+    "expected_activity_ids_by_traveler": {"Pia": ["florence_florence_baptistery", "florence_florence_cathedral", "florence_ponte_vecchio"], "Quinn": ["florence_ponte_vecchio"]}
+  },
+  {
+    "case_id": "milan_art_and_architecture",
+    "description": "A Milan group mixing art, architecture, and a low-walking preference.",
+    "trip": {"destination": "Milan", "country": "Italy", "days": 3, "budget_level": "moderate", "pace": "balanced", "travelers": [{"name": "Rae", "interests": ["art"], "walking_tolerance": "low"}, {"name": "Seth", "interests": ["architecture"], "walking_tolerance": "low"}]},
+    "expected_top_activity_ids": ["milan_biblioteca_ambrosiana", "milan_santa_maria_delle_grazie", "milan_pinacoteca_di_brera"],
+    "expected_activity_ids_by_traveler": {"Rae": ["milan_biblioteca_ambrosiana", "milan_pinacoteca_di_brera", "milan_the_last_supper"], "Seth": ["milan_biblioteca_ambrosiana", "milan_santa_maria_delle_grazie", "milan_galleria_vittorio_emanuele_ii"]}
+  },
+  {
+    "case_id": "milan_music_and_design",
+    "description": "A Milan group interested in music and design.",
+    "trip": {"destination": "Milan", "country": "Italy", "days": 2, "budget_level": "high", "pace": "relaxed", "travelers": [{"name": "Tia", "interests": ["music"], "walking_tolerance": "low"}, {"name": "Uma", "interests": ["design"], "walking_tolerance": "low"}]},
+    "expected_top_activity_ids": ["milan_la_scala", "milan_pirelli_tower"],
+    "expected_activity_ids_by_traveler": {"Tia": ["milan_la_scala"], "Uma": ["milan_pirelli_tower"]}
+  },
+  {
+    "case_id": "venice_art_and_culture",
+    "description": "A low-walking Venice group interested in art and culture.",
+    "trip": {"destination": "Venice", "country": "Italy", "days": 3, "budget_level": "moderate", "pace": "relaxed", "travelers": [{"name": "Val", "interests": ["art"], "walking_tolerance": "moderate"}, {"name": "Wes", "interests": ["culture"], "walking_tolerance": "moderate"}]},
+    "expected_top_activity_ids": ["venice_doge_s_palace", "venice_gallerie_dell_accademia", "venice_ca_d_oro"],
+    "expected_activity_ids_by_traveler": {"Val": ["venice_doge_s_palace", "venice_gallerie_dell_accademia", "venice_ca_d_oro"], "Wes": ["venice_doge_s_palace", "venice_gallerie_dell_accademia", "venice_ca_d_oro"]}
+  },
+  {
+    "case_id": "venice_architecture_and_photos",
+    "description": "A Venice group wanting architecture and photogenic landmarks.",
+    "trip": {"destination": "Venice", "country": "Italy", "days": 2, "budget_level": "low", "pace": "balanced", "travelers": [{"name": "Yara", "interests": ["architecture"], "walking_tolerance": "low"}, {"name": "Zane", "interests": ["photography"], "walking_tolerance": "low"}]},
+    "expected_top_activity_ids": ["venice_bridge_of_sighs", "venice_grand_canal", "venice_st_mark_s_basilica"],
+    "expected_activity_ids_by_traveler": {"Yara": ["venice_bridge_of_sighs", "venice_st_mark_s_basilica", "venice_santa_maria_della_salute"], "Zane": ["venice_bridge_of_sighs", "venice_grand_canal", "venice_rialto_bridge"]}
+  }
+]

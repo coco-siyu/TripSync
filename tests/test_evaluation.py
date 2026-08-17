@@ -13,6 +13,7 @@ from evaluation.retrieval import (
     load_retrieval_cases,
     score_ranked_ids,
 )
+from evaluation.group_fit import evaluate_group_fit, load_group_fit_cases
 
 
 class FakeEmbeddingModel:
@@ -122,6 +123,42 @@ class RetrievalBenchmarkTests(unittest.TestCase):
             ["text", "vector", "hybrid"],
         )
         self.assertIn("Best MRR@5", format_comparison_report(comparison))
+
+
+class GroupFitBenchmarkTests(unittest.TestCase):
+    def test_group_fit_cases_are_valid_and_cover_each_traveler_in_text_baseline(self) -> None:
+        report = evaluate_group_fit(
+            load_activities(),
+            load_group_fit_cases(),
+            k=5,
+            mode="text",
+        )
+
+        self.assertEqual(report.case_count, 10)
+        self.assertEqual(report.mode, "text")
+        self.assertEqual(report.semantic_fallback_count, 0)
+        self.assertGreaterEqual(report.top_five_hit_rate, 0.9)
+        self.assertGreaterEqual(report.traveler_target_coverage, 0.8)
+
+    def test_group_fit_holdout_cases_are_valid_and_separate_from_baseline(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        baseline_ids = {
+            case.case_id for case in load_group_fit_cases(root / "evaluation" / "group_fit_cases.json")
+        }
+        holdout_cases = load_group_fit_cases(
+            root / "evaluation" / "group_fit_holdout_cases.json"
+        )
+
+        report = evaluate_group_fit(
+            load_activities(),
+            holdout_cases,
+            k=5,
+            mode="text",
+        )
+
+        self.assertEqual(report.case_count, 6)
+        self.assertTrue(baseline_ids.isdisjoint(case.case_id for case in holdout_cases))
+        self.assertEqual(report.semantic_fallback_count, 0)
 
 
 if __name__ == "__main__":
