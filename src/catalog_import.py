@@ -273,11 +273,11 @@ def fetch_candidates(
                     f"Wikidata returned HTTP {error.code} for {city.name}. "
                     "Please try again later."
                 ) from error
-        except URLError as error:
+        except (TimeoutError, URLError) as error:
             if attempt == retries:
                 raise CatalogImportError(
-                    f"Could not reach Wikidata for {city.name}. Check your "
-                    "connection and try again."
+                    f"Wikidata timed out or could not be reached for {city.name}. "
+                    "Try again later."
                 ) from error
 
         # Public query services occasionally have short outages. Exponential

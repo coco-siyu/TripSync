@@ -1,8 +1,3 @@
-// Ten reviewed “known-good” trip scenarios across Rome, Florence, Milan, and Venice. Each includes:
-// the group’s preferences
-// activities that should reasonably appear in the Top 5
-// activities expected to serve each named traveler
-// This is the regular benchmark—the one we use to catch accidental regressions during development.
 [
   {
     "case_id": "rome_painting_and_architecture",

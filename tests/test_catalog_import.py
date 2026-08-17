@@ -173,6 +173,24 @@ class CatalogImportTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogImportError, "HTTP 502"):
             fetch_candidates(supported_city("Florence"), retries=0)
 
+    @patch("src.catalog_import.time.sleep")
+    @patch("src.catalog_import.urlopen")
+    def test_retries_a_wikidata_timeout(
+        self,
+        mock_urlopen: MagicMock,
+        mock_sleep: MagicMock,
+    ) -> None:
+        response = MagicMock()
+        response.__enter__.return_value = response
+        mock_urlopen.side_effect = [TimeoutError("slow response"), response]
+
+        with patch("src.catalog_import.json.load", return_value=PAYLOAD):
+            candidates = fetch_candidates(supported_city("Florence"), retries=1)
+
+        self.assertEqual(len(candidates), 2)
+        self.assertEqual(mock_urlopen.call_count, 2)
+        mock_sleep.assert_called_once_with(1)
+
 
 if __name__ == "__main__":
     unittest.main()

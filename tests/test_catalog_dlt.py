@@ -11,7 +11,7 @@ from datetime import date
 
 from src.catalog_dlt import candidate_records, ingest_cities, ingest_destinations, rotate_destinations
 from src.destination_queue import DestinationQueueItem, load_destination_queue
-from src.catalog_import import CatalogCandidate, supported_city
+from src.catalog_import import CatalogCandidate, CatalogImportError, CitySource, supported_city
 
 
 class CatalogDltTests(unittest.TestCase):
@@ -101,6 +101,39 @@ class CatalogDltTests(unittest.TestCase):
             )
         self.assertEqual(mock_resolve_city.call_args_list[0].args, ("Rome", "Italy"))
         self.assertEqual(mock_resolve_city.call_args_list[1].args, ("Paris", "France"))
+
+    @patch("src.catalog_dlt.dlt.pipeline")
+    @patch("src.catalog_dlt.resolve_city")
+    def test_ingestion_skips_one_temporary_source_failure_and_continues(
+        self,
+        mock_resolve_city: MagicMock,
+        mock_pipeline_factory: MagicMock,
+    ) -> None:
+        rome = supported_city("Rome")
+        florence = supported_city("Florence")
+        mock_resolve_city.side_effect = [rome, florence]
+        candidate = CatalogCandidate(
+            "Q123", "Example museum", 41.9, 12.5, "https://example.test", ("museum",), ()
+        )
+
+        def fetcher(city: CitySource) -> list[CatalogCandidate]:
+            if city.name == "Rome":
+                raise CatalogImportError("Wikidata timed out")
+            return [candidate]
+
+        with tempfile.TemporaryDirectory() as directory:
+            summary = ingest_destinations(
+                [
+                    DestinationQueueItem(city="Rome", country="Italy"),
+                    DestinationQueueItem(city="Florence", country="Italy"),
+                ],
+                destination_path=Path(directory) / "ingestion.duckdb",
+                catalog_path=Path(directory) / "activities.json",
+                fetcher=fetcher,
+            )
+
+        self.assertEqual(summary, {"Florence": 1})
+        mock_pipeline_factory.return_value.run.assert_called_once()
 
 
 if __name__ == "__main__":

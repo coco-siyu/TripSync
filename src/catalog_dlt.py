@@ -16,7 +16,13 @@ from typing import Callable, Iterable
 import dlt
 
 from src.catalog import auto_curate_candidates, save_activities
-from src.catalog_import import CatalogCandidate, CitySource, fetch_candidates, resolve_city
+from src.catalog_import import (
+    CatalogCandidate,
+    CatalogImportError,
+    CitySource,
+    fetch_candidates,
+    resolve_city,
+)
 from src.draft_curation import classify_candidate
 from src.destination_queue import DEFAULT_DESTINATION_QUEUE_PATH, DestinationQueueItem, load_destination_queue
 
@@ -97,9 +103,18 @@ def ingest_destinations(
         pipelines_dir=str(REPOSITORY_ROOT / ".dlt" / "pipelines"),
     )
     summary: dict[str, int] = {}
+    failed_destinations: list[str] = []
     for destination in destination_list:
-        city = resolve_city(destination.city, destination.country)
-        candidates = fetcher(city) if fetcher else fetch_candidates(city, limit=limit)
+        try:
+            city = resolve_city(destination.city, destination.country)
+            candidates = (
+                fetcher(city) if fetcher else fetch_candidates(city, limit=limit)
+            )
+        except (CatalogImportError, ValueError) as error:
+            label = f"{destination.city}, {destination.country}"
+            failed_destinations.append(label)
+            print(f"Skipping {label}: {error}")
+            continue
         retrieved_at = datetime.now(UTC).isoformat()
         records = candidate_records(city, candidates, retrieved_at=retrieved_at)
         if records:
@@ -109,6 +124,11 @@ def ingest_destinations(
         )
         added, _ = save_activities(activities, catalog_path) if catalog_path else save_activities(activities)
         summary[city.name] = len(added)
+    if not summary and failed_destinations:
+        raise CatalogImportError(
+            "No configured destinations could be retrieved: "
+            + "; ".join(failed_destinations)
+        )
     return summary
 
 
