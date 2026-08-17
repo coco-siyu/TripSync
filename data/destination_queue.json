@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "review_note": "This is the scheduled discovery queue. Set active to false to pause a destination. Each run quality-screens candidates and publishes clear, Pydantic-valid visitor attractions to the shared catalog.",
+  "initial_next_destination": {"city": "Barcelona", "country": "Spain"},
   "destinations": [
     {"city": "Rome", "country": "Italy", "active": true},
     {"city": "Florence", "country": "Italy", "active": true},
@@ -82,7 +83,6 @@
     {"city": "Osaka", "country": "Japan", "active": true},
     {"city": "Hiroshima", "country": "Japan", "active": true},
     {"city": "Nara", "country": "Japan", "active": true},
-    {"city": "Taipei", "country": "Taiwan", "active": true},
     {"city": "Sydney", "country": "Australia", "active": true},
     {"city": "Melbourne", "country": "Australia", "active": true},
     {"city": "Auckland", "country": "New Zealand", "active": true},

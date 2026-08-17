@@ -8,10 +8,11 @@ records are counted for audit but do not become a routine curation task.
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Callable, Iterable
+from uuid import uuid4
 
 import dlt
 
@@ -23,12 +24,38 @@ from src.catalog_import import (
     fetch_candidates,
     resolve_city,
 )
+from src.catalog_cursor import (
+    advance_cursor,
+    destination_key,
+    next_destination_after,
+    read_or_initialize_cursor,
+    record_run,
+    select_from_cursor,
+)
 from src.draft_curation import classify_candidate
-from src.destination_queue import DEFAULT_DESTINATION_QUEUE_PATH, DestinationQueueItem, load_destination_queue
+from src.destination_queue import (
+    DEFAULT_DESTINATION_QUEUE_PATH,
+    DestinationQueueItem,
+    load_destination_queue,
+    load_initial_destination,
+)
+from src.supabase_store import is_configured
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DESTINATION = REPOSITORY_ROOT / "data" / "tripsync_ingestion.duckdb"
+# The first planned weekly catalog batch.  Rotation is relative to this date,
+# rather than the calendar's absolute week number, so it always begins at the
+# top of the destination queue and remains predictable across years.
+ROTATION_START_DATE = date(2026, 7, 20)
+
+
+@dataclass(frozen=True)
+class IngestionOutcome:
+    """Published counts and recoverable per-destination retrieval failures."""
+
+    published_by_city: dict[str, int]
+    failures: dict[str, str]
 
 
 def rotate_destinations(
@@ -47,7 +74,7 @@ def rotate_destinations(
     if batch_size >= len(destination_list):
         return destination_list
     effective_date = run_date or datetime.now(UTC).date()
-    week_index = effective_date.toordinal() // 7
+    week_index = max(0, (effective_date - ROTATION_START_DATE).days // 7)
     start = (week_index * batch_size) % len(destination_list)
     return [
         destination_list[(start + offset) % len(destination_list)]
@@ -87,7 +114,7 @@ def ingest_destinations(
     destination_path: Path = DEFAULT_DESTINATION,
     catalog_path: Path | None = None,
     fetcher: Callable[[CitySource], list[CatalogCandidate]] | None = None,
-) -> dict[str, int]:
+) -> IngestionOutcome:
     """Fetch configured destinations and publish safe attractions directly."""
 
     if not 1 <= limit <= 250:
@@ -103,7 +130,7 @@ def ingest_destinations(
         pipelines_dir=str(REPOSITORY_ROOT / ".dlt" / "pipelines"),
     )
     summary: dict[str, int] = {}
-    failed_destinations: list[str] = []
+    failures: dict[str, str] = {}
     for destination in destination_list:
         try:
             city = resolve_city(destination.city, destination.country)
@@ -112,7 +139,7 @@ def ingest_destinations(
             )
         except (CatalogImportError, ValueError) as error:
             label = f"{destination.city}, {destination.country}"
-            failed_destinations.append(label)
+            failures[destination_key(destination)] = str(error)
             print(f"Skipping {label}: {error}")
             continue
         retrieved_at = datetime.now(UTC).isoformat()
@@ -124,19 +151,14 @@ def ingest_destinations(
         )
         added, _ = save_activities(activities, catalog_path) if catalog_path else save_activities(activities)
         summary[city.name] = len(added)
-    if not summary and failed_destinations:
-        raise CatalogImportError(
-            "No configured destinations could be retrieved: "
-            + "; ".join(failed_destinations)
-        )
-    return summary
+    return IngestionOutcome(summary, failures)
 
 
 def ingest_cities(
     cities: Iterable[str],
     country: str,
     **kwargs: object,
-) -> dict[str, int]:
+) -> IngestionOutcome:
     """Convenience wrapper for an intentional, one-off city list."""
 
     destinations = [
@@ -166,16 +188,60 @@ def main() -> None:
     if arguments.cities:
         if not arguments.country:
             parser.error("--country is required with --cities")
-        summary = ingest_cities(arguments.cities, arguments.country, limit=arguments.limit)
+        outcome = ingest_cities(arguments.cities, arguments.country, limit=arguments.limit)
     else:
-        destinations = rotate_destinations(
-            load_destination_queue(arguments.destination_queue), arguments.rotate_size
-        )
-        summary = ingest_destinations(
-            destinations, limit=arguments.limit
-        )
-    for city, count in summary.items():
+        queue = load_destination_queue(arguments.destination_queue)
+        initial_destination = load_initial_destination(arguments.destination_queue) or queue[0]
+        uses_cursor = arguments.rotate_size > 0 and is_configured()
+        if uses_cursor:
+            cursor = read_or_initialize_cursor(initial_destination)
+            destinations = select_from_cursor(queue, arguments.rotate_size, cursor)
+            print(
+                "Catalog cursor: starting at "
+                f"{destinations[0].city}; processing {len(destinations)} destination(s)."
+            )
+        else:
+            destinations = rotate_destinations(queue, arguments.rotate_size)
+        outcome = ingest_destinations(destinations, limit=arguments.limit)
+
+        if uses_cursor:
+            run_id = str(uuid4())
+            for destination in destinations:
+                key = destination_key(destination)
+                if key in outcome.failures:
+                    record_run(
+                        destination,
+                        status="failed",
+                        error_message=outcome.failures[key],
+                        run_id=run_id,
+                    )
+                else:
+                    record_run(
+                        destination,
+                        status="succeeded",
+                        published_count=outcome.published_by_city.get(destination.city, 0),
+                        run_id=run_id,
+                    )
+            failed_destination = next(
+                (item for item in destinations if destination_key(item) in outcome.failures),
+                None,
+            )
+            next_key = (
+                destination_key(failed_destination)
+                if failed_destination
+                else next_destination_after(queue, destinations[-1])
+            )
+            advance_cursor(next_key)
+            next_label = next(item for item in queue if destination_key(item) == next_key)
+            print(f"Catalog cursor: next run starts at {next_label.city}, {next_label.country}.")
+
+    for city, count in outcome.published_by_city.items():
         print(f"{city}: published {count} new quality-approved attractions.")
+    if outcome.failures:
+        raise CatalogImportError(
+            "One or more destinations need a retry: "
+            + "; ".join(outcome.failures.values())
+        )
 
 
 if __name__ == "__main__":

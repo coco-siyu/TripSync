@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 from datetime import date
 
+from src.catalog_cursor import destination_key, next_destination_after, select_from_cursor
 from src.catalog_dlt import candidate_records, ingest_cities, ingest_destinations, rotate_destinations
 from src.destination_queue import DestinationQueueItem, load_destination_queue
 from src.catalog_import import CatalogCandidate, CatalogImportError, CitySource, supported_city
@@ -52,7 +53,7 @@ class CatalogDltTests(unittest.TestCase):
                 catalog_path=Path(directory) / "activities.json", fetcher=lambda _: [candidate],
             )
 
-        self.assertEqual(summary, {"Rome": 1})
+        self.assertEqual(summary.published_by_city, {"Rome": 1})
         pipeline.run.assert_called_once()
         self.assertEqual(pipeline.run.call_args.kwargs["table_name"], "candidate_runs")
 
@@ -78,12 +79,21 @@ class CatalogDltTests(unittest.TestCase):
             DestinationQueueItem(city=city, country="Example")
             for city in ("One", "Two", "Three", "Four", "Five")
         ]
-        selection = rotate_destinations(destinations, 2, run_date=date(2026, 8, 3))
+        selection = rotate_destinations(destinations, 2, run_date=date(2026, 7, 20))
         self.assertEqual([item.city for item in selection], ["One", "Two"])
-        next_week = rotate_destinations(destinations, 2, run_date=date(2026, 8, 10))
+        next_week = rotate_destinations(destinations, 2, run_date=date(2026, 7, 27))
         self.assertEqual([item.city for item in next_week], ["Three", "Four"])
-        all_destinations = rotate_destinations(destinations, 0, run_date=date(2026, 8, 3))
+        all_destinations = rotate_destinations(destinations, 0, run_date=date(2026, 7, 20))
         self.assertEqual([item.city for item in all_destinations], ["One", "Two", "Three", "Four", "Five"])
+
+    def test_persistent_cursor_continues_after_the_prior_batch(self) -> None:
+        destinations = [
+            DestinationQueueItem(city=city, country="Example")
+            for city in ("One", "Two", "Three", "Four", "Five")
+        ]
+        selected = select_from_cursor(destinations, 2, destination_key(destinations[2]))
+        self.assertEqual([item.city for item in selected], ["Three", "Four"])
+        self.assertEqual(next_destination_after(destinations, selected[-1]), destination_key(destinations[4]))
 
     @patch("src.catalog_dlt.dlt.pipeline")
     @patch("src.catalog_dlt.resolve_city")
@@ -132,7 +142,8 @@ class CatalogDltTests(unittest.TestCase):
                 fetcher=fetcher,
             )
 
-        self.assertEqual(summary, {"Florence": 1})
+        self.assertEqual(summary.published_by_city, {"Florence": 1})
+        self.assertEqual(len(summary.failures), 1)
         mock_pipeline_factory.return_value.run.assert_called_once()
 
 

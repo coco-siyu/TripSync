@@ -8,11 +8,11 @@ versioned list of city/country pairs that the schedule uses automatically. Set
 `"active": false` to pause a place; add another object to expand the queue.
 
 The weekly workflow rotates through three active destinations at a time, in
-queue order. With the initial ten destinations, each gets refreshed at least
-once in roughly four weeks. Rotation avoids repeatedly querying the same small
-set; it is date-based rather than stateful, so a failed run does not incorrectly
-mark a city as refreshed. Manual runs retrieve every active destination unless
-you explicitly choose a rotation size.
+queue order. It saves a durable cursor in Supabase after each run, so the next
+run starts immediately after the last completed destination rather than using
+the calendar date. A failed city remains the next starting point for retry.
+Manual runs with a rotation size use the same cursor; a normal one-off city run
+does not change it.
 
 ## What the pipeline does
 
@@ -63,5 +63,6 @@ Run workflow**. It rotates through three destinations and writes directly to
 the shared catalog. Configure `SUPABASE_URL` and `SUPABASE_SECRET_KEY` as
 repository secrets before enabling the scheduled workflow.
 
-If Wikidata is temporarily unavailable, the workflow fails visibly rather than
-writing a partial or invented batch. Re-run it later from GitHub Actions.
+If Wikidata is temporarily unavailable for one destination, the workflow logs
+the failure, records it in the ingestion history, and leaves the cursor at that
+city so a later run can retry it without skipping ahead.

@@ -40,6 +40,12 @@ def upsert_many(table: str, rows: list[dict[str, Any]], *, conflict: str) -> Non
         client().table(table).upsert(rows, on_conflict=conflict).execute()
 
 
+def insert(table: str, row: dict[str, Any]) -> None:
+    """Append one server-side audit record."""
+
+    client().table(table).insert(row).execute()
+
+
 def select(table: str, *, order: str) -> list[dict[str, Any]]:
     response = client().table(table).select("*").order(order, desc=True).execute()
     return list(response.data)

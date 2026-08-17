@@ -50,8 +50,34 @@ create table if not exists public.catalog_activity_embeddings (
   updated_at timestamptz not null default now()
 );
 
+-- One durable cursor lets the scheduled catalog workflow continue from the
+-- next destination instead of recalculating a position from the calendar.
+create table if not exists public.catalog_ingestion_state (
+  cursor_id text primary key,
+  next_destination_key text not null,
+  updated_at timestamptz not null default now()
+);
+
+-- A small, human-readable audit trail for scheduled and manual ingestion.
+create table if not exists public.catalog_ingestion_runs (
+  id bigint generated always as identity primary key,
+  run_id text not null,
+  destination_key text not null,
+  city text not null,
+  country text not null,
+  status text not null check (status in ('succeeded', 'failed')),
+  published_count integer,
+  error_message text,
+  completed_at timestamptz not null
+);
+
+create index if not exists catalog_ingestion_runs_completed_at_idx
+  on public.catalog_ingestion_runs (completed_at desc);
+
 alter table public.saved_trips enable row level security;
 alter table public.llm_feedback enable row level security;
 alter table public.overall_experience_feedback enable row level security;
 alter table public.catalog_activities enable row level security;
 alter table public.catalog_activity_embeddings enable row level security;
+alter table public.catalog_ingestion_state enable row level security;
+alter table public.catalog_ingestion_runs enable row level security;

@@ -36,6 +36,7 @@ class DestinationQueue(BaseModel):
 
     schema_version: int = Field(ge=1)
     review_note: str | None = Field(default=None, max_length=1_000)
+    initial_next_destination: DestinationQueueItem | None = None
     destinations: list[DestinationQueueItem] = Field(min_length=1, max_length=100)
 
 
@@ -55,3 +56,10 @@ def load_destination_queue(path: Path = DEFAULT_DESTINATION_QUEUE_PATH) -> list[
     if not deduplicated:
         raise ValueError("destination queue contains no active destinations")
     return deduplicated
+
+
+def load_initial_destination(path: Path = DEFAULT_DESTINATION_QUEUE_PATH) -> DestinationQueueItem | None:
+    """Return the optional, human-chosen starting point for a new cursor."""
+
+    document = json.loads(path.read_text(encoding="utf-8"))
+    return DestinationQueue.model_validate(document).initial_next_destination
