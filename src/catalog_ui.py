@@ -12,8 +12,12 @@ from pydantic import ValidationError
 from src.catalog import (
     auto_curate_candidates,
     delete_activities,
+    delete_review_candidates,
     load_curated_activities,
+    load_review_candidates,
+    review_curate_candidates,
     save_activities,
+    save_review_candidates,
     update_activity,
 )
 from src.catalog_import import CatalogImportError, fetch_candidates, resolve_city
@@ -66,7 +70,7 @@ def _filter_published_catalog(country: str, city: str) -> None:
 def _show_catalog_write_error(error: Exception) -> None:
     """Turn a missing shared-catalog migration into an actionable UI message."""
 
-    if "catalog_activities" in str(error):
+    if "catalog_activities" in str(error) or "catalog_review_candidates" in str(error):
         st.error(
             "The shared catalog table has not been created in Supabase yet. "
             "Run `supabase/schema.sql` in the Supabase SQL Editor, then try again.",
@@ -276,22 +280,173 @@ def _render_catalog_import() -> None:
                 with st.spinner(f"Finding places in {city_name}…"):
                     city = resolve_city(city_name, country_name)
                     candidates = fetch_candidates(city, limit=limit)
-                    activities, skipped = auto_curate_candidates(
-                        [candidate.__dict__ for candidate in candidates], city.name, city.country
+                    raw_candidates = [candidate.__dict__ for candidate in candidates]
+                    activities, _ = auto_curate_candidates(
+                        raw_candidates, city.name, city.country
+                    )
+                    held_for_review = save_review_candidates(
+                        raw_candidates, city.name, city.country
                     )
                     published_ids = {activity.id for activity in load_curated_activities()}
                     ready = [activity for activity in activities if activity.id not in published_ids]
                     added, duplicates = save_activities(ready)
                 st.success(
                     f"Published {len(added)} quality-approved attraction(s). "
-                    f"Skipped {len(duplicates)} existing record(s) and held {len(skipped)} borderline record(s)."
+                    f"Skipped {len(duplicates)} existing record(s) and sent "
+                    f"{held_for_review} ambiguous place(s) to Needs review."
                 )
                 _filter_published_catalog(city.country, city.name)
             except CatalogImportError as error:
                 st.error(str(error), icon=":material/cloud_off:")
             except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
                 _show_catalog_write_error(error)
+def _review_table_rows(records: list[dict[str, object]]) -> list[dict[str, str]]:
+    """Present stored source records without exposing storage details to curators."""
 
+    rows: list[dict[str, str]] = []
+    for record in records:
+        candidate = record.get("candidate_json", {})
+        candidate = candidate if isinstance(candidate, dict) else {}
+        source_types = candidate.get("wikidata_types", [])
+        rows.append(
+            {
+                "Name": str(candidate.get("name", "Unnamed place")),
+                "City": str(record.get("city", "")),
+                "Country": str(record.get("country", "")),
+                "Types": ", ".join(str(item) for item in source_types),
+                "Why it needs review": str(record.get("reason", "Needs context")),
+            }
+        )
+    return rows
+
+
+def _selected_review_records(
+    records: list[dict[str, object]], selected_rows: list[int]
+) -> list[dict[str, object]]:
+    """Return valid review selections, safely ignoring stale table row positions."""
+
+    return [
+        records[index]
+        for index in selected_rows
+        if isinstance(index, int) and 0 <= index < len(records)
+    ]
+
+
+def _render_needs_review() -> None:
+    """Allow an admin to resolve the small queue of ambiguous source places."""
+
+    completed_action = st.session_state.pop("needs-review-completed-action", None)
+    if completed_action:
+        st.toast(completed_action, icon=":material/check_circle:", duration=3)
+
+    records = load_review_candidates()
+    st.subheader("Needs review")
+    st.caption(
+        "Ambiguous places stay out of traveler results until you approve them. "
+        "Clear non-visitor records are filtered out automatically."
+    )
+    if not records:
+        st.info("No places currently need review.", icon=":material/task_alt:")
+        return
+
+    countries = sorted({str(record.get("country", "")) for record in records}, key=str.casefold)
+    country = st.selectbox(
+        "Country filter", ["All countries", *countries], key="review-country-filter"
+    )
+    cities = sorted(
+        {
+            str(record.get("city", ""))
+            for record in records
+            if country == "All countries" or record.get("country") == country
+        },
+        key=str.casefold,
+    )
+    city = st.selectbox("City filter", ["All cities", *cities], key="review-city-filter")
+    filtered = [
+        record
+        for record in records
+        if (country == "All countries" or record.get("country") == country)
+        and (city == "All cities" or record.get("city") == city)
+    ]
+    event = st.dataframe(
+        pd.DataFrame(_review_table_rows(filtered)),
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="multi-row",
+        key="review-candidate-table",
+    )
+    selected = _selected_review_records(filtered, event.selection.rows)
+    st.subheader("Resolve selection")
+    approve_tab, dismiss_tab = st.tabs(
+        ["Approve to published", "Dismiss from review"],
+        key="review-candidate-actions",
+        on_change="rerun",
+    )
+    if approve_tab.open:
+        with approve_tab:
+            st.caption(
+                "Approval creates conservative, Pydantic-valid activity drafts. "
+                "You can fine-tune tags and planning details later in Published activities."
+            )
+            if st.button(
+                f"Approve {len(selected)} selected place(s)",
+                icon=":material/published_with_changes:",
+                type="primary",
+                disabled=not selected,
+                key="review-candidate-approve",
+            ):
+                approved = 0
+                resolved_ids: list[str] = []
+                try:
+                    for record in selected:
+                        candidate = record.get("candidate_json", {})
+                        candidate = candidate if isinstance(candidate, dict) else {}
+                        drafts, skipped = review_curate_candidates(
+                            [candidate], str(record.get("city", "")), str(record.get("country", ""))
+                        )
+                        if skipped or not drafts:
+                            continue
+                        added, _ = save_activities(drafts)
+                        approved += len(added)
+                        review_id = str(record.get("review_id", ""))
+                        if review_id:
+                            resolved_ids.append(review_id)
+                    delete_review_candidates(resolved_ids)
+                    st.session_state["needs-review-completed-action"] = (
+                        f"Approved {approved} place(s) and removed {len(resolved_ids)} "
+                        "resolved record(s) from Needs review."
+                    )
+                    st.rerun()
+                except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+                    _show_catalog_write_error(error)
+    if dismiss_tab.open:
+        with dismiss_tab:
+            selection_signature = "-".join(
+                sorted(str(record.get("review_id", "")) for record in selected)
+            ) or "none"
+            st.caption("Dismissal removes only the review-queue record; no published activity is changed.")
+            confirmed = st.checkbox(
+                "I reviewed the selected places and want to dismiss them from Needs review.",
+                key=f"confirm-review-dismiss-{selection_signature}",
+                disabled=not selected,
+            )
+            if st.button(
+                "Dismiss selected places",
+                icon=":material/delete:",
+                type="primary",
+                disabled=not selected or not confirmed,
+                key="review-candidate-dismiss",
+            ):
+                try:
+                    removed = delete_review_candidates(
+                        [str(record.get("review_id", "")) for record in selected]
+                    )
+                    st.session_state["needs-review-completed-action"] = (
+                        f"Dismissed {removed} place(s) from Needs review."
+                    )
+                    st.rerun()
+                except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+                    _show_catalog_write_error(error)
 
 
 def render_catalog_workspace() -> None:
@@ -301,15 +456,18 @@ def render_catalog_workspace() -> None:
         return
     st.markdown('<div class="ts-section-label">Build the catalog</div>', unsafe_allow_html=True)
     st.title("Curate places your travelers will love")
-    st.caption("Manage published activities separately from fetching and reviewing source candidates.")
-    published_tab, fetch_tab = st.tabs(
-        ["Published activities", "Fetch & batch curate"],
+    st.caption("Manage published activities, resolve ambiguous places, and fetch new source candidates.")
+    published_tab, review_tab, fetch_tab = st.tabs(
+        ["Published activities", "Needs review", "Fetch & batch curate"],
         key="catalog-workspace-tabs",
         on_change="rerun",
     )
     if published_tab.open:
         with published_tab:
             _render_published_catalog()
+    if review_tab.open:
+        with review_tab:
+            _render_needs_review()
     if fetch_tab.open:
         with fetch_tab:
             _render_catalog_import()

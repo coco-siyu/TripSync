@@ -25,8 +25,8 @@ does not change it.
    provenance log through `dlt`.
 
 Ambiguous records such as universities, libraries, stadiums, islands, and
-seasonal events are deliberately held back. They do not become published
-activities or routine admin tasks until TripSync has a stronger rule for them.
+seasonal events are kept in the separate **Needs review** queue. They never
+become traveler recommendations until a curator explicitly approves them.
 The **Curate catalog** workspace is for editing or deleting published activity
 records and for an optional one-off city import.
 

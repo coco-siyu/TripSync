@@ -2,7 +2,7 @@
 
 The pipeline records Wikidata provenance, filters obvious non-activities, and
 publishes only deterministic, Pydantic-valid visitor attractions. Ambiguous
-records are counted for audit but do not become a routine curation task.
+records are stored in a separate review queue and never appear to travelers.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import dlt
 
-from src.catalog import auto_curate_candidates, save_activities
+from src.catalog import auto_curate_candidates, save_activities, save_review_candidates
 from src.catalog_import import (
     CatalogCandidate,
     CatalogImportError,
@@ -146,9 +146,9 @@ def ingest_destinations(
         records = candidate_records(city, candidates, retrieved_at=retrieved_at)
         if records:
             pipeline.run(records, table_name="candidate_runs", write_disposition="append")
-        activities, _ = auto_curate_candidates(
-            [asdict(candidate) for candidate in candidates], city.name, city.country
-        )
+        raw_candidates = [asdict(candidate) for candidate in candidates]
+        activities, _ = auto_curate_candidates(raw_candidates, city.name, city.country)
+        save_review_candidates(raw_candidates, city.name, city.country)
         added, _ = save_activities(activities, catalog_path) if catalog_path else save_activities(activities)
         summary[city.name] = len(added)
     return IngestionOutcome(summary, failures)

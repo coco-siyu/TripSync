@@ -6,6 +6,7 @@ import json
 import os
 import re
 import unicodedata
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,8 @@ CANDIDATE_DIRECTORY = REPOSITORY_ROOT / "data" / "candidates"
 ACTIVITY_CATALOG_PATH = REPOSITORY_ROOT / "data" / "activities.json"
 SAMPLE_ACTIVITY_PATH = REPOSITORY_ROOT / "data" / "sample_activities.json"
 SUPABASE_CATALOG_TABLE = "catalog_activities"
+SUPABASE_REVIEW_TABLE = "catalog_review_candidates"
+REVIEW_CANDIDATES_PATH = REPOSITORY_ROOT / "data" / "review_candidates.json"
 
 
 def candidate_files() -> list[Path]:
@@ -97,6 +100,101 @@ def _remote_rows(activities: list[Activity]) -> list[dict[str, Any]]:
         }
         for activity in activities
     ]
+
+
+def review_candidate_id(candidate: dict[str, Any], city: str) -> str:
+    """Create a stable queue key for one ambiguous source record."""
+
+    source_id = str(candidate.get("wikidata_id", "")).strip()
+    if not source_id:
+        source_id = activity_id(city, str(candidate.get("name", "")))
+    return f"{activity_id(city, city)}:{source_id.casefold()}"
+
+
+def _load_local_review_candidates(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(rows, list):
+        raise ValueError("Review candidate store must contain a list")
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _write_local_review_candidates(rows: list[dict[str, Any]], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    os.replace(temporary, path)
+
+
+def save_review_candidates(
+    candidates: list[dict[str, Any]],
+    city: str,
+    country: str,
+    path: Path = REVIEW_CANDIDATES_PATH,
+) -> int:
+    """Persist only ambiguous places for optional later review.
+
+    Clear rejects never enter this queue. The shared Supabase store is used for
+    production ingestion; the JSON path is only a local-development fallback.
+    """
+
+    timestamp = datetime.now(UTC).isoformat()
+    rows: list[dict[str, Any]] = []
+    for candidate in candidates:
+        decision = classify_candidate(candidate)
+        if decision.outcome != "review":
+            continue
+        rows.append(
+            {
+                "review_id": review_candidate_id(candidate, city),
+                "city": city,
+                "country": country,
+                "candidate_json": candidate,
+                "reason": decision.reason,
+                "confidence": decision.confidence,
+                "updated_at": timestamp,
+            }
+        )
+    if not rows:
+        return 0
+    if path == REVIEW_CANDIDATES_PATH and _uses_supabase(ACTIVITY_CATALOG_PATH):
+        upsert_many(SUPABASE_REVIEW_TABLE, rows, conflict="review_id")
+        return len(rows)
+
+    existing = {row.get("review_id"): row for row in _load_local_review_candidates(path)}
+    existing.update({row["review_id"]: row for row in rows})
+    _write_local_review_candidates(list(existing.values()), path)
+    return len(rows)
+
+
+def load_review_candidates(path: Path = REVIEW_CANDIDATES_PATH) -> list[dict[str, Any]]:
+    """Load the optional queue of ambiguous, unpublished source records."""
+
+    if path == REVIEW_CANDIDATES_PATH and _uses_supabase(ACTIVITY_CATALOG_PATH):
+        return select(SUPABASE_REVIEW_TABLE, order="updated_at")
+    return _load_local_review_candidates(path)
+
+
+def delete_review_candidates(
+    review_ids: list[str], path: Path = REVIEW_CANDIDATES_PATH
+) -> int:
+    """Remove records after a curator publishes or dismisses them."""
+
+    ids = {review_id for review_id in review_ids if review_id}
+    if not ids:
+        return 0
+    if path == REVIEW_CANDIDATES_PATH and _uses_supabase(ACTIVITY_CATALOG_PATH):
+        delete_in(SUPABASE_REVIEW_TABLE, "review_id", list(ids))
+        return len(ids)
+    existing = _load_local_review_candidates(path)
+    retained = [row for row in existing if row.get("review_id") not in ids]
+    removed = len(existing) - len(retained)
+    if removed:
+        _write_local_review_candidates(retained, path)
+    return removed
 
 
 def _try_sync_embeddings(activities: list[Activity]) -> None:

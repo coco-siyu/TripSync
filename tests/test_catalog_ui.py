@@ -11,9 +11,13 @@ from src.catalog import (
     auto_curate_candidates,
     delete_activities,
     delete_candidates_from_batch,
+    delete_review_candidates,
     load_candidate_batch,
     load_curated_activities,
+    load_review_candidates,
+    review_curate_candidates,
     save_activities,
+    save_review_candidates,
 )
 
 
@@ -69,3 +73,36 @@ class CatalogUiTests(unittest.TestCase):
                 [candidate["wikidata_id"] for candidate in load_candidate_batch(path)["candidates"]],
                 ["Q1"],
             )
+
+    def test_ambiguous_candidates_are_queued_then_can_be_approved(self) -> None:
+        candidates = [
+            {
+                "wikidata_id": "Q1",
+                "name": "Example University",
+                "source_url": "https://www.wikidata.org/wiki/Q1",
+                "wikidata_types": ["university"],
+            },
+            {
+                "wikidata_id": "Q2",
+                "name": "Example Airport",
+                "source_url": "https://www.wikidata.org/wiki/Q2",
+                "wikidata_types": ["airport"],
+            },
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            review_path = Path(directory) / "review.json"
+            self.assertEqual(
+                save_review_candidates(candidates, "Example City", "Example Country", review_path), 1
+            )
+            records = load_review_candidates(review_path)
+            self.assertEqual(
+                [record["candidate_json"]["name"] for record in records],
+                ["Example University"],
+            )
+            drafts, skipped = review_curate_candidates(
+                [records[0]["candidate_json"]], "Example City", "Example Country"
+            )
+            self.assertEqual(len(drafts), 1)
+            self.assertEqual(skipped, {})
+            self.assertEqual(delete_review_candidates([records[0]["review_id"]], review_path), 1)
+            self.assertEqual(load_review_candidates(review_path), [])

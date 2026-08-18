@@ -50,6 +50,22 @@ create table if not exists public.catalog_activity_embeddings (
   updated_at timestamptz not null default now()
 );
 
+-- Ambiguous source records are kept separate from the live catalog. They are
+-- never used in traveller recommendations until an admin explicitly approves
+-- and Pydantic-validates them.
+create table if not exists public.catalog_review_candidates (
+  review_id text primary key,
+  city text not null,
+  country text not null,
+  candidate_json jsonb not null,
+  reason text not null,
+  confidence numeric not null,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists catalog_review_candidates_location_idx
+  on public.catalog_review_candidates (country, city);
+
 -- One durable cursor lets the scheduled catalog workflow continue from the
 -- next destination instead of recalculating a position from the calendar.
 create table if not exists public.catalog_ingestion_state (
@@ -79,5 +95,6 @@ alter table public.llm_feedback enable row level security;
 alter table public.overall_experience_feedback enable row level security;
 alter table public.catalog_activities enable row level security;
 alter table public.catalog_activity_embeddings enable row level security;
+alter table public.catalog_review_candidates enable row level security;
 alter table public.catalog_ingestion_state enable row level security;
 alter table public.catalog_ingestion_runs enable row level security;
