@@ -13,6 +13,7 @@ from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay
 from src.llm import NarrationGenerationError
 from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
 from src.catalog import load_curated_activities
+from src.search import retrieve_activities as real_retrieve_activities
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -287,6 +288,24 @@ class StreamlitInteractionTests(unittest.TestCase):
             "rome_colosseum",
             app.session_state["dismissed_must_do_ids"],
         )
+
+    def test_results_retrieval_is_reused_when_shortlisting_and_planning(
+        self,
+    ) -> None:
+        """Small result actions must not trigger repeat embedding retrieval."""
+
+        with patch(
+            "src.ui.retrieve_activities",
+            wraps=real_retrieve_activities,
+        ) as retrieve:
+            app = self._sample_results_app()
+            self.assertEqual(retrieve.call_count, 1)
+
+            app.button(key="activity-selection-rome_pantheon").click().run()
+            self.assertEqual(retrieve.call_count, 1)
+
+            app.button(key="build-itinerary").click().run()
+            self.assertEqual(retrieve.call_count, 1)
 
     def test_build_itinerary_creates_three_guarded_days(self) -> None:
         app = self._sample_results_app()

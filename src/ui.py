@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from html import escape
@@ -45,6 +46,7 @@ from src.planner import (
     apply_itinerary_change_proposal,
     build_itinerary,
     replace_itinerary_activity,
+    route_summary_for_day,
 )
 from src.proposals import (
     ItineraryChangeProposal,
@@ -53,7 +55,12 @@ from src.proposals import (
     validate_proposals_against_plan,
 )
 from src.scoring import GroupFitResult, rank_activities
-from src.search import RetrievalMode, RetrievedActivity, retrieve_activities
+from src.search import (
+    RetrievalMode,
+    RetrievalResponse,
+    RetrievedActivity,
+    retrieve_activities,
+)
 from src.trips import save_trip
 
 
@@ -197,9 +204,9 @@ def build_sample_trip() -> TripRequest:
     )
 
 
-@st.cache_data
+@st.cache_data(ttl="2m", max_entries=1)
 def load_activity_catalog() -> list[Activity]:
-    """Load the one canonical, city-filtered TripSync activity catalog."""
+    """Load the canonical catalog without querying Supabase on every click."""
 
     return load_curated_activities()
 
@@ -226,6 +233,7 @@ def _initialize_state() -> None:
         "itinerary_narration_error": None,
         "itinerary_change_proposals": None,
         "itinerary_change_error": None,
+        "retrieval_cache": None,
         "feedback_session_id": uuid4().hex,
         "saved_trip_id": None,
     }
@@ -247,6 +255,7 @@ def _reset_activity_selections() -> None:
     st.session_state.itinerary_narration_error = None
     st.session_state.itinerary_change_proposals = None
     st.session_state.itinerary_change_error = None
+    st.session_state.retrieval_cache = None
 
 
 def _invalidate_itinerary() -> None:
@@ -259,6 +268,53 @@ def _invalidate_itinerary() -> None:
     st.session_state.itinerary_narration_error = None
     st.session_state.itinerary_change_proposals = None
     st.session_state.itinerary_change_error = None
+
+
+def _retrieval_cache_key(
+    trip: TripRequest,
+    activities: list[Activity],
+) -> str:
+    """Identify the exact preference and catalog inputs behind a search.
+
+    A Streamlit button click reruns the script.  Keeping this key in session
+    state means toggling, adding, removing, or building an itinerary reuses
+    the already-grounded retrieval response instead of calling embeddings
+    again.  A changed trip or catalog creates a new key automatically.
+    """
+
+    payload = {
+        "trip": trip.model_dump(mode="json"),
+        "activities": [activity.model_dump(mode="json") for activity in activities],
+        "mode": RETRIEVAL_MODE,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _retrieve_for_current_trip(
+    trip: TripRequest,
+    activities: list[Activity],
+) -> RetrievalResponse:
+    """Retrieve once per trip/catalog combination within this browser session."""
+
+    cache_key = _retrieval_cache_key(trip, activities)
+    cache = st.session_state.get("retrieval_cache")
+    if isinstance(cache, dict) and cache.get("key") == cache_key:
+        response = cache.get("response")
+        if isinstance(response, RetrievalResponse):
+            return response
+
+    with st.spinner("Finding activities that fit your group…"):
+        response = retrieve_activities(
+            activities,
+            trip,
+            mode=RETRIEVAL_MODE,
+        )
+    st.session_state.retrieval_cache = {
+        "key": cache_key,
+        "response": response,
+    }
+    return response
 
 
 def _apply_styles(workspace: str = "Plan a trip") -> None:
@@ -2080,8 +2136,9 @@ def _render_itinerary(
             )
         st.markdown(_chip_row(summary_labels), unsafe_allow_html=True)
         st.caption(
-            "Daily timing includes a 30-minute transition estimate between "
-            "activities. Opening hours and route optimization are not live yet."
+            "Daily timing includes a 30-minute planning buffer between activities. "
+            "When catalog coordinates are available, stops are ordered to reduce "
+            "backtracking and show a walking estimate below."
         )
         if st.session_state.itinerary_notice:
             st.info(
@@ -2136,6 +2193,18 @@ def _render_itinerary(
                     )
                     continue
 
+                route_summary = route_summary_for_day(day, activity_by_id)
+                if route_summary.status == "spread_out":
+                    st.warning(
+                        route_summary.message,
+                        icon=":material/directions_walk:",
+                    )
+                else:
+                    st.caption(route_summary.message)
+                route_legs_by_destination = {
+                    leg.to_activity_id: leg for leg in route_summary.legs
+                }
+
                 for position, scheduled_activity in enumerate(day.activities):
                     activity = activity_by_id.get(
                         scheduled_activity.activity_id
@@ -2172,6 +2241,14 @@ def _render_itinerary(
                         )
                     st.caption(" · ".join(details))
                     st.caption(scheduled_activity.reason)
+                    leg = route_legs_by_destination.get(
+                        scheduled_activity.activity_id
+                    )
+                    if leg is not None:
+                        st.caption(
+                            "From the previous stop: about "
+                            f"{leg.distance_km:g} km · {leg.walking_minutes} min walk"
+                        )
                     activity_story = narrative_by_activity_id.get(
                         scheduled_activity.activity_id
                     )
@@ -2425,11 +2502,7 @@ def _render_results_step() -> None:
         st.toast(f"Saved {saved.title}")
     activities = load_activity_catalog()
     activity_by_id = _activity_lookup(activities)
-    retrieval_response = retrieve_activities(
-        activities,
-        trip,
-        mode=RETRIEVAL_MODE,
-    )
+    retrieval_response = _retrieve_for_current_trip(trip, activities)
     retrieval_by_activity_id = {
         result.activity_id: result
         for result in retrieval_response.results

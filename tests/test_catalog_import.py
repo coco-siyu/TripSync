@@ -14,6 +14,7 @@ from src.catalog_import import (
     SUPPORTED_CITIES,
     build_query,
     fetch_candidates,
+    coordinates_query,
     parse_candidates,
     supported_city,
     write_candidate_file,
@@ -49,6 +50,11 @@ PAYLOAD = {
 
 
 class CatalogImportTests(unittest.TestCase):
+    def test_builds_coordinate_query_for_known_items(self) -> None:
+        query = coordinates_query(["Q2", "Q1", "Q2"])
+        self.assertIn("VALUES ?item { wd:Q1 wd:Q2 }", query)
+        self.assertIn("wdt:P625", query)
+
     def test_supports_the_four_initial_italian_cities(self) -> None:
         self.assertEqual(set(SUPPORTED_CITIES), {"rome", "florence", "milan", "venice"})
         self.assertEqual(supported_city(" FLORENCE ").wikidata_id, "Q2044")

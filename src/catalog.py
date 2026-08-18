@@ -65,6 +65,8 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
         "reservation_required": fields["reservation_required"],
         "description": fields["description"],
         "source_url": fields.get("source_url") or candidate["source_url"],
+        "latitude": fields.get("latitude", candidate.get("latitude")),
+        "longitude": fields.get("longitude", candidate.get("longitude")),
     })
 
 

@@ -30,8 +30,11 @@ create table if not exists public.overall_experience_feedback (
   primary key (session_id, itinerary_id)
 );
 
--- Shared, Pydantic-validated activity catalog. This is edited only through
--- the admin-protected Curate catalog workspace.
+-- Shared, Pydantic-validated activity catalog. `activity_json` contains the
+-- complete Activity contract, including optional latitude/longitude route
+-- coordinates. This avoids a SQL migration whenever the validated document
+-- gains an optional planning field. It is edited only through the
+-- admin-protected Curate catalog workspace.
 create table if not exists public.catalog_activities (
   activity_id text primary key,
   activity_json jsonb not null,

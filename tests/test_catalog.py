@@ -15,10 +15,16 @@ from src.catalog import (
     load_curated_activities,
     save_activity,
 )
+from src.catalog_backfill import backfill_coordinates, wikidata_id_from_source
 from src.curation_seed import suggested_activities
 
 
-CANDIDATE = {"name": "Uffizi Gallery", "source_url": "https://www.wikidata.org/wiki/Q51252"}
+CANDIDATE = {
+    "name": "Uffizi Gallery",
+    "source_url": "https://www.wikidata.org/wiki/Q51252",
+    "latitude": 43.7696,
+    "longitude": 11.2558,
+}
 FIELDS = {
     "name": "Uffizi Gallery", "category": "museum", "interests": ["art", "history"],
     "walking_level": "moderate", "budget_level": "moderate", "duration_hours": 3,
@@ -34,6 +40,8 @@ class CatalogTests(unittest.TestCase):
 
     def test_validates_and_persists_a_curated_activity(self) -> None:
         activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        self.assertEqual(activity.latitude, 43.7696)
+        self.assertEqual(activity.longitude, 11.2558)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "activities.json"
             save_activity(activity, path)
@@ -57,3 +65,23 @@ class CatalogTests(unittest.TestCase):
             count = consolidate_sample_activities(path)
             self.assertEqual(count, 12)
             self.assertEqual(len(load_curated_activities(path)), 12)
+
+    def test_backfills_only_missing_coordinates_from_wikidata_provenance(self) -> None:
+        missing_coordinates = build_activity(
+            {"name": "Uffizi Gallery", "source_url": CANDIDATE["source_url"]},
+            "Florence", "Italy", FIELDS,
+        )
+        existing_coordinates = missing_coordinates.model_copy(
+            update={"latitude": 43.7696, "longitude": 11.2558}
+        )
+
+        updated, refreshed, unresolved = backfill_coordinates(
+            [missing_coordinates, existing_coordinates],
+            fetcher=lambda ids: {"Q51252": (43.7696, 11.2558)},
+        )
+
+        self.assertEqual(refreshed, 1)
+        self.assertEqual(unresolved, 0)
+        self.assertEqual(updated[0].latitude, 43.7696)
+        self.assertEqual(updated[0].longitude, 11.2558)
+        self.assertEqual(wikidata_id_from_source(updated[0]), "Q51252")

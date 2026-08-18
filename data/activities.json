@@ -19,7 +19,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A former palace housing Renaissance sculpture and decorative arts.",
-    "source_url": "https://www.wikidata.org/wiki/Q388448"
+    "source_url": "https://www.wikidata.org/wiki/Q388448",
+    "latitude": 43.770398,
+    "longitude": 11.258008
   },
   {
     "id": "florence_basilica_of_santa_croce",
@@ -42,7 +44,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "A Franciscan basilica containing major Florentine tombs and frescoes.",
-    "source_url": "https://www.wikidata.org/wiki/Q51177"
+    "source_url": "https://www.wikidata.org/wiki/Q51177",
+    "latitude": 43.76845,
+    "longitude": 11.26274
   },
   {
     "id": "florence_boboli_gardens",
@@ -65,7 +69,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "Historic landscaped gardens behind Palazzo Pitti with sculptures and city views.",
-    "source_url": "https://www.wikidata.org/wiki/Q888825"
+    "source_url": "https://www.wikidata.org/wiki/Q888825",
+    "latitude": 43.765275,
+    "longitude": 11.249968
   },
   {
     "id": "florence_florence_baptistery",
@@ -88,7 +94,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "An octagonal baptistery facing the cathedral, known for its bronze doors and mosaics.",
-    "source_url": "https://www.wikidata.org/wiki/Q732511"
+    "source_url": "https://www.wikidata.org/wiki/Q732511",
+    "latitude": 43.773055555,
+    "longitude": 11.255
   },
   {
     "id": "florence_florence_cathedral",
@@ -111,7 +119,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "Florence's cathedral, known for Brunelleschi's dome and Gothic-Renaissance architecture.",
-    "source_url": "https://www.wikidata.org/wiki/Q191739"
+    "source_url": "https://www.wikidata.org/wiki/Q191739",
+    "latitude": 43.773055555,
+    "longitude": 11.256944444
   },
   {
     "id": "florence_galleria_dell_accademia",
@@ -133,7 +143,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "An art museum best known for Michelangelo's David and unfinished Prisoners.",
-    "source_url": "https://www.wikidata.org/wiki/Q10855544"
+    "source_url": "https://www.wikidata.org/wiki/Q10855544",
+    "latitude": 43.776944444,
+    "longitude": 11.258888888
   },
   {
     "id": "florence_palazzo_pitti",
@@ -156,7 +168,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A grand palace complex with royal apartments and art collections.",
-    "source_url": "https://www.wikidata.org/wiki/Q29286"
+    "source_url": "https://www.wikidata.org/wiki/Q29286",
+    "latitude": 43.765153,
+    "longitude": 11.250008
   },
   {
     "id": "florence_palazzo_vecchio",
@@ -179,7 +193,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "Florence's historic town hall with civic art, grand rooms, and a tower.",
-    "source_url": "https://www.wikidata.org/wiki/Q271928"
+    "source_url": "https://www.wikidata.org/wiki/Q271928",
+    "latitude": 43.769444444,
+    "longitude": 11.256111111
   },
   {
     "id": "florence_ponte_vecchio",
@@ -202,7 +218,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "Florence's medieval bridge lined with small shops over the Arno.",
-    "source_url": "https://www.wikidata.org/wiki/Q208633"
+    "source_url": "https://www.wikidata.org/wiki/Q208633",
+    "latitude": 43.76798889,
+    "longitude": 11.25319167
   },
   {
     "id": "florence_uffizi_gallery",
@@ -224,7 +242,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A major Renaissance art museum with works by Botticelli, Leonardo, and Michelangelo.",
-    "source_url": "https://www.wikidata.org/wiki/Q51252"
+    "source_url": "https://www.wikidata.org/wiki/Q51252",
+    "latitude": 43.768333333,
+    "longitude": 11.255277777
   },
   {
     "id": "milan_basilica_of_sant_ambrogio",
@@ -247,7 +267,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "An early Christian and Romanesque basilica dedicated to Milan's patron saint.",
-    "source_url": "https://www.wikidata.org/wiki/Q1071570"
+    "source_url": "https://www.wikidata.org/wiki/Q1071570",
+    "latitude": 45.4625,
+    "longitude": 9.175833333
   },
   {
     "id": "milan_biblioteca_ambrosiana",
@@ -270,7 +292,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A historic library and art collection founded by Cardinal Federico Borromeo.",
-    "source_url": "https://www.wikidata.org/wiki/Q815611"
+    "source_url": "https://www.wikidata.org/wiki/Q815611",
+    "latitude": 45.463479,
+    "longitude": 9.185788
   },
   {
     "id": "milan_galleria_vittorio_emanuele_ii",
@@ -293,7 +317,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "A 19th-century glass-vaulted shopping gallery near the Duomo.",
-    "source_url": "https://www.wikidata.org/wiki/Q51112"
+    "source_url": "https://www.wikidata.org/wiki/Q51112",
+    "latitude": 45.465638888,
+    "longitude": 9.19
   },
   {
     "id": "milan_la_scala",
@@ -316,7 +342,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "Milan's historic opera house, with performances and an adjoining museum.",
-    "source_url": "https://www.wikidata.org/wiki/Q5471"
+    "source_url": "https://www.wikidata.org/wiki/Q5471",
+    "latitude": 45.4675,
+    "longitude": 9.189166666
   },
   {
     "id": "milan_milan_cathedral",
@@ -339,7 +367,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A Gothic cathedral with an elaborate facade and rooftop terraces.",
-    "source_url": "https://www.wikidata.org/wiki/Q18068"
+    "source_url": "https://www.wikidata.org/wiki/Q18068",
+    "latitude": 45.463968,
+    "longitude": 9.190578
   },
   {
     "id": "milan_pinacoteca_di_brera",
@@ -361,7 +391,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A leading Italian art museum in the Brera district.",
-    "source_url": "https://www.wikidata.org/wiki/Q150066"
+    "source_url": "https://www.wikidata.org/wiki/Q150066",
+    "latitude": 45.471955,
+    "longitude": 9.187815
   },
   {
     "id": "milan_pirelli_tower",
@@ -383,7 +415,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "A landmark modernist skyscraper designed by Gio Ponti and Pier Luigi Nervi.",
-    "source_url": "https://www.wikidata.org/wiki/Q920809"
+    "source_url": "https://www.wikidata.org/wiki/Q920809",
+    "latitude": 45.484788,
+    "longitude": 9.201221
   },
   {
     "id": "milan_santa_maria_delle_grazie",
@@ -406,7 +440,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A Renaissance church and convent complex that houses The Last Supper.",
-    "source_url": "https://www.wikidata.org/wiki/Q244952"
+    "source_url": "https://www.wikidata.org/wiki/Q244952",
+    "latitude": 45.465833333,
+    "longitude": 9.171111111
   },
   {
     "id": "milan_sforza_castle",
@@ -429,7 +465,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "A Renaissance castle complex with civic museums and courtyards.",
-    "source_url": "https://www.wikidata.org/wiki/Q23354"
+    "source_url": "https://www.wikidata.org/wiki/Q23354",
+    "latitude": 45.471005,
+    "longitude": 9.179693
   },
   {
     "id": "milan_the_last_supper",
@@ -452,7 +490,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "Leonardo da Vinci's mural in the refectory of Santa Maria delle Grazie.",
-    "source_url": "https://www.wikidata.org/wiki/Q128910"
+    "source_url": "https://www.wikidata.org/wiki/Q128910",
+    "latitude": 45.466666666,
+    "longitude": 9.170833333
   },
   {
     "id": "rome_appian_way",
@@ -474,7 +514,9 @@
     "accessibility_notes": "Ancient paving is uneven; cycling or walking routes should be chosen for the group's mobility needs.",
     "reservation_required": false,
     "description": "Historic Roman road and surrounding parkland with archaeological sites and countryside scenery.",
-    "source_url": "https://www.parcoarcheologicoappiaantica.it/en/"
+    "source_url": "https://www.parcoarcheologicoappiaantica.it/en/",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_arch_of_constantine",
@@ -497,7 +539,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "A triumphal arch beside the Colosseum, built from Roman imperial reliefs.",
-    "source_url": "https://www.wikidata.org/wiki/Q5786"
+    "source_url": "https://www.wikidata.org/wiki/Q5786",
+    "latitude": 41.889828,
+    "longitude": 12.490605
   },
   {
     "id": "rome_borghese_gallery",
@@ -519,7 +563,9 @@
     "accessibility_notes": "The museum offers an accessible entrance and lift; contact the venue for current arrangements.",
     "reservation_required": true,
     "description": "Timed-entry museum known for works by Bernini, Caravaggio, Raphael, and Titian.",
-    "source_url": "https://galleriaborghese.beniculturali.it/en/"
+    "source_url": "https://galleriaborghese.beniculturali.it/en/",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_capitoline_museums",
@@ -541,7 +587,9 @@
     "accessibility_notes": "Lifts connect the principal floors; the museum spans multiple buildings.",
     "reservation_required": false,
     "description": "Civic museums on Capitoline Hill with ancient sculpture, paintings, and views over the Forum.",
-    "source_url": "https://www.museicapitolini.org/en"
+    "source_url": "https://www.museicapitolini.org/en",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_castel_sant_angelo",
@@ -563,7 +611,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": true,
     "description": "A former mausoleum and fortress with museum rooms and rooftop city views.",
-    "source_url": "https://www.wikidata.org/wiki/Q486382"
+    "source_url": "https://www.wikidata.org/wiki/Q486382",
+    "latitude": 41.903044,
+    "longitude": 12.466307
   },
   {
     "id": "rome_centrale_montemartini",
@@ -585,7 +635,9 @@
     "accessibility_notes": "The museum provides step-free access and lifts between exhibition levels.",
     "reservation_required": false,
     "description": "Ancient Roman sculpture displayed inside a former thermoelectric power station.",
-    "source_url": "https://www.centralemontemartini.org/en"
+    "source_url": "https://www.centralemontemartini.org/en",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_circus_maximus",
@@ -608,7 +660,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "The vast site of ancient Rome's chariot-racing stadium.",
-    "source_url": "https://www.wikidata.org/wiki/Q207808"
+    "source_url": "https://www.wikidata.org/wiki/Q207808",
+    "latitude": 41.8859,
+    "longitude": 12.4857
   },
   {
     "id": "rome_colosseum",
@@ -630,7 +684,9 @@
     "accessibility_notes": "Elevators serve some levels, but uneven surfaces and substantial walking remain.",
     "reservation_required": true,
     "description": "Ancient amphitheater and archaeological landmark in the center of Rome.",
-    "source_url": "https://colosseo.it/en/area/the-colosseum/"
+    "source_url": "https://colosseo.it/en/area/the-colosseum/",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_pantheon",
@@ -652,7 +708,9 @@
     "accessibility_notes": "The main entrance and interior are generally accessible, with limited walking inside.",
     "reservation_required": false,
     "description": "Exceptionally preserved Roman monument known for its concrete dome and central oculus.",
-    "source_url": "https://www.pantheonroma.com/"
+    "source_url": "https://www.pantheonroma.com/",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_piazza_navona",
@@ -673,7 +731,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "A visitor experience in Rome.",
-    "source_url": "https://www.wikidata.org/wiki/Q463400"
+    "source_url": "https://www.wikidata.org/wiki/Q463400",
+    "latitude": 41.89871,
+    "longitude": 12.47316
   },
   {
     "id": "rome_roman_forum",
@@ -695,7 +755,9 @@
     "accessibility_notes": "The archaeological area includes slopes, steps, and uneven stone paths.",
     "reservation_required": true,
     "description": "Ruins of the civic center of ancient Rome with views from Palatine Hill.",
-    "source_url": "https://colosseo.it/en/area/roman-forum/"
+    "source_url": "https://colosseo.it/en/area/roman-forum/",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_testaccio_market",
@@ -717,7 +779,9 @@
     "accessibility_notes": "The modern covered market is on one level, though aisles may be busy.",
     "reservation_required": false,
     "description": "Covered neighborhood market with produce stalls and vendors serving Roman specialties.",
-    "source_url": "https://www.turismoroma.it/en/places/testaccio-market"
+    "source_url": "https://www.turismoroma.it/en/places/testaccio-market",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_trajan_s_forum",
@@ -740,7 +804,9 @@
     "accessibility_notes": "Check the official visitor information before visiting.",
     "reservation_required": false,
     "description": "The final and largest of Rome's imperial forums, built under Emperor Trajan.",
-    "source_url": "https://www.wikidata.org/wiki/Q211295"
+    "source_url": "https://www.wikidata.org/wiki/Q211295",
+    "latitude": 41.895417,
+    "longitude": 12.485869
   },
   {
     "id": "rome_trastevere_walk",
@@ -762,7 +828,9 @@
     "accessibility_notes": "Routes can be shortened, but many streets have cobblestones and uneven paving.",
     "reservation_required": false,
     "description": "Self-guided exploration of a historic neighborhood known for lanes, squares, churches, and restaurants.",
-    "source_url": "https://www.turismoroma.it/en/places/trastevere"
+    "source_url": "https://www.turismoroma.it/en/places/trastevere",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_trevi_fountain",
@@ -784,7 +852,9 @@
     "accessibility_notes": "The fountain is viewed from a public square that can be crowded and has some steps.",
     "reservation_required": false,
     "description": "Monumental Baroque fountain featuring Oceanus and dramatic carved rockwork.",
-    "source_url": "https://www.turismoroma.it/en/places/trevi-fountain"
+    "source_url": "https://www.turismoroma.it/en/places/trevi-fountain",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_vatican_museums",
@@ -806,7 +876,9 @@
     "accessibility_notes": "Accessible routes are available, though the museum complex is large and requires substantial walking.",
     "reservation_required": true,
     "description": "Extensive papal collections of art and archaeology, including the Sistine Chapel.",
-    "source_url": "https://www.museivaticani.va/content/museivaticani/en.html"
+    "source_url": "https://www.museivaticani.va/content/museivaticani/en.html",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "rome_villa_borghese",
@@ -828,7 +900,9 @@
     "accessibility_notes": "Wide park paths allow flexible routes, though distances can be substantial.",
     "reservation_required": false,
     "description": "Large landscaped public park with gardens, fountains, viewpoints, and cultural venues.",
-    "source_url": "https://www.turismoroma.it/en/places/villa-borghese"
+    "source_url": "https://www.turismoroma.it/en/places/villa-borghese",
+    "latitude": null,
+    "longitude": null
   },
   {
     "id": "venice_biblioteca_nazionale_marciana",
@@ -852,7 +926,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": true,
     "description": "Visit Biblioteca Nazionale Marciana, a curated museum experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q578460"
+    "source_url": "https://www.wikidata.org/wiki/Q578460",
+    "latitude": 45.433333333,
+    "longitude": 12.339166666
   },
   {
     "id": "venice_bridge_of_sighs",
@@ -876,7 +952,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Bridge of Sighs, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q52517"
+    "source_url": "https://www.wikidata.org/wiki/Q52517",
+    "latitude": 45.434055555,
+    "longitude": 12.340861111
   },
   {
     "id": "venice_ca_d_oro",
@@ -900,7 +978,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": true,
     "description": "Visit Ca' d'Oro, a curated museum experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q820872"
+    "source_url": "https://www.wikidata.org/wiki/Q820872",
+    "latitude": 45.440555555,
+    "longitude": 12.333888888
   },
   {
     "id": "venice_carnival_of_venice",
@@ -924,7 +1004,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Carnival of Venice, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q35191"
+    "source_url": "https://www.wikidata.org/wiki/Q35191",
+    "latitude": 45.4397,
+    "longitude": 12.3319
   },
   {
     "id": "venice_doge_s_palace",
@@ -948,7 +1030,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": true,
     "description": "Visit Doge's Palace, a curated museum experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q189883"
+    "source_url": "https://www.wikidata.org/wiki/Q189883",
+    "latitude": 45.433666666,
+    "longitude": 12.340416666
   },
   {
     "id": "venice_gallerie_dell_accademia",
@@ -972,7 +1056,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": true,
     "description": "Visit Gallerie dell'Accademia, a curated museum experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q338330"
+    "source_url": "https://www.wikidata.org/wiki/Q338330",
+    "latitude": 45.431078,
+    "longitude": 12.328139
   },
   {
     "id": "venice_giudecca",
@@ -996,7 +1082,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Giudecca, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q52435"
+    "source_url": "https://www.wikidata.org/wiki/Q52435",
+    "latitude": 45.425,
+    "longitude": 12.328611111
   },
   {
     "id": "venice_grand_canal",
@@ -1020,7 +1108,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Grand Canal, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q309243"
+    "source_url": "https://www.wikidata.org/wiki/Q309243",
+    "latitude": 45.442222222,
+    "longitude": 12.326388888
   },
   {
     "id": "venice_lido_di_venezia",
@@ -1044,7 +1134,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Lido di Venezia, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q226221"
+    "source_url": "https://www.wikidata.org/wiki/Q226221",
+    "latitude": 45.383333333,
+    "longitude": 12.35
   },
   {
     "id": "venice_mestre",
@@ -1068,7 +1160,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Mestre, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q541405"
+    "source_url": "https://www.wikidata.org/wiki/Q541405",
+    "latitude": 45.490555555,
+    "longitude": 12.238055555
   },
   {
     "id": "venice_murano",
@@ -1092,7 +1186,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Murano, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q52437"
+    "source_url": "https://www.wikidata.org/wiki/Q52437",
+    "latitude": 45.4575,
+    "longitude": 12.353611111
   },
   {
     "id": "venice_piazza_san_marco",
@@ -1116,7 +1212,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Piazza San Marco, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q217527"
+    "source_url": "https://www.wikidata.org/wiki/Q217527",
+    "latitude": 45.434,
+    "longitude": 12.338
   },
   {
     "id": "venice_rialto_bridge",
@@ -1140,7 +1238,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Rialto Bridge, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q52505"
+    "source_url": "https://www.wikidata.org/wiki/Q52505",
+    "latitude": 45.438008,
+    "longitude": 12.335639
   },
   {
     "id": "venice_san_michele",
@@ -1164,7 +1264,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit San Michele, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q844263"
+    "source_url": "https://www.wikidata.org/wiki/Q844263",
+    "latitude": 45.446944444,
+    "longitude": 12.347222222
   },
   {
     "id": "venice_santa_maria_della_salute",
@@ -1188,7 +1290,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Santa Maria della Salute, a curated historic site experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q52531"
+    "source_url": "https://www.wikidata.org/wiki/Q52531",
+    "latitude": 45.43057,
+    "longitude": 12.33473
   },
   {
     "id": "venice_st_mark_s_basilica",
@@ -1212,7 +1316,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit St Mark's Basilica, a curated historic site experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q172988"
+    "source_url": "https://www.wikidata.org/wiki/Q172988",
+    "latitude": 45.434444444,
+    "longitude": 12.339722222
   },
   {
     "id": "venice_st_mark_s_campanile",
@@ -1236,7 +1342,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit St Mark's Campanile, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q754194"
+    "source_url": "https://www.wikidata.org/wiki/Q754194",
+    "latitude": 45.434027777,
+    "longitude": 12.339027777
   },
   {
     "id": "venice_teatro_la_fenice",
@@ -1260,7 +1368,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Teatro La Fenice, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q223942"
+    "source_url": "https://www.wikidata.org/wiki/Q223942",
+    "latitude": 45.4337,
+    "longitude": 12.3339
   },
   {
     "id": "venice_torcello",
@@ -1284,7 +1394,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Torcello, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q52441"
+    "source_url": "https://www.wikidata.org/wiki/Q52441",
+    "latitude": 45.498333333,
+    "longitude": 12.418333333
   },
   {
     "id": "venice_venetian_arsenal",
@@ -1308,7 +1420,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Venetian Arsenal, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q1262248"
+    "source_url": "https://www.wikidata.org/wiki/Q1262248",
+    "latitude": 45.435277777,
+    "longitude": 12.353055555
   },
   {
     "id": "venice_venetian_lagoon",
@@ -1332,7 +1446,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Venetian Lagoon, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q76925"
+    "source_url": "https://www.wikidata.org/wiki/Q76925",
+    "latitude": 45.413055555,
+    "longitude": 12.297222222
   },
   {
     "id": "venice_venice_biennale",
@@ -1356,7 +1472,9 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Venice Biennale, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q205751"
+    "source_url": "https://www.wikidata.org/wiki/Q205751",
+    "latitude": 45.428889,
+    "longitude": 12.358611
   },
   {
     "id": "venice_venice_film_festival",
@@ -1380,6 +1498,8 @@
     "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
     "reservation_required": false,
     "description": "Visit Venice Film Festival, a curated landmark experience in Venice.",
-    "source_url": "https://www.wikidata.org/wiki/Q49024"
+    "source_url": "https://www.wikidata.org/wiki/Q49024",
+    "latitude": 45.406,
+    "longitude": 12.367111111
   }
 ]

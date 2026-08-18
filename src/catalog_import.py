@@ -163,6 +163,77 @@ def _coordinates(value: str) -> tuple[float, float]:
         raise ValueError(f"Unexpected Wikidata coordinate: {value!r}") from error
 
 
+def coordinates_query(wikidata_ids: list[str]) -> str:
+    """Build a small coordinate-only query for known Wikidata items.
+
+    This is deliberately separate from the discovery query: a catalog record
+    can be refreshed by its stable source identifier without rediscovering or
+    changing any of its curated planning details.
+    """
+
+    ids = sorted({item.strip() for item in wikidata_ids if item.strip()})
+    if not ids:
+        raise ValueError("at least one Wikidata identifier is required")
+    if len(ids) > 100:
+        raise ValueError("a coordinate query supports at most 100 identifiers")
+    if any(not item.startswith("Q") or not item[1:].isdigit() for item in ids):
+        raise ValueError("Wikidata identifiers must look like Q123")
+
+    values = " ".join(f"wd:{item}" for item in ids)
+    return f"""
+SELECT ?item ?coord WHERE {{
+  VALUES ?item {{ {values} }}
+  ?item wdt:P625 ?coord .
+}}
+""".strip()
+
+
+def fetch_coordinates(
+    wikidata_ids: list[str], *, timeout: int = 20, retries: int = 3
+) -> dict[str, tuple[float, float]]:
+    """Look up coordinates for stable Wikidata IDs, with polite retries."""
+
+    if retries < 0:
+        raise ValueError("retries must not be negative")
+    query = coordinates_query(wikidata_ids)
+    request = Request(
+        f"{WIKIDATA_SPARQL_URL}?{urlencode({'query': query, 'format': 'json'})}",
+        headers={
+            "Accept": "application/sparql-results+json",
+            "User-Agent": "TripSync catalog coordinate backfill (educational project)",
+        },
+    )
+    for attempt in range(retries + 1):
+        try:
+            with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed HTTPS endpoint
+                payload = json.load(response)
+            break
+        except HTTPError as error:
+            if error.code not in TRANSIENT_HTTP_STATUSES or attempt == retries:
+                raise CatalogImportError(
+                    f"Wikidata returned HTTP {error.code} while refreshing coordinates. "
+                    "Please try again later."
+                ) from error
+        except (TimeoutError, URLError) as error:
+            if attempt == retries:
+                raise CatalogImportError(
+                    "Wikidata timed out while refreshing coordinates. Try again later."
+                ) from error
+        time.sleep(2**attempt)
+
+    bindings = payload.get("results", {}).get("bindings", []) if isinstance(payload, dict) else []
+    coordinates: dict[str, tuple[float, float]] = {}
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            continue
+        try:
+            item_id = _wikidata_id(binding["item"]["value"])
+            coordinates[item_id] = _coordinates(binding["coord"]["value"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return coordinates
+
+
 def _review_flags(types: set[str]) -> tuple[str, ...]:
     """Describe items that need context rather than silently excluding them."""
 

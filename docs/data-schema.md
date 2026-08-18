@@ -19,13 +19,17 @@ Each activity record should contain the following fields:
 | `reservation_required` | boolean | Yes | Whether advance booking is normally required |
 | `description` | string | Yes | Concise factual description |
 | `source_url` | string | Yes | Source used to verify the record |
+| `latitude` | number or `null` | No | WGS84 latitude used for approximate route ordering; must be paired with `longitude` |
+| `longitude` | number or `null` | No | WGS84 longitude used for approximate route ordering; must be paired with `latitude` |
 
 ## Controlled values
 
 The first version will use controlled values where practical so retrieval results
-and group-fit scoring can be evaluated consistently. Additional fields, such as
-opening hours or geographic coordinates, should only be added when the application
-uses them.
+and group-fit scoring can be evaluated consistently. Geographic coordinates are
+optional: when both are available, TripSync uses them to reduce itinerary
+backtracking and estimate walking between stops. A record must contain both
+`latitude` and `longitude`, or neither. They are estimates rather than live map,
+traffic, accessibility, or opening-hours data.
 
 Controlled values are:
 

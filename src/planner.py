@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from math import asin, cos, radians, sin, sqrt
 
 from src.models import (
     Activity,
@@ -59,6 +60,29 @@ class ReplacementOutcome:
     day_number: int
 
 
+@dataclass(frozen=True)
+class RouteLeg:
+    """One estimated walking leg between two located itinerary stops."""
+
+    from_activity_id: str
+    to_activity_id: str
+    distance_km: float
+    walking_minutes: int
+
+
+@dataclass(frozen=True)
+class DayRouteSummary:
+    """Small, explainable route-health summary for one itinerary day."""
+
+    located_stops: int
+    total_stops: int
+    total_distance_km: float | None
+    total_walking_minutes: int | None
+    status: str
+    message: str
+    legs: tuple[RouteLeg, ...]
+
+
 def _unique_ids(activity_ids: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     unique: list[str] = []
@@ -67,6 +91,172 @@ def _unique_ids(activity_ids: Sequence[str]) -> list[str]:
             unique.append(activity_id)
             seen.add(activity_id)
     return unique
+
+
+def _distance_km(first: Activity, second: Activity) -> float | None:
+    """Return a straight-line distance when both activities have coordinates."""
+
+    if (
+        first.latitude is None
+        or first.longitude is None
+        or second.latitude is None
+        or second.longitude is None
+    ):
+        return None
+    latitude_delta = radians(second.latitude - first.latitude)
+    longitude_delta = radians(second.longitude - first.longitude)
+    first_latitude = radians(first.latitude)
+    second_latitude = radians(second.latitude)
+    haversine = (
+        sin(latitude_delta / 2) ** 2
+        + cos(first_latitude)
+        * cos(second_latitude)
+        * sin(longitude_delta / 2) ** 2
+    )
+    return round(2 * 6371 * asin(sqrt(haversine)), 2)
+
+
+def _walking_minutes(distance_km: float) -> int:
+    """Use a conservative city-walking estimate, with a short-stop minimum."""
+
+    return max(8, round(distance_km / 4.5 * 60))
+
+
+def _route_order(
+    activities: Sequence[ScheduledActivity],
+    activity_by_id: Mapping[str, Activity],
+) -> list[ScheduledActivity]:
+    """Order known locations by proximity while leaving unknown stops stable.
+
+    Must-dos retain first-stop priority. This intentionally avoids claiming an
+    exact live route: it is a simple, predictable nearest-neighbour ordering.
+    """
+
+    located = [
+        scheduled
+        for scheduled in activities
+        if (
+            activity_by_id.get(scheduled.activity_id) is not None
+            and activity_by_id[scheduled.activity_id].latitude is not None
+            and activity_by_id[scheduled.activity_id].longitude is not None
+        )
+    ]
+    if len(located) < 2:
+        return list(activities)
+
+    start = next(
+        (scheduled for scheduled in located if scheduled.must_do_owners),
+        located[0],
+    )
+    remaining = [scheduled for scheduled in located if scheduled != start]
+    ordered = [start]
+    while remaining:
+        current = activity_by_id[ordered[-1].activity_id]
+        next_stop = min(
+            remaining,
+            key=lambda scheduled: (
+                _distance_km(current, activity_by_id[scheduled.activity_id])
+                or float("inf"),
+                scheduled.activity_name.casefold(),
+            ),
+        )
+        ordered.append(next_stop)
+        remaining.remove(next_stop)
+
+    unlocated = [scheduled for scheduled in activities if scheduled not in located]
+    return [*ordered, *unlocated]
+
+
+def route_summary_for_day(
+    day: ItineraryDay,
+    activity_by_id: Mapping[str, Activity],
+) -> DayRouteSummary:
+    """Explain route coverage and walking distance for an ordered itinerary day."""
+
+    activities = [
+        activity_by_id.get(scheduled.activity_id)
+        for scheduled in day.activities
+    ]
+    known = [activity for activity in activities if activity is not None]
+    located_stops = sum(
+        activity.latitude is not None and activity.longitude is not None
+        for activity in known
+    )
+    legs: list[RouteLeg] = []
+    for scheduled_first, scheduled_second, first, second in zip(
+        day.activities,
+        day.activities[1:],
+        activities,
+        activities[1:],
+        strict=False,
+    ):
+        if first is None or second is None:
+            continue
+        distance = _distance_km(first, second)
+        if distance is None:
+            continue
+        legs.append(
+            RouteLeg(
+                from_activity_id=scheduled_first.activity_id,
+                to_activity_id=scheduled_second.activity_id,
+                distance_km=distance,
+                walking_minutes=_walking_minutes(distance),
+            )
+        )
+
+    if len(day.activities) < 2:
+        return DayRouteSummary(
+            located_stops=located_stops,
+            total_stops=len(day.activities),
+            total_distance_km=0.0,
+            total_walking_minutes=0,
+            status="single_stop",
+            message="One stop today, leaving plenty of room to explore nearby.",
+            legs=tuple(),
+        )
+    if not legs:
+        return DayRouteSummary(
+            located_stops=located_stops,
+            total_stops=len(day.activities),
+            total_distance_km=None,
+            total_walking_minutes=None,
+            status="approximate",
+            message=(
+                "Route order is approximate because this catalog has no "
+                "coordinates for these stops yet."
+            ),
+            legs=tuple(),
+        )
+
+    distance = round(sum(leg.distance_km for leg in legs), 1)
+    minutes = sum(leg.walking_minutes for leg in legs)
+    if located_stops < len(day.activities):
+        status = "partial"
+        message = (
+            f"About {distance:g} km of known walking. Some stop locations "
+            "are still missing, so this is a partial route estimate."
+        )
+    elif distance <= 1.5:
+        status = "compact"
+        message = f"Compact route: about {distance:g} km, roughly {minutes} minutes walking."
+    elif distance <= 4:
+        status = "walkable"
+        message = f"Walkable route: about {distance:g} km, roughly {minutes} minutes walking."
+    else:
+        status = "spread_out"
+        message = (
+            f"This day is spread out: about {distance:g} km, roughly "
+            f"{minutes} minutes walking. Consider swapping a stop if you want a calmer day."
+        )
+    return DayRouteSummary(
+        located_stops=located_stops,
+        total_stops=len(day.activities),
+        total_distance_km=distance,
+        total_walking_minutes=minutes,
+        status=status,
+        message=message,
+        legs=tuple(legs),
+    )
 
 
 def _traveler_names(result: GroupFitResult | None) -> list[str]:
@@ -270,6 +460,9 @@ def build_itinerary(
             if _place_activity(days, activity, scheduled, rule):
                 scheduled_or_selected_ids.add(activity_id)
 
+    for day in days:
+        day.activities = _route_order(day.activities, activity_by_id)
+
     itinerary_days = [
         ItineraryDay(
             day_number=day.day_number,
@@ -390,6 +583,7 @@ def replace_itinerary_activity(
     updated_activities = list(remaining_activities)
     if replacement is not None:
         updated_activities.insert(target_position, replacement)
+    updated_activities = _route_order(updated_activities, activity_by_id)
 
     activity_hours = round(
         sum(activity.duration_hours for activity in updated_activities),
@@ -502,6 +696,8 @@ def apply_itinerary_change_proposal(
             updated_activities.append(replacement)
         else:
             updated_activities.insert(target_position, replacement)
+
+    updated_activities = _route_order(updated_activities, activity_by_id)
 
     rule = PACE_RULES[plan.pace]
     activity_hours = round(

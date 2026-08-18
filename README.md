@@ -161,6 +161,18 @@ ingestion. The curation rules are in
 [docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior
 is in [docs/retrieval.md](docs/retrieval.md).
 
+### Backfill route coordinates
+
+Existing activities created before route-aware itinerary planning may not have
+coordinates yet. Backfill them in place from their Wikidata source URLs; this
+does not replace any curated activity details or change activity IDs. Review the
+count first, then run without `--dry-run` to save the updates:
+
+```bash
+python -m src.catalog_backfill --dry-run
+python -m src.catalog_backfill
+```
+
 ### One-off city import
 
 The Curate catalog workspace is primarily for managing the live catalog: filter

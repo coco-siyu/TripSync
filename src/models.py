@@ -152,6 +152,8 @@ class Activity(TripSyncModel):
     reservation_required: bool
     description: str = Field(min_length=1, max_length=800)
     source_url: HttpUrl
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
 
     @field_validator("category", mode="before")
     @classmethod
@@ -174,6 +176,16 @@ class Activity(TripSyncModel):
         if any(not interest for interest in value):
             raise ValueError("interests must not be blank")
         return value
+
+    @model_validator(mode="after")
+    def require_complete_location(self) -> Activity:
+        """Keep route estimates trustworthy when location data is present."""
+
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError(
+                "latitude and longitude must be provided together"
+            )
+        return self
 
 
 class ScheduledActivity(TripSyncModel):

@@ -10,8 +10,10 @@ from pydantic import ValidationError
 
 from src.models import (
     Activity,
+    ItineraryDay,
     ItineraryPlan,
     ItinerarySource,
+    ScheduledActivity,
     TravelerProfile,
     TripRequest,
 )
@@ -19,6 +21,7 @@ from src.planner import (
     PACE_RULES,
     build_itinerary,
     replace_itinerary_activity,
+    route_summary_for_day,
 )
 from src.scoring import rank_activities
 
@@ -352,6 +355,119 @@ class ItineraryPlannerTests(unittest.TestCase):
         self.assertEqual(
             first.model_dump(mode="json"),
             second.model_dump(mode="json"),
+        )
+
+    def test_route_summary_uses_published_coordinates(self) -> None:
+        first = self.activities[0].model_copy(
+            update={"latitude": 41.9, "longitude": 12.48}
+        )
+        second = self.activities[1].model_copy(
+            update={"latitude": 41.91, "longitude": 12.49}
+        )
+        day = ItineraryDay(
+            day_number=1,
+            activities=[
+                ScheduledActivity(
+                    activity_id=first.id,
+                    activity_name=first.name,
+                    duration_hours=first.duration_hours,
+                    source=ItinerarySource.SHORTLIST,
+                    reason="Saved in your trip shortlist.",
+                ),
+                ScheduledActivity(
+                    activity_id=second.id,
+                    activity_name=second.name,
+                    duration_hours=second.duration_hours,
+                    source=ItinerarySource.SHORTLIST,
+                    reason="Saved in your trip shortlist.",
+                ),
+            ],
+            activity_hours=first.duration_hours + second.duration_hours,
+            transition_hours=0.5,
+            planned_hours=first.duration_hours + second.duration_hours + 0.5,
+            capacity_hours=8,
+        )
+
+        summary = route_summary_for_day(day, {first.id: first, second.id: second})
+
+        self.assertEqual(summary.located_stops, 2)
+        self.assertEqual(len(summary.legs), 1)
+        self.assertGreater(summary.total_walking_minutes or 0, 0)
+        self.assertIn(summary.status, {"compact", "walkable", "spread_out"})
+
+    def test_route_summary_is_honest_when_coordinates_are_missing(self) -> None:
+        first, second = self.activities[:2]
+        day = ItineraryDay(
+            day_number=1,
+            activities=[
+                ScheduledActivity(
+                    activity_id=first.id,
+                    activity_name=first.name,
+                    duration_hours=first.duration_hours,
+                    source=ItinerarySource.SHORTLIST,
+                    reason="Saved in your trip shortlist.",
+                ),
+                ScheduledActivity(
+                    activity_id=second.id,
+                    activity_name=second.name,
+                    duration_hours=second.duration_hours,
+                    source=ItinerarySource.SHORTLIST,
+                    reason="Saved in your trip shortlist.",
+                ),
+            ],
+            activity_hours=first.duration_hours + second.duration_hours,
+            transition_hours=0.5,
+            planned_hours=first.duration_hours + second.duration_hours + 0.5,
+            capacity_hours=8,
+        )
+
+        summary = route_summary_for_day(day, {first.id: first, second.id: second})
+
+        self.assertEqual(summary.status, "approximate")
+        self.assertIn("no coordinates", summary.message)
+
+    def test_planner_orders_located_stops_to_reduce_backtracking(self) -> None:
+        route_activities = [
+            self.activities[0].model_copy(
+                update={
+                    "id": "route_a",
+                    "name": "Route A",
+                    "duration_hours": 1,
+                    "latitude": 41.9,
+                    "longitude": 12.48,
+                }
+            ),
+            self.activities[1].model_copy(
+                update={
+                    "id": "route_b",
+                    "name": "Route B",
+                    "duration_hours": 1,
+                    "latitude": 41.901,
+                    "longitude": 12.481,
+                }
+            ),
+            self.activities[2].model_copy(
+                update={
+                    "id": "route_c",
+                    "name": "Route C",
+                    "duration_hours": 1,
+                    "latitude": 41.91,
+                    "longitude": 12.49,
+                }
+            ),
+        ]
+        trip = make_trip(days=1, pace="packed")
+        plan = build_itinerary(
+            trip,
+            route_activities,
+            rank_activities(route_activities, trip),
+            ["route_c", "route_a", "route_b"],
+            auto_fill=False,
+        )
+
+        self.assertEqual(
+            [activity.activity_id for activity in plan.days[0].activities],
+            ["route_c", "route_b", "route_a"],
         )
 
     def test_plan_model_rejects_duplicate_activity_across_days(self) -> None:
