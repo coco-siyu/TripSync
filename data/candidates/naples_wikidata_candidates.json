@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-01T02:02:43.380482+00:00",
+  "generated_at": "2026-08-10T06:46:05.702737+00:00",
   "city": "Naples",
   "country": "Italy",
   "source": {
@@ -11,6 +11,64 @@
     "attribution": "Data sourced from Wikidata."
   },
   "candidates": [
+    {
+      "wikidata_id": "Q2034636",
+      "name": "Astronomical Observatory of Capodimonte",
+      "latitude": 40.86286111,
+      "longitude": 14.25505556,
+      "source_url": "https://www.wikidata.org/wiki/Q2034636",
+      "wikidata_types": [
+        "astronomical observatory",
+        "building",
+        "science museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Astronomical_Observatory_of_Capodimonte",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Observatory%20Capodimonte.jpg"
+    },
+    {
+      "wikidata_id": "Q799950",
+      "name": "Bagnoli",
+      "latitude": 40.813956,
+      "longitude": 14.165925,
+      "source_url": "https://www.wikidata.org/wiki/Q799950",
+      "wikidata_types": [
+        "quarter of Naples"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bagnoli",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Italsider%20di%20Bagnoli%201.JPG"
+    },
+    {
+      "wikidata_id": "Q897603",
+      "name": "Basilica of St. Dominic",
+      "latitude": 40.848731,
+      "longitude": 14.254407,
+      "source_url": "https://www.wikidata.org/wiki/Q897603",
+      "wikidata_types": [
+        "conventual church",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Domenico_Maggiore",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/SanDomenicoMaggioreNaples.jpg"
+    },
+    {
+      "wikidata_id": "Q2256644",
+      "name": "Biblioteca nazionale Vittorio Emanuele III",
+      "latitude": 40.83619,
+      "longitude": 14.24956,
+      "source_url": "https://www.wikidata.org/wiki/Q2256644",
+      "wikidata_types": [
+        "real property",
+        "state public library"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access and visitor relevance."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Biblioteca_Nazionale_Vittorio_Emanuele_III",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/NapoliPalazzoReale.jpg"
+    },
     {
       "wikidata_id": "Q897839",
       "name": "Cappella Sansevero",
@@ -94,6 +152,20 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Certosa%20di%20San%20Martino%20from%20Sant%27Elmo.jpg"
     },
     {
+      "wikidata_id": "Q1255667",
+      "name": "Church of San Ferdinando, Naples",
+      "latitude": 40.8376,
+      "longitude": 14.2487,
+      "source_url": "https://www.wikidata.org/wiki/Q1255667",
+      "wikidata_types": [
+        "church building",
+        "Jesuit church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Ferdinando_(church),_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Napoli%20s%20Ferdinando%201040518.JPG"
+    },
+    {
       "wikidata_id": "Q581804",
       "name": "Farnese Bull",
       "latitude": 40.8534,
@@ -122,6 +194,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Galleria%20San%20Martino.%2001.JPG"
     },
     {
+      "wikidata_id": "Q718774",
+      "name": "Gesù Nuovo",
+      "latitude": 40.84762222,
+      "longitude": 14.25180278,
+      "source_url": "https://www.wikidata.org/wiki/Q718774",
+      "wikidata_types": [
+        "church building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ges%C3%B9_Nuovo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Facciata%20della%20chiesa%20del%20Ges%C3%B9%20Nuovo%20%28Napoli%29%20-%20BW%202013-05-16.jpg"
+    },
+    {
       "wikidata_id": "Q832957",
       "name": "Historic Centre of Naples",
       "latitude": 40.85139,
@@ -134,6 +219,32 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Historic_Centre_of_Naples",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/NapoliMaschioAngioinoIngresso.jpg"
+    },
+    {
+      "wikidata_id": "Q1085934",
+      "name": "Line 1",
+      "latitude": 40.85564,
+      "longitude": 14.22749,
+      "source_url": "https://www.wikidata.org/wiki/Q1085934",
+      "wikidata_types": [
+        "rapid transit line"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Line_1_(Naples_Metro)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Metro%20Napoli%20Linea%201%20Piscinola.jpg"
+    },
+    {
+      "wikidata_id": "Q1921150",
+      "name": "Mercato",
+      "latitude": 40.8475,
+      "longitude": 14.27222222,
+      "source_url": "https://www.wikidata.org/wiki/Q1921150",
+      "wikidata_types": [
+        "quarter of Naples"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mercato_(Naples)",
+      "image_url": null
     },
     {
       "wikidata_id": "Q290549",
@@ -225,6 +336,49 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Nisida%20al%20tramonto.jpg"
     },
     {
+      "wikidata_id": "Q221640",
+      "name": "Ospedale L'Albergo Reale dei Poveri",
+      "latitude": 40.863465,
+      "longitude": 14.26546,
+      "source_url": "https://www.wikidata.org/wiki/Q221640",
+      "wikidata_types": [
+        "former hospital",
+        "hospital",
+        "palace",
+        "public building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ospedale_L%27Albergo_Reale_dei_Poveri,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Benjamin%20Rolland%20Murat%20visita%20l%20albergo%20dei%20poveri.JPG"
+    },
+    {
+      "wikidata_id": "Q4115652",
+      "name": "Palace of Capodimonte",
+      "latitude": 40.86700556,
+      "longitude": 14.25053333,
+      "source_url": "https://www.wikidata.org/wiki/Q4115652",
+      "wikidata_types": [
+        "museum",
+        "royal palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palace_of_Capodimonte",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Reggia%20di%20Capodimonte%201.JPG"
+    },
+    {
+      "wikidata_id": "Q926401",
+      "name": "piazza Dante",
+      "latitude": 40.84901667,
+      "longitude": 14.25007222,
+      "source_url": "https://www.wikidata.org/wiki/Q926401",
+      "wikidata_types": [
+        "square"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_Dante,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Monument%20of%20Dante%20Alighieri%20in%20Piazza%20Dante%20Napoli.%20Campania%2C%20Italy%2C%20South%20Europe-2.jpg"
+    },
+    {
       "wikidata_id": "Q1047594",
       "name": "piazza del Plebiscito",
       "latitude": 40.8359,
@@ -236,6 +390,45 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_del_Plebiscito",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20reale%20pontificia%20di%20San%20Francesco%20di%20Paola%20Piazza%20del%20Plebiscito%20Napoli%20Neapel%20Italy%20Foto%20Wolfgang%20Pehlemann%20P1070687.jpg"
+    },
+    {
+      "wikidata_id": "Q3398528",
+      "name": "Port of Naples",
+      "latitude": 40.84216,
+      "longitude": 14.25736,
+      "source_url": "https://www.wikidata.org/wiki/Q3398528",
+      "wikidata_types": [
+        "port"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Port_of_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Napoli-porto01.jpg"
+    },
+    {
+      "wikidata_id": "Q834089",
+      "name": "Porta Capuana",
+      "latitude": 40.8544,
+      "longitude": 14.265434,
+      "source_url": "https://www.wikidata.org/wiki/Q834089",
+      "wikidata_types": [
+        "city gate"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Porta_Capuana",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Porta%20Capuana%202025.jpg"
+    },
+    {
+      "wikidata_id": "Q589347",
+      "name": "Posillipo",
+      "latitude": 40.80555556,
+      "longitude": 14.20333333,
+      "source_url": "https://www.wikidata.org/wiki/Q589347",
+      "wikidata_types": [
+        "quarter of Naples"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Posillipo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Veduta%20di%20Napoli%20da%20Pizzofalcone%20003.JPG"
     },
     {
       "wikidata_id": "Q426339",
@@ -274,6 +467,75 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Francesco%20di%20Paola%20%28Naples%29%20exterior.jpg"
     },
     {
+      "wikidata_id": "Q955081",
+      "name": "San Giacomo degli Spagnoli",
+      "latitude": 40.84065,
+      "longitude": 14.24992,
+      "source_url": "https://www.wikidata.org/wiki/Q955081",
+      "wikidata_types": [
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Giacomo_degli_Spagnoli,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Portale%20Spagn.jpg"
+    },
+    {
+      "wikidata_id": "Q281957",
+      "name": "San Giorgio Maggiore, Naples",
+      "latitude": 40.84971,
+      "longitude": 14.26075,
+      "source_url": "https://www.wikidata.org/wiki/Q281957",
+      "wikidata_types": [
+        "church building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Giorgio_Maggiore,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Napoli%20-%20Chiesa%20di%20San%20Giorgio%20Maggiore.jpg"
+    },
+    {
+      "wikidata_id": "Q1084608",
+      "name": "San Lorenzo Maggiore",
+      "latitude": 40.850930555,
+      "longitude": 14.258119444,
+      "source_url": "https://www.wikidata.org/wiki/Q1084608",
+      "wikidata_types": [
+        "church building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Lorenzo_Maggiore,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Lorenzo%20facciata.jpg"
+    },
+    {
+      "wikidata_id": "Q693174",
+      "name": "San Paolo Maggiore",
+      "latitude": 40.85144,
+      "longitude": 14.25683,
+      "source_url": "https://www.wikidata.org/wiki/Q693174",
+      "wikidata_types": [
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Paolo_Maggiore,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20di%20San%20Paolo%20Maggiore%20%28Napoli%29%2C%20facciata%2001.jpg"
+    },
+    {
+      "wikidata_id": "Q368820",
+      "name": "San Pietro a Majella Conservatory of Music",
+      "latitude": 40.84944444,
+      "longitude": 14.2525,
+      "source_url": "https://www.wikidata.org/wiki/Q368820",
+      "wikidata_types": [
+        "conservatory",
+        "palace",
+        "university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Conservatorio_di_San_Pietro_a_Majella",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/NapoliConservatorioSanPietroAMaiellaTarga.jpg"
+    },
+    {
       "wikidata_id": "Q810104",
       "name": "Santa Chiara",
       "latitude": 40.84688,
@@ -286,6 +548,34 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Chiara,_Naples",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Monastero%20di%20SantaChiaraNaples.jpg"
+    },
+    {
+      "wikidata_id": "Q717930",
+      "name": "Santa Maria del Carmine",
+      "latitude": 40.84677,
+      "longitude": 14.26823,
+      "source_url": "https://www.wikidata.org/wiki/Q717930",
+      "wikidata_types": [
+        "church building",
+        "minor basilica",
+        "shrine"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_del_Carmine,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Santa%20Maria%20del%20Carmine%20Maggiore%20%28Naples%29.jpg"
+    },
+    {
+      "wikidata_id": "Q514901",
+      "name": "Santa Maria della Sanità, Naples",
+      "latitude": 40.859684,
+      "longitude": 14.24893,
+      "source_url": "https://www.wikidata.org/wiki/Q514901",
+      "wikidata_types": [
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_della_Sanit%C3%A0,_Naples",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/SantaMariaSanit%C3%A0Facciata.jpg"
     },
     {
       "wikidata_id": "Q3523",
@@ -328,6 +618,22 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/StadioPartenopeo.jpg"
     },
     {
+      "wikidata_id": "Q220221",
+      "name": "Stazione Zoologica Anton Dohrn",
+      "latitude": 40.8327,
+      "longitude": 14.23577,
+      "source_url": "https://www.wikidata.org/wiki/Q220221",
+      "wikidata_types": [
+        "archives",
+        "centre for marine biology",
+        "research institute",
+        "zoo"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Stazione_Zoologica_Anton_Dohrn",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/StazionezoologicaAntonDohrnNapoli19-12-10%201512.jpg"
+    },
+    {
       "wikidata_id": "Q628491",
       "name": "Teatro di San Carlo",
       "latitude": 40.837388229,
@@ -341,6 +647,20 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Teatro_di_San_Carlo",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Teatro%20de%20San%20Carlos%2C%20N%C3%A1poles%2C%20Italia%2C%202023-03-25%2C%20DD%20184-186%20HDR.jpg"
+    },
+    {
+      "wikidata_id": "Q3992393",
+      "name": "Toledo",
+      "latitude": 40.8424,
+      "longitude": 14.2493,
+      "source_url": "https://www.wikidata.org/wiki/Q3992393",
+      "wikidata_types": [
+        "metro station",
+        "underground railway station"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Toledo_station_(Naples)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Toledo%20%28Metropolitana%20di%20Napoli%20L1%29.jpg"
     },
     {
       "wikidata_id": "Q691851",
@@ -357,6 +677,19 @@
       ],
       "wikipedia_url": "https://en.wikipedia.org/wiki/University_of_Naples_Federico_II",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Universit%C3%A0%20degli%20Studi%20di%20Napoli%20Federico%20II%20%283542%29.jpg"
+    },
+    {
+      "wikidata_id": "Q718790",
+      "name": "Villa Donn'Anna",
+      "latitude": 40.8199,
+      "longitude": 14.2143,
+      "source_url": "https://www.wikidata.org/wiki/Q718790",
+      "wikidata_types": [
+        "villa"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Villa_Donn%27Anna",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Napoli%20-%20Palazzo%20Donnanna.jpg"
     }
   ],
   "review_note": "These are discovery candidates only. Do not copy an item into activities.json until its TripSync fields have been manually reviewed."

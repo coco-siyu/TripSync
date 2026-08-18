@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-03T04:01:04.159491+00:00",
+  "generated_at": "2026-08-10T06:46:03.748535+00:00",
   "city": "Venice",
   "country": "Italy",
   "source": {
@@ -41,6 +41,19 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Antonio%20Contin%20-%20Ponte%20dei%20sospiri%20%28Venice%29.jpg"
     },
     {
+      "wikidata_id": "Q52439",
+      "name": "Burano",
+      "latitude": 45.485555555,
+      "longitude": 12.4175,
+      "source_url": "https://www.wikidata.org/wiki/Q52439",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Burano",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Burano%20Vendig%20Aug%202021%204.jpg"
+    },
+    {
       "wikidata_id": "Q820872",
       "name": "Ca' d'Oro",
       "latitude": 45.440555555,
@@ -57,6 +70,77 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ca%27%20d%27Oro%20facciata.jpg"
     },
     {
+      "wikidata_id": "Q957551",
+      "name": "Ca' Foscari",
+      "latitude": 45.434464,
+      "longitude": 12.3266,
+      "source_url": "https://www.wikidata.org/wiki/Q957551",
+      "wikidata_types": [
+        "city palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_Foscari",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/%28Venice%29%20Ca%27%20Foscari.jpg"
+    },
+    {
+      "wikidata_id": "Q1546906",
+      "name": "Ca' Foscari University of Venice",
+      "latitude": 45.434464,
+      "longitude": 12.3266,
+      "source_url": "https://www.wikidata.org/wiki/Q1546906",
+      "wikidata_types": [
+        "university"
+      ],
+      "review_flags": [
+        "Institution: verify visitor access or a campus-tour experience."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_Foscari_University_of_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/%28Venice%29%20Ca%27%20Foscari.jpg"
+    },
+    {
+      "wikidata_id": "Q756807",
+      "name": "Ca' Pesaro",
+      "latitude": 45.441,
+      "longitude": 12.33146,
+      "source_url": "https://www.wikidata.org/wiki/Q756807",
+      "wikidata_types": [
+        "museum",
+        "palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_Pesaro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ca%27Pesaro%20di%20Baldassarre%20Longhena%20facciata%20sul%20Canal%20Grande.jpg"
+    },
+    {
+      "wikidata_id": "Q1052171",
+      "name": "Ca' Rezzonico",
+      "latitude": 45.434086,
+      "longitude": 12.324354,
+      "source_url": "https://www.wikidata.org/wiki/Q1052171",
+      "wikidata_types": [
+        "art museum",
+        "mansion",
+        "palace"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ca%27_Rezzonico",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ca%27%20Rezzonico%20%28Venice%29.jpg"
+    },
+    {
+      "wikidata_id": "Q52423",
+      "name": "Cannaregio",
+      "latitude": 45.446,
+      "longitude": 12.327,
+      "source_url": "https://www.wikidata.org/wiki/Q52423",
+      "wikidata_types": [
+        "neighborhood",
+        "sestiere of Venice"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Cannaregio",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Canale%20di%20Cannaregio%20-%20Viewed%20from%20Grand%20Canal.jpg"
+    },
+    {
       "wikidata_id": "Q35191",
       "name": "Carnival of Venice",
       "latitude": 45.4397,
@@ -69,6 +153,33 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Carnival_of_Venice",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venezia%20flickr03.jpg"
+    },
+    {
+      "wikidata_id": "Q52425",
+      "name": "Castello",
+      "latitude": 45.435694,
+      "longitude": 12.3485,
+      "source_url": "https://www.wikidata.org/wiki/Q52425",
+      "wikidata_types": [
+        "sestiere of Venice"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Castello,_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Isole%20di%20castello.png"
+    },
+    {
+      "wikidata_id": "Q713558",
+      "name": "Church of San Giorgio Maggiore",
+      "latitude": 45.4293,
+      "longitude": 12.3433,
+      "source_url": "https://www.wikidata.org/wiki/Q713558",
+      "wikidata_types": [
+        "church building",
+        "minor basilica"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Giorgio_Maggiore_(church),_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20di%20San%20Giorgio%20Maggiore%20%28Venice%29.jpg"
     },
     {
       "wikidata_id": "Q189883",
@@ -84,6 +195,19 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Doge%27s_Palace",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/%28Venice%29%20Doge%27s%20Palace%20facing%20the%20sea.jpg"
+    },
+    {
+      "wikidata_id": "Q52422",
+      "name": "Dorsoduro",
+      "latitude": 45.431,
+      "longitude": 12.326,
+      "source_url": "https://www.wikidata.org/wiki/Q52422",
+      "wikidata_types": [
+        "sestiere of Venice"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Dorsoduro",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ponte%20de%20l%27Avogaria%20%28Venice%29%20-%20Initio%20del%20rio%20de%20Malpaga.jpg"
     },
     {
       "wikidata_id": "Q338330",
@@ -131,6 +255,34 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Panorama%20of%20Canal%20Grande%20and%20Ponte%20di%20Rialto%2C%20Venice%20-%20September%202017.jpg"
     },
     {
+      "wikidata_id": "Q1994701",
+      "name": "Horses of Saint Mark",
+      "latitude": 45.43449167,
+      "longitude": 12.33936944,
+      "source_url": "https://www.wikidata.org/wiki/Q1994701",
+      "wikidata_types": [
+        "group of sculptures"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Horses_of_Saint_Mark",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Horses%20of%20Basilica%20San%20Marco%20bright.jpg"
+    },
+    {
+      "wikidata_id": "Q830807",
+      "name": "Il Redentore",
+      "latitude": 45.424991666,
+      "longitude": 12.332452777,
+      "source_url": "https://www.wikidata.org/wiki/Q830807",
+      "wikidata_types": [
+        "votive church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Il_Redentore",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Chiesa%20del%20Redentore%20%28Venice%29.jpg"
+    },
+    {
       "wikidata_id": "Q226221",
       "name": "Lido di Venezia",
       "latitude": 45.383333333,
@@ -143,6 +295,19 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Venice_Lido",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Lido%20Aug%202020%201.jpg"
+    },
+    {
+      "wikidata_id": "Q519717",
+      "name": "Mazzorbo",
+      "latitude": 45.4873,
+      "longitude": 12.41007,
+      "source_url": "https://www.wikidata.org/wiki/Q519717",
+      "wikidata_types": [
+        "frazione"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mazzorbo",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/0%20Quartier%20Nord%20et%20campanile%20de%20l%27%C3%AEle%20de%20Mazzorbo.jpg"
     },
     {
       "wikidata_id": "Q541405",
@@ -172,6 +337,20 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Aerial%20photographs%20of%20Venice%202013%2C%20Anton%20Nossik%2C%20009.jpg"
     },
     {
+      "wikidata_id": "Q907964",
+      "name": "Palazzo Grassi",
+      "latitude": 45.4337974,
+      "longitude": 12.3279355,
+      "source_url": "https://www.wikidata.org/wiki/Q907964",
+      "wikidata_types": [
+        "city palace",
+        "museum"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Grassi",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palais%20Grassi.jpg"
+    },
+    {
       "wikidata_id": "Q217527",
       "name": "Piazza San Marco",
       "latitude": 45.434,
@@ -184,6 +363,52 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Piazza_San_Marco",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20San%20Marco%20%28Venice%29%20at%20night-msu-2021-6449-.jpg"
+    },
+    {
+      "wikidata_id": "Q52509",
+      "name": "Ponte dell'Accademia",
+      "latitude": 45.43166,
+      "longitude": 12.32899,
+      "source_url": "https://www.wikidata.org/wiki/Q52509",
+      "wikidata_types": [
+        "arch bridge",
+        "Bridges in Venice",
+        "footbridge"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ponte_dell%27Accademia",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ponte%20dell%27Accademia%20Venezia.jpg"
+    },
+    {
+      "wikidata_id": "Q1134699",
+      "name": "Ponte della Libertà",
+      "latitude": 45.454486,
+      "longitude": 12.297306,
+      "source_url": "https://www.wikidata.org/wiki/Q1134699",
+      "wikidata_types": [
+        "arch bridge",
+        "Bridges in Venice",
+        "road-rail bridge"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ponte_della_Libert%C3%A0",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venise%20Aero%20Pont%20de%20la%20Libert%C3%A9.jpg"
+    },
+    {
+      "wikidata_id": "Q2570221",
+      "name": "Portrait of the Four Tetrarchs",
+      "latitude": 45.43416667,
+      "longitude": 12.33972222,
+      "source_url": "https://www.wikidata.org/wiki/Q2570221",
+      "wikidata_types": [
+        "group of sculptures",
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Portrait_of_the_Four_Tetrarchs",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/0%20Venise%2C%20les%20T%C3%A9trarques%20de%20la%20basilique%20San%20Marco%20%282%29.JPG"
     },
     {
       "wikidata_id": "Q52505",
@@ -204,6 +429,45 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Rialto%202025%204.jpg"
     },
     {
+      "wikidata_id": "Q126327",
+      "name": "San Giorgio Maggiore",
+      "latitude": 45.427752,
+      "longitude": 12.344168,
+      "source_url": "https://www.wikidata.org/wiki/Q126327",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Giorgio_Maggiore",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Giorgio%20Maggiore%20dal%20campanile%20di%20San%20Marco.jpg"
+    },
+    {
+      "wikidata_id": "Q1791020",
+      "name": "San Lazzaro degli Armeni",
+      "latitude": 45.411979,
+      "longitude": 12.361422,
+      "source_url": "https://www.wikidata.org/wiki/Q1791020",
+      "wikidata_types": [
+        "island"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Lazzaro_degli_Armeni",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Lazzaro%20degli%20Armeni%2C%20Venice%20aerial%20photo%202013.jpg"
+    },
+    {
+      "wikidata_id": "Q52427",
+      "name": "San Marco",
+      "latitude": 45.434,
+      "longitude": 12.333,
+      "source_url": "https://www.wikidata.org/wiki/Q52427",
+      "wikidata_types": [
+        "sestiere of Venice"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Marco",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Chiese%20di%20San%20Marco.png"
+    },
+    {
       "wikidata_id": "Q844263",
       "name": "San Michele",
       "latitude": 45.446944444,
@@ -215,6 +479,45 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Isola_di_San_Michele",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Aerial%20photographs%20of%20Venice%202013%2C%20Anton%20Nossik%2C%20031.jpg"
+    },
+    {
+      "wikidata_id": "Q52429",
+      "name": "San Polo",
+      "latitude": 45.438055555,
+      "longitude": 12.333055555,
+      "source_url": "https://www.wikidata.org/wiki/Q52429",
+      "wikidata_types": [
+        "sestiere of Venice"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Polo",
+      "image_url": null
+    },
+    {
+      "wikidata_id": "Q794876",
+      "name": "San Zaccaria",
+      "latitude": 45.434722222,
+      "longitude": 12.343333333,
+      "source_url": "https://www.wikidata.org/wiki/Q794876",
+      "wikidata_types": [
+        "church building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/San_Zaccaria,_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Chiesa%20di%20San%20Zaccaria%20Venezia.jpg"
+    },
+    {
+      "wikidata_id": "Q52428",
+      "name": "Santa Croce",
+      "latitude": 45.437661111,
+      "longitude": 12.319208333,
+      "source_url": "https://www.wikidata.org/wiki/Q52428",
+      "wikidata_types": [
+        "sestiere of Venice"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Croce_(Venice)",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/San%20Simeone%20Piccolo%20%28Venice%29.jpg"
     },
     {
       "wikidata_id": "Q52531",
@@ -230,6 +533,35 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_della_Salute",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Santa%20Maria%20della%20Salute%20from%20Hotel%20Monaco.jpg"
+    },
+    {
+      "wikidata_id": "Q224961",
+      "name": "Santa Maria Gloriosa dei Frari",
+      "latitude": 45.43693,
+      "longitude": 12.32649,
+      "source_url": "https://www.wikidata.org/wiki/Q224961",
+      "wikidata_types": [
+        "minor basilica",
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santa_Maria_Gloriosa_dei_Frari",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Facade%20of%20Santa%20Maria%20Gloriosa%20dei%20Frari%20%28Venice%29.jpg"
+    },
+    {
+      "wikidata_id": "Q155225",
+      "name": "Santi Giovanni e Paolo",
+      "latitude": 45.439216666,
+      "longitude": 12.342397222,
+      "source_url": "https://www.wikidata.org/wiki/Q155225",
+      "wikidata_types": [
+        "church building",
+        "minor basilica",
+        "parish church"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Santi_Giovanni_e_Paolo,_Venice",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Basilica%20dei%20Santi%20Giovanni%20e%20Paolo.jpg"
     },
     {
       "wikidata_id": "Q172988",
@@ -298,6 +630,20 @@
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Arsenal%20-%20Venice%2C%20Italy%20-%20panoramio.jpg"
     },
     {
+      "wikidata_id": "Q649030",
+      "name": "Venetian Ghetto",
+      "latitude": 45.445277777,
+      "longitude": 12.326388888,
+      "source_url": "https://www.wikidata.org/wiki/Q649030",
+      "wikidata_types": [
+        "island",
+        "neighborhood"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venetian_Ghetto",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venetian%20Ghetto%20from%20above.jpg"
+    },
+    {
       "wikidata_id": "Q76925",
       "name": "Venetian Lagoon",
       "latitude": 45.413055555,
@@ -310,6 +656,19 @@
       "review_flags": [],
       "wikipedia_url": "https://en.wikipedia.org/wiki/Venetian_Lagoon",
       "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/The%20Venetian%20Lagoon%20ESA25362327%20%28cropped%29.tiff"
+    },
+    {
+      "wikidata_id": "Q801567",
+      "name": "Venezia Santa Lucia railway station",
+      "latitude": 45.440975,
+      "longitude": 12.321038888,
+      "source_url": "https://www.wikidata.org/wiki/Q801567",
+      "wikidata_types": [
+        "dead-end railway station"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Venezia_Santa_Lucia_railway_station",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Venice%2C%20Cannaregio%2C%20Stazione%20St.%20Lucia.jpg"
     },
     {
       "wikidata_id": "Q205751",
