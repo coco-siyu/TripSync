@@ -134,6 +134,11 @@ def _render_published_activity_editor(activity: Activity) -> None:
         accessibility = st.text_input("Accessibility notes", value=activity.accessibility_notes)
         description = st.text_area("Short factual description", value=activity.description)
         source_url = st.text_input("Verification URL", value=str(activity.source_url))
+        official_url = st.text_input(
+            "Official visitor information URL",
+            value=str(activity.official_url or ""),
+            help="Use the attraction's own visitor or ticketing site when known.",
+        )
         save = st.form_submit_button("Validate and save changes", icon=":material/save:", type="primary")
     if save:
         try:
@@ -151,6 +156,7 @@ def _render_published_activity_editor(activity: Activity) -> None:
                 "accessibility_notes": accessibility,
                 "description": description,
                 "source_url": source_url,
+                "official_url": official_url or None,
             })
             update_activity(updated)
             st.success(f"Saved changes to {updated.name}.")

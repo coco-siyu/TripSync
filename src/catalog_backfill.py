@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable
 
-from src.catalog import ACTIVITY_CATALOG_PATH, load_curated_activities, update_activity
+from src.catalog import ACTIVITY_CATALOG_PATH, load_curated_activities, update_activities
 from src.catalog_import import CatalogImportError, WIKIDATA_ENTITY_URL, fetch_coordinates
 from src.models import Activity
 
@@ -21,6 +21,8 @@ CoordinateFetcher = Callable[[list[str]], dict[str, tuple[float, float]]]
 def wikidata_id_from_source(activity: Activity) -> str | None:
     """Extract a stable Wikidata item ID from an activity's provenance URL."""
 
+    if activity.wikidata_id:
+        return activity.wikidata_id
     source = str(activity.source_url)
     if not source.startswith(WIKIDATA_ENTITY_URL):
         return None
@@ -79,8 +81,10 @@ def main() -> None:
     if arguments.dry_run:
         print(f"Would add coordinates to {refreshed} activity record(s); {unresolved} could not be resolved.")
         return
-    for activity in updated:
-        update_activity(activity, ACTIVITY_CATALOG_PATH)
+    # Coordinates do not contribute to the stable text used for semantic
+    # embeddings, so this is one catalog write with no unnecessary embedding
+    # lookup or OpenAI call per activity.
+    update_activities(updated, ACTIVITY_CATALOG_PATH, sync_embeddings=False)
     print(f"Added coordinates to {refreshed} activity record(s); {unresolved} could not be resolved.")
 
 

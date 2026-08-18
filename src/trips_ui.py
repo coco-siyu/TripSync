@@ -21,8 +21,8 @@ def render_saved_trips() -> None:
     st.markdown('<div class="ts-section-label">Your saved plans</div>', unsafe_allow_html=True)
     st.title("Pick up where you left off")
     st.caption(
-        "This demo shows plans saved in this browser session. Other visitors' "
-        "plans stay private."
+        "Saved trips include the itinerary you had at the time of saving. This "
+        "demo shows plans saved in this browser session; other visitors' plans stay private."
     )
     records = list_saved_trips(st.session_state.feedback_session_id)
     if not records:

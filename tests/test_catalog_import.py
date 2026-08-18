@@ -30,6 +30,7 @@ PAYLOAD = {
                 "coord": {"value": "Point(12.5 41.9)"},
                 "typeLabel": {"value": "museum"},
                 "article": {"value": "https://en.wikipedia.org/wiki/Example_Museum"},
+                "officialWebsite": {"value": "https://museum.example.org"},
             },
             {
                 "item": {"value": "http://www.wikidata.org/entity/Q123"},
@@ -75,6 +76,7 @@ class CatalogImportTests(unittest.TestCase):
         self.assertEqual(candidates[0].latitude, 41.9)
         self.assertEqual(candidates[0].longitude, 12.5)
         self.assertEqual(candidates[0].source_url, "https://www.wikidata.org/wiki/Q123")
+        self.assertEqual(candidates[0].official_url, "https://museum.example.org")
         self.assertIsNone(candidates[1].wikipedia_url)
         self.assertEqual(candidates[0].wikidata_types, ("art museum", "museum"))
         self.assertEqual(candidates[0].review_flags, ())

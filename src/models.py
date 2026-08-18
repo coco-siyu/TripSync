@@ -152,6 +152,9 @@ class Activity(TripSyncModel):
     reservation_required: bool
     description: str = Field(min_length=1, max_length=800)
     source_url: HttpUrl
+    official_url: HttpUrl | None = None
+    wikipedia_url: HttpUrl | None = None
+    wikidata_id: str | None = Field(default=None, pattern=r"^Q\d+$")
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 

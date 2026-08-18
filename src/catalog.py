@@ -65,6 +65,9 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
         "reservation_required": fields["reservation_required"],
         "description": fields["description"],
         "source_url": fields.get("source_url") or candidate["source_url"],
+        "official_url": fields.get("official_url") or candidate.get("official_url"),
+        "wikipedia_url": fields.get("wikipedia_url") or candidate.get("wikipedia_url"),
+        "wikidata_id": candidate.get("wikidata_id"),
         "latitude": fields.get("latitude", candidate.get("latitude")),
         "longitude": fields.get("longitude", candidate.get("longitude")),
     })
@@ -241,14 +244,35 @@ def save_activity(activity: Activity, path: Path = ACTIVITY_CATALOG_PATH) -> Non
 def update_activity(activity: Activity, path: Path = ACTIVITY_CATALOG_PATH) -> None:
     """Replace an existing validated activity while preserving its stable ID."""
 
-    existing = load_curated_activities(path)
-    if activity.id not in {entry.id for entry in existing}:
-        raise ValueError(f"{activity.name} is not in the curated catalog")
-    if _uses_supabase(path):
-        upsert_many(SUPABASE_CATALOG_TABLE, _remote_rows([activity]), conflict="activity_id")
-        _try_sync_embeddings([activity])
+    update_activities([activity], path=path)
+
+
+def update_activities(
+    activities_to_update: list[Activity],
+    path: Path = ACTIVITY_CATALOG_PATH,
+    *,
+    sync_embeddings: bool = True,
+) -> None:
+    """Persist existing catalog records, optionally refreshing text embeddings once."""
+
+    if not activities_to_update:
         return
-    updated = [activity if entry.id == activity.id else entry for entry in existing]
+    existing = load_curated_activities(path)
+    existing_ids = {entry.id for entry in existing}
+    missing_ids = [activity.id for activity in activities_to_update if activity.id not in existing_ids]
+    if missing_ids:
+        raise ValueError(f"{activities_to_update[0].name} is not in the curated catalog")
+    if _uses_supabase(path):
+        upsert_many(
+            SUPABASE_CATALOG_TABLE,
+            _remote_rows(activities_to_update),
+            conflict="activity_id",
+        )
+        if sync_embeddings:
+            _try_sync_embeddings(activities_to_update)
+        return
+    updates_by_id = {activity.id: activity for activity in activities_to_update}
+    updated = [updates_by_id.get(entry.id, entry) for entry in existing]
     _write_activities(updated, path)
 
 
@@ -311,6 +335,8 @@ def review_curate_candidates(
             "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
             "description": f"Visit {name}, a curated {draft.category.replace('_', ' ')} experience in {city}.",
             "source_url": candidate.get("source_url"),
+            "official_url": candidate.get("official_url"),
+            "wikipedia_url": candidate.get("wikipedia_url"),
         }
         try:
             activities.append(build_activity(candidate, city, country, fields))

@@ -96,6 +96,22 @@ AUTO_PUBLISH_TYPE_TERMS = (
     "triumphal arch",
 )
 
+# These terms frequently describe well-known visitor attractions in large
+# cities, but are broader than a museum or cathedral.  We only auto-publish
+# them when Wikidata also supplies an English Wikipedia article; otherwise
+# they remain in the review queue.
+EVIDENCED_AUTO_PUBLISH_TYPE_TERMS = (
+    "tourist attraction",
+    "listed building",
+    "cultural heritage",
+    "heritage site",
+    "historic building",
+    "historic house",
+    "house museum",
+    "royal residence",
+    "place of worship",
+)
+
 
 @dataclass(frozen=True)
 class ActivityDraft:
@@ -158,6 +174,13 @@ def classify_candidate(candidate: dict) -> CandidateQualityDecision:
         confidence = 0.95 if has_wikipedia else 0.86
         evidence = "with an English Wikipedia record" if has_wikipedia else "with a clear Wikidata type"
         return CandidateQualityDecision("auto_publish", confidence, f"Recognised {matched} {evidence}.")
+    matched = _matches_any(types, EVIDENCED_AUTO_PUBLISH_TYPE_TERMS)
+    if matched and candidate.get("wikipedia_url"):
+        return CandidateQualityDecision(
+            "auto_publish",
+            0.84,
+            f"Recognised {matched} with an English Wikipedia record.",
+        )
     matched = _matches_any(types, REVIEW_TYPE_TERMS)
     if matched:
         return CandidateQualityDecision("review", 0.65, f"{matched.title()} needs context before it becomes a trip activity.")
@@ -215,4 +238,6 @@ def automatic_activity_fields(candidate: dict, city: str) -> dict | None:
         "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
         "description": f"Visit {name}, a curated {draft.category.replace('_', ' ')} experience in {city}.",
         "source_url": candidate["source_url"],
+        "official_url": candidate.get("official_url"),
+        "wikipedia_url": candidate.get("wikipedia_url"),
     }

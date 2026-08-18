@@ -14,6 +14,7 @@ from src.catalog import (
     consolidate_sample_activities,
     load_curated_activities,
     save_activity,
+    update_activities,
 )
 from src.catalog_backfill import backfill_coordinates, wikidata_id_from_source
 from src.curation_seed import suggested_activities
@@ -24,6 +25,9 @@ CANDIDATE = {
     "source_url": "https://www.wikidata.org/wiki/Q51252",
     "latitude": 43.7696,
     "longitude": 11.2558,
+    "wikidata_id": "Q51252",
+    "official_url": "https://www.uffizi.it/",
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Uffizi",
 }
 FIELDS = {
     "name": "Uffizi Gallery", "category": "museum", "interests": ["art", "history"],
@@ -42,6 +46,8 @@ class CatalogTests(unittest.TestCase):
         activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
         self.assertEqual(activity.latitude, 43.7696)
         self.assertEqual(activity.longitude, 11.2558)
+        self.assertEqual(activity.wikidata_id, "Q51252")
+        self.assertEqual(str(activity.official_url), "https://www.uffizi.it/")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "activities.json"
             save_activity(activity, path)
@@ -85,3 +91,30 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(updated[0].latitude, 43.7696)
         self.assertEqual(updated[0].longitude, 11.2558)
         self.assertEqual(wikidata_id_from_source(updated[0]), "Q51252")
+
+    def test_backfill_uses_stored_wikidata_id_when_primary_source_changes(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={"source_url": "https://www.uffizi.it/", "latitude": None, "longitude": None}
+        )
+        self.assertEqual(wikidata_id_from_source(activity), "Q51252")
+
+    def test_updates_multiple_existing_records_in_one_local_write(self) -> None:
+        first = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        second = first.model_copy(
+            update={"id": "florence_bargello", "name": "Bargello National Museum"}
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "activities.json"
+            save_activity(first, path)
+            save_activity(second, path)
+            update_activities(
+                [
+                    first.model_copy(update={"latitude": 43.77, "longitude": 11.26}),
+                    second.model_copy(update={"latitude": 43.771, "longitude": 11.257}),
+                ],
+                path,
+                sync_embeddings=False,
+            )
+            saved = {activity.id: activity for activity in load_curated_activities(path)}
+            self.assertEqual(saved[first.id].latitude, 43.77)
+            self.assertEqual(saved[second.id].longitude, 11.257)

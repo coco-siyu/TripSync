@@ -62,6 +62,7 @@ class CatalogCandidate:
     wikidata_types: tuple[str, ...]
     review_flags: tuple[str, ...]
     wikipedia_url: str | None = None
+    official_url: str | None = None
     image_url: str | None = None
 
 
@@ -119,7 +120,7 @@ def build_query(city: CitySource, *, limit: int = 100) -> str:
         raise ValueError("limit must be between 1 and 250")
 
     return f"""
-SELECT DISTINCT ?item ?itemLabel ?coord ?article ?image ?sitelinks ?type ?typeLabel WHERE {{
+SELECT DISTINCT ?item ?itemLabel ?coord ?article ?officialWebsite ?image ?sitelinks ?type ?typeLabel WHERE {{
   # Limit unique places before optional type labels expand one place into
   # several result rows. Without this subquery, --limit 25 could mean five
   # attractions with five types each instead of 25 attractions.
@@ -140,6 +141,7 @@ SELECT DISTINCT ?item ?itemLabel ?coord ?article ?image ?sitelinks ?type ?typeLa
     ?article schema:about ?item ;
              schema:isPartOf <https://en.wikipedia.org/> .
   }}
+  OPTIONAL {{ ?item wdt:P856 ?officialWebsite . }}
   OPTIONAL {{ ?item wdt:P18 ?image . }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,it" . }}
 }}
@@ -286,6 +288,7 @@ def parse_candidates(payload: dict[str, Any]) -> list[CatalogCandidate]:
                 "longitude": longitude,
                 "source_url": f"{WIKIDATA_ENTITY_URL}{wikidata_id}",
                 "wikipedia_url": binding.get("article", {}).get("value"),
+                "official_url": binding.get("officialWebsite", {}).get("value"),
                 "image_url": binding.get("image", {}).get("value"),
                 "types": set(),
             },

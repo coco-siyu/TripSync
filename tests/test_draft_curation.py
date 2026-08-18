@@ -41,6 +41,29 @@ class CandidateQualityGateTests(unittest.TestCase):
         self.assertEqual([decision.outcome for decision in decisions], ["auto_publish", "auto_publish"])
         self.assertGreater(decisions[0].confidence, decisions[1].confidence)
 
+    def test_promotes_well_evidenced_broad_london_attraction_types(self) -> None:
+        examples = [
+            candidate(
+                "Tower of London",
+                "Grade I listed building",
+                "tourist attraction",
+                wikipedia_url="https://en.wikipedia.org/wiki/Tower_of_London",
+            ),
+            candidate(
+                "Hampton Court Palace",
+                "historic house",
+                wikipedia_url="https://en.wikipedia.org/wiki/Hampton_Court_Palace",
+            ),
+        ]
+        self.assertEqual(
+            [classify_candidate(item).outcome for item in examples],
+            ["auto_publish", "auto_publish"],
+        )
+
+    def test_keeps_broad_types_without_wikipedia_for_review(self) -> None:
+        decision = classify_candidate(candidate("Unknown listed building", "listed building"))
+        self.assertEqual(decision.outcome, "review")
+
     def test_keeps_context_dependent_places_for_review(self) -> None:
         examples = [
             candidate("University of Paris", "university"),
@@ -69,4 +92,3 @@ class CandidateQualityGateTests(unittest.TestCase):
         self.assertIn("Example Hotel", auto_skipped)
         self.assertEqual([activity.name for activity in review], ["Example University"])
         self.assertIn("Example Museum", review_skipped)
-

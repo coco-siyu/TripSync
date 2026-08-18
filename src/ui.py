@@ -1424,10 +1424,51 @@ def _render_result_card(
 
                 st.caption(activity.accessibility_notes)
                 st.link_button(
-                    "View activity source",
+                    "View primary source",
                     str(activity.source_url),
                     icon=":material/open_in_new:",
                 )
+
+            with st.expander("Plan your visit"):
+                st.caption(
+                    "Planning details are curated estimates. Check the official "
+                    "visitor source for live opening hours, tickets, and access."
+                )
+                details_left, details_right = st.columns(2)
+                with details_left:
+                    st.markdown(f"**Typical visit:** {activity.duration_hours:g} hours")
+                    st.markdown(f"**Walking:** {activity.walking_level.value.title()}")
+                    st.markdown(f"**Budget:** {activity.budget_level.value.title()}")
+                with details_right:
+                    st.markdown(
+                        f"**Reservations:** {'Usually recommended' if activity.reservation_required else 'Not usually required'}"
+                    )
+                    st.markdown(f"**Setting:** {'Indoors' if activity.indoor else 'Mostly outdoors'}")
+                    st.markdown(f"**Family-friendly:** {'Yes' if activity.family_friendly else 'Check before visiting'}")
+                if activity.latitude is not None and activity.longitude is not None:
+                    map_url = (
+                        "https://www.google.com/maps/search/?api=1&query="
+                        f"{activity.latitude},{activity.longitude}"
+                    )
+                    st.link_button("Open map", map_url, icon=":material/location_on:")
+                if activity.official_url:
+                    st.link_button(
+                        "Official visitor information",
+                        str(activity.official_url),
+                        icon=":material/open_in_new:",
+                    )
+                elif activity.wikipedia_url:
+                    st.link_button(
+                        "Wikipedia overview",
+                        str(activity.wikipedia_url),
+                        icon=":material/open_in_new:",
+                    )
+                if activity.wikidata_id:
+                    st.link_button(
+                        "Wikidata record",
+                        f"https://www.wikidata.org/wiki/{activity.wikidata_id}",
+                        icon=":material/database:",
+                    )
 
             if rejection is not None:
                 if st.button(
@@ -2486,7 +2527,14 @@ def _render_results_step() -> None:
         st.rerun()
 
     trip = TripRequest.model_validate(st.session_state.trip_request)
-    if st.button("Save this trip", icon=":material/bookmark_add:", key="save-trip"):
+    has_itinerary = bool(st.session_state.itinerary_plan)
+    if has_itinerary:
+        st.caption("Saving keeps your current itinerary inside this trip.")
+    if st.button(
+        "Save trip & itinerary" if has_itinerary else "Save this trip",
+        icon=":material/bookmark_add:",
+        key="save-trip",
+    ):
         saved = save_trip(
             trip,
             {
