@@ -10,6 +10,9 @@ permissions:
 
 jobs:
   retrieve-candidates:
+    concurrency:
+      group: tripsync-catalog-ingestion
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
