@@ -1445,6 +1445,11 @@ def _render_result_card(
                     )
                     st.markdown(f"**Setting:** {'Indoors' if activity.indoor else 'Mostly outdoors'}")
                     st.markdown(f"**Family-friendly:** {'Yes' if activity.family_friendly else 'Check before visiting'}")
+                if activity.address:
+                    st.markdown(f"**Address:** {activity.address}")
+                if activity.opening_hours:
+                    st.markdown(f"**OSM-reported hours:** {activity.opening_hours}")
+                    st.caption("Community-maintained information — confirm current hours on the official visitor site.")
                 if activity.latitude is not None and activity.longitude is not None:
                     map_url = (
                         "https://www.google.com/maps/search/?api=1&query="
@@ -1468,6 +1473,12 @@ def _render_result_card(
                         "Wikidata record",
                         f"https://www.wikidata.org/wiki/{activity.wikidata_id}",
                         icon=":material/database:",
+                    )
+                if activity.osm_url:
+                    st.link_button(
+                        "OpenStreetMap reference",
+                        str(activity.osm_url),
+                        icon=":material/map:",
                     )
 
             if rejection is not None:

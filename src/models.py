@@ -155,6 +155,9 @@ class Activity(TripSyncModel):
     official_url: HttpUrl | None = None
     wikipedia_url: HttpUrl | None = None
     wikidata_id: str | None = Field(default=None, pattern=r"^Q\d+$")
+    address: str | None = Field(default=None, min_length=1, max_length=300)
+    opening_hours: str | None = Field(default=None, min_length=1, max_length=250)
+    osm_url: HttpUrl | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 

@@ -139,6 +139,13 @@ def _render_published_activity_editor(activity: Activity) -> None:
             value=str(activity.official_url or ""),
             help="Use the attraction's own visitor or ticketing site when known.",
         )
+        address = st.text_input("Address", value=activity.address or "")
+        opening_hours = st.text_input(
+            "Opening hours",
+            value=activity.opening_hours or "",
+            help="Community-maintained or curator-entered information. Keep the official link for current hours.",
+        )
+        osm_url = st.text_input("OpenStreetMap reference URL", value=str(activity.osm_url or ""))
         save = st.form_submit_button("Validate and save changes", icon=":material/save:", type="primary")
     if save:
         try:
@@ -157,6 +164,9 @@ def _render_published_activity_editor(activity: Activity) -> None:
                 "description": description,
                 "source_url": source_url,
                 "official_url": official_url or None,
+                "address": address or None,
+                "opening_hours": opening_hours or None,
+                "osm_url": osm_url or None,
             })
             update_activity(updated)
             st.success(f"Saved changes to {updated.name}.")

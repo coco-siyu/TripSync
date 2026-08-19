@@ -16,7 +16,8 @@ from src.catalog import (
     save_activity,
     update_activities,
 )
-from src.catalog_backfill import backfill_coordinates, wikidata_id_from_source
+from src.catalog_backfill import backfill_coordinates, backfill_osm_details, wikidata_id_from_source
+from src.osm_enrichment import OsmDetails, _batch_query, _query, enrich_activity, parse_osm_details
 from src.curation_seed import suggested_activities
 
 
@@ -97,6 +98,65 @@ class CatalogTests(unittest.TestCase):
             update={"source_url": "https://www.uffizi.it/", "latitude": None, "longitude": None}
         )
         self.assertEqual(wikidata_id_from_source(activity), "Q51252")
+
+    def test_parses_and_backfills_optional_osm_visit_details(self) -> None:
+        details = parse_osm_details({
+            "elements": [{
+                "type": "way", "id": 123,
+                "tags": {
+                    "addr:housenumber": "6", "addr:street": "Piazzale degli Uffizi",
+                    "addr:city": "Florence", "addr:postcode": "50122",
+                    "opening_hours": "Tu-Su 08:15-18:30", "website": "https://www.uffizi.it/",
+                },
+            }]
+        })
+        self.assertEqual(details.address, "6 Piazzale degli Uffizi, 50122 Florence")
+        self.assertEqual(details.opening_hours, "Tu-Su 08:15-18:30")
+        self.assertEqual(details.osm_url, "https://www.openstreetmap.org/way/123")
+
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        updated, refreshed, unresolved = backfill_osm_details(
+            [activity], fetcher=lambda _: details
+        )
+        self.assertEqual((refreshed, unresolved), (1, 0))
+        self.assertEqual(updated[0].address, details.address)
+        self.assertEqual(updated[0].opening_hours, details.opening_hours)
+        self.assertEqual(str(updated[0].osm_url), details.osm_url)
+
+    def test_osm_query_recovers_wikidata_id_from_legacy_source_url(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={"wikidata_id": None}
+        )
+
+        self.assertIn('["wikidata"="Q51252"]', _query(activity))
+
+    def test_osm_batch_query_uses_stable_ids(self) -> None:
+        query = _batch_query(["Q51252", "Q123"])
+        self.assertIn('["wikidata"~"^(Q51252|Q123)$"]', query)
+
+    def test_osm_backfill_uses_one_batch_lookup_by_default(self) -> None:
+        first = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        second = first.model_copy(update={"id": "florence_bargello", "wikidata_id": "Q123"})
+        calls: list[list[str]] = []
+
+        def fetch_batch(rows: list[object]) -> dict[str, OsmDetails]:
+            calls.append([row.id for row in rows])  # type: ignore[attr-defined]
+            return {first.id: OsmDetails(opening_hours="Mo-Su 10:00-17:00")}
+
+        updated, refreshed, unresolved = backfill_osm_details(
+            [first, second], batch_fetcher=fetch_batch
+        )
+
+        self.assertEqual(calls, [[first.id, second.id]])
+        self.assertEqual((refreshed, unresolved), (1, 1))
+        self.assertEqual(updated[0].opening_hours, "Mo-Su 10:00-17:00")
+
+    def test_osm_enrichment_preserves_curator_fields(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={"address": "Curator address", "official_url": "https://curator.example.org"}
+        )
+        updated = enrich_activity(activity, OsmDetails(address="OSM address", website="https://osm.example.org"))
+        self.assertIsNone(updated)
 
     def test_updates_multiple_existing_records_in_one_local_write(self) -> None:
         first = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)

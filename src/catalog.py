@@ -68,6 +68,9 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
         "official_url": fields.get("official_url") or candidate.get("official_url"),
         "wikipedia_url": fields.get("wikipedia_url") or candidate.get("wikipedia_url"),
         "wikidata_id": candidate.get("wikidata_id"),
+        "address": fields.get("address"),
+        "opening_hours": fields.get("opening_hours"),
+        "osm_url": fields.get("osm_url"),
         "latitude": fields.get("latitude", candidate.get("latitude")),
         "longitude": fields.get("longitude", candidate.get("longitude")),
     })

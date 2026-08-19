@@ -13,9 +13,12 @@ from collections.abc import Callable
 from src.catalog import ACTIVITY_CATALOG_PATH, load_curated_activities, update_activities
 from src.catalog_import import CatalogImportError, WIKIDATA_ENTITY_URL, fetch_coordinates
 from src.models import Activity
+from src.osm_enrichment import OsmDetails, enrich_activity, fetch_osm_details_many
 
 
 CoordinateFetcher = Callable[[list[str]], dict[str, tuple[float, float]]]
+OsmFetcher = Callable[[Activity], OsmDetails]
+OsmBatchFetcher = Callable[[list[Activity]], dict[str, OsmDetails]]
 
 
 def wikidata_id_from_source(activity: Activity) -> str | None:
@@ -65,27 +68,80 @@ def backfill_coordinates(
     return updated, refreshed, unresolved
 
 
+def backfill_osm_details(
+    activities: list[Activity], *, fetcher: OsmFetcher | None = None,
+    batch_fetcher: OsmBatchFetcher = fetch_osm_details_many,
+) -> tuple[list[Activity], int, int]:
+    """Add missing OSM details, preserving curator fields and batching live calls."""
+
+    updated: list[Activity] = []
+    refreshed = 0
+    unresolved = 0
+    missing = [
+        activity
+        for activity in activities
+        if not (activity.address and activity.opening_hours and activity.osm_url)
+    ]
+
+    if fetcher is not None:
+        # Keep this narrow injectable path for deterministic unit tests.
+        details_by_activity: dict[str, OsmDetails] = {}
+        for activity in missing:
+            try:
+                details_by_activity[activity.id] = fetcher(activity)
+            except CatalogImportError:
+                unresolved += 1
+    else:
+        try:
+            details_by_activity = batch_fetcher(missing)
+        except CatalogImportError:
+            raise
+
+    for activity in missing:
+        details = details_by_activity.get(activity.id)
+        if details is None:
+            unresolved += 1
+            continue
+        enriched = enrich_activity(activity, details)
+        if enriched is None:
+            unresolved += 1
+            continue
+        updated.append(enriched)
+        refreshed += 1
+    return updated, refreshed, unresolved
+
+
 def main() -> None:
     """Update the configured shared catalog without overwriting curated fields."""
 
-    parser = argparse.ArgumentParser(description="Backfill TripSync route coordinates from Wikidata.")
+    parser = argparse.ArgumentParser(description="Backfill TripSync route coordinates and optional OSM visit details.")
     parser.add_argument("--dry-run", action="store_true", help="Report possible updates without saving them.")
+    parser.add_argument(
+        "--osm-details",
+        action="store_true",
+        help="Add missing OpenStreetMap address, opening-hours, and source-link details.",
+    )
     arguments = parser.parse_args()
 
     activities = load_curated_activities(ACTIVITY_CATALOG_PATH)
     try:
-        updated, refreshed, unresolved = backfill_coordinates(activities)
+        if arguments.osm_details:
+            updated, refreshed, unresolved = backfill_osm_details(activities)
+            detail_label = "OpenStreetMap visit details"
+        else:
+            updated, refreshed, unresolved = backfill_coordinates(activities)
+            detail_label = "coordinates"
     except CatalogImportError as error:
-        parser.exit(1, f"Coordinate refresh could not finish: {error}\n")
+        parser.exit(1, f"Catalog refresh could not finish: {error}\n")
 
     if arguments.dry_run:
-        print(f"Would add coordinates to {refreshed} activity record(s); {unresolved} could not be resolved.")
+        print(f"Would add {detail_label} to {refreshed} activity record(s); {unresolved} could not be resolved.")
         return
     # Coordinates do not contribute to the stable text used for semantic
     # embeddings, so this is one catalog write with no unnecessary embedding
     # lookup or OpenAI call per activity.
     update_activities(updated, ACTIVITY_CATALOG_PATH, sync_embeddings=False)
-    print(f"Added coordinates to {refreshed} activity record(s); {unresolved} could not be resolved.")
+    print(f"Added {detail_label} to {refreshed} activity record(s); {unresolved} could not be resolved.")
 
 
 if __name__ == "__main__":
