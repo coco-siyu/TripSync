@@ -161,6 +161,24 @@ class Activity(TripSyncModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 
+    @field_validator("official_url", "wikipedia_url", "osm_url", mode="before")
+    @classmethod
+    def normalize_optional_urls(cls, value: Any) -> Any:
+        """Accept older catalog links that were stored without a scheme.
+
+        Curated records created before these fields used ``HttpUrl`` sometimes
+        contain a plain domain such as ``museum.example.org``.  Treat that as a
+        conventional HTTPS link when the record is next validated, rather than
+        preventing unrelated catalog enrichment from completing.
+        """
+
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if normalized and "://" not in normalized:
+            return f"https://{normalized}"
+        return normalized or None
+
     @field_validator("category", mode="before")
     @classmethod
     def normalize_category(cls, value: Any) -> Any:

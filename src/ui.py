@@ -234,8 +234,11 @@ def _initialize_state() -> None:
         "itinerary_change_proposals": None,
         "itinerary_change_error": None,
         "retrieval_cache": None,
+        "activity_detail_id": None,
         "feedback_session_id": uuid4().hex,
         "saved_trip_id": None,
+        "saved_trip_read_mode": False,
+        "saved_itinerary_version_id": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -256,6 +259,9 @@ def _reset_activity_selections() -> None:
     st.session_state.itinerary_change_proposals = None
     st.session_state.itinerary_change_error = None
     st.session_state.retrieval_cache = None
+    st.session_state.activity_detail_id = None
+    st.session_state.saved_trip_read_mode = False
+    st.session_state.saved_itinerary_version_id = None
 
 
 def _invalidate_itinerary() -> None:
@@ -1173,14 +1179,20 @@ def _chip_row(labels: list[str]) -> str:
     return f'<div class="ts-chip-row">{chips}</div>'
 
 
-def _render_summary(trip: TripRequest) -> None:
+def _render_summary(trip: TripRequest, *, show_edit: bool = True) -> None:
     with st.container(key="summary-card"):
-        heading_col, action_col = st.columns([4, 1], vertical_alignment="center")
+        if show_edit:
+            heading_col, action_col = st.columns(
+                [4, 1], vertical_alignment="center"
+            )
+        else:
+            heading_col = st
+            action_col = None
         heading_col.markdown('<div class="ts-section-label">Your planning brief</div>', unsafe_allow_html=True)
         heading_col.subheader(
             f"{trip.destination}, {trip.country} · {trip.days} days"
         )
-        if action_col.button(
+        if action_col is not None and action_col.button(
             "Edit",
             icon=":material/edit:",
             type="secondary",
@@ -1298,13 +1310,14 @@ def _render_activity_action(
     activity: Activity,
     *,
     is_must_do: bool,
+    key_prefix: str = "",
 ) -> None:
     selected = activity.id in st.session_state.selected_activity_ids
     label = "Remove from trip" if selected else "Add to trip"
     icon = ":material/remove_circle:" if selected else ":material/add_circle:"
     if st.button(
         label,
-        key=f"activity-selection-{activity.id}",
+        key=f"{key_prefix}activity-selection-{activity.id}",
         icon=icon,
         type="secondary" if selected else "primary",
         width="stretch",
@@ -1319,6 +1332,69 @@ def _render_activity_action(
             _add_activity_to_shortlist(activity.id)
             st.toast(f"Added {activity.name} to your trip.")
         st.rerun()
+
+
+def _render_activity_details(
+    activity: Activity,
+) -> None:
+    """Render the additional, practical visit information within a result card."""
+
+    with st.container(border=True, key=f"activity-detail-{activity.id}"):
+        st.markdown("**Visit information**")
+        left, right = st.columns(2)
+        with left:
+            st.markdown(f"**Typical visit:** {format_duration(activity.duration_hours)}")
+            st.markdown(f"**Walking:** {activity.walking_level.value.title()}")
+            st.markdown(f"**Budget:** {activity.budget_level.value.title()}")
+            st.markdown(
+                "**Reservations:** "
+                f"{'Usually recommended' if activity.reservation_required else 'Not usually required'}"
+            )
+        with right:
+            st.markdown(f"**Setting:** {'Indoors' if activity.indoor else 'Mostly outdoors'}")
+            st.markdown(
+                "**Family-friendly:** "
+                f"{'Yes' if activity.family_friendly else 'Check before visiting'}"
+            )
+            st.markdown(f"**Address:** {activity.address or 'Not available yet'}")
+            st.markdown(
+                "**Opening hours:** "
+                f"{activity.opening_hours or 'Check the official visitor source'}"
+            )
+
+        st.caption(
+            "Opening hours and access can change. Confirm them with the "
+            "official visitor source before you go."
+        )
+        link_columns = st.columns(4)
+        if activity.latitude is not None and activity.longitude is not None:
+            map_url = (
+                "https://www.google.com/maps/search/?api=1&query="
+                f"{activity.latitude},{activity.longitude}"
+            )
+            link_columns[0].link_button(
+                "Open map", map_url, icon=":material/location_on:", width="stretch"
+            )
+        if activity.official_url:
+            link_columns[1].link_button(
+                "Official site",
+                str(activity.official_url),
+                icon=":material/open_in_new:",
+                width="stretch",
+            )
+        link_columns[2].link_button(
+            "Primary source",
+            str(activity.source_url),
+            icon=":material/open_in_new:",
+            width="stretch",
+        )
+        if activity.wikipedia_url:
+            link_columns[3].link_button(
+                "Wikipedia",
+                str(activity.wikipedia_url),
+                icon=":material/menu_book:",
+                width="stretch",
+            )
 
 
 def _render_result_card(
@@ -1402,6 +1478,26 @@ def _render_result_card(
                     unsafe_allow_html=True,
                 )
 
+            details_are_open = st.session_state.activity_detail_id == activity.id
+            if st.button(
+                "Hide details" if details_are_open else "View details",
+                key=f"view-activity-details-{card_position}-{activity.id}",
+                icon=(
+                    ":material/visibility_off:"
+                    if details_are_open
+                    else ":material/visibility:"
+                ),
+                type="secondary",
+                width="stretch",
+            ):
+                st.session_state.activity_detail_id = (
+                    None if details_are_open else activity.id
+                )
+                st.rerun()
+
+            if st.session_state.activity_detail_id == activity.id:
+                _render_activity_details(activity)
+
             with st.expander("Why this fits your group"):
                 st.markdown("**Why it was retrieved**")
                 for reason in retrieval.reasons:
@@ -1428,58 +1524,6 @@ def _render_result_card(
                     str(activity.source_url),
                     icon=":material/open_in_new:",
                 )
-
-            with st.expander("Plan your visit"):
-                st.caption(
-                    "Planning details are curated estimates. Check the official "
-                    "visitor source for live opening hours, tickets, and access."
-                )
-                details_left, details_right = st.columns(2)
-                with details_left:
-                    st.markdown(f"**Typical visit:** {activity.duration_hours:g} hours")
-                    st.markdown(f"**Walking:** {activity.walking_level.value.title()}")
-                    st.markdown(f"**Budget:** {activity.budget_level.value.title()}")
-                with details_right:
-                    st.markdown(
-                        f"**Reservations:** {'Usually recommended' if activity.reservation_required else 'Not usually required'}"
-                    )
-                    st.markdown(f"**Setting:** {'Indoors' if activity.indoor else 'Mostly outdoors'}")
-                    st.markdown(f"**Family-friendly:** {'Yes' if activity.family_friendly else 'Check before visiting'}")
-                if activity.address:
-                    st.markdown(f"**Address:** {activity.address}")
-                if activity.opening_hours:
-                    st.markdown(f"**OSM-reported hours:** {activity.opening_hours}")
-                    st.caption("Community-maintained information — confirm current hours on the official visitor site.")
-                if activity.latitude is not None and activity.longitude is not None:
-                    map_url = (
-                        "https://www.google.com/maps/search/?api=1&query="
-                        f"{activity.latitude},{activity.longitude}"
-                    )
-                    st.link_button("Open map", map_url, icon=":material/location_on:")
-                if activity.official_url:
-                    st.link_button(
-                        "Official visitor information",
-                        str(activity.official_url),
-                        icon=":material/open_in_new:",
-                    )
-                elif activity.wikipedia_url:
-                    st.link_button(
-                        "Wikipedia overview",
-                        str(activity.wikipedia_url),
-                        icon=":material/open_in_new:",
-                    )
-                if activity.wikidata_id:
-                    st.link_button(
-                        "Wikidata record",
-                        f"https://www.wikidata.org/wiki/{activity.wikidata_id}",
-                        icon=":material/database:",
-                    )
-                if activity.osm_url:
-                    st.link_button(
-                        "OpenStreetMap reference",
-                        str(activity.osm_url),
-                        icon=":material/map:",
-                    )
 
             if rejection is not None:
                 if st.button(
@@ -2141,6 +2185,30 @@ def _render_change_proposals(
                         st.rerun()
 
 
+def _save_current_trip(
+    trip: TripRequest,
+    *,
+    save_itinerary_version: bool,
+) -> Any:
+    """Persist the current planning state, including an itinerary snapshot."""
+
+    saved = save_trip(
+        trip,
+        {
+            "selected_activity_ids": st.session_state.selected_activity_ids,
+            "dismissed_must_do_ids": st.session_state.dismissed_must_do_ids,
+            "itinerary_plan": st.session_state.itinerary_plan,
+            "rejected_activities": st.session_state.rejected_activities,
+            "itinerary_narrative": st.session_state.itinerary_narrative,
+        },
+        trip_id=st.session_state.saved_trip_id,
+        session_id=st.session_state.feedback_session_id,
+        save_itinerary_version=save_itinerary_version,
+    )
+    st.session_state.saved_trip_id = saved.trip_id
+    return saved
+
+
 def _render_itinerary(
     trip: TripRequest,
     plan: ItineraryPlan,
@@ -2148,6 +2216,8 @@ def _render_itinerary(
     candidate_activities: list[Activity],
     ranked_results: list[GroupFitResult],
     owners_by_activity_id: dict[str, tuple[str, ...]],
+    *,
+    read_only: bool = False,
 ) -> None:
     scheduled = [
         activity
@@ -2173,10 +2243,29 @@ def _render_itinerary(
 
     with st.container(key="itinerary-shell"):
         st.markdown(
-            '<div class="ts-section-label">Ready to explore</div>',
+            '<div class="ts-section-label">Saved itinerary</div>'
+            if read_only
+            else '<div class="ts-section-label">Ready to explore</div>',
             unsafe_allow_html=True,
         )
         st.header(f"Your {len(plan.days)}-day itinerary")
+        if not read_only:
+            save_label = (
+                "Save another itinerary version"
+                if st.session_state.saved_trip_id
+                else "Save trip & itinerary"
+            )
+            if st.button(
+                save_label,
+                icon=":material/bookmark_add:",
+                key="save-itinerary",
+                type="primary",
+            ):
+                saved = _save_current_trip(
+                    trip,
+                    save_itinerary_version=True,
+                )
+                st.toast(f"Saved {saved.title}")
         summary_labels = [
             f"{len(scheduled)} activities",
             f"{format_duration(total_activity_hours)} of activities",
@@ -2192,12 +2281,12 @@ def _render_itinerary(
             "When catalog coordinates are available, stops are ordered to reduce "
             "backtracking and show a walking estimate below."
         )
-        if st.session_state.itinerary_notice:
+        if not read_only and st.session_state.itinerary_notice:
             st.info(
                 st.session_state.itinerary_notice,
                 icon=":material/swap_horiz:",
             )
-        if st.session_state.itinerary_undo:
+        if not read_only and st.session_state.itinerary_undo:
             if st.button(
                 "Undo last replacement",
                 key="undo-itinerary-replacement",
@@ -2208,7 +2297,8 @@ def _render_itinerary(
                 st.toast("The previous itinerary is back.")
                 st.rerun()
 
-        narrative = _render_narration(trip, plan, activity_by_id)
+        if not read_only:
+            narrative = _render_narration(trip, plan, activity_by_id)
         if narrative is not None:
             narrative_by_activity_id = {
                 activity.activity_id: activity
@@ -2310,7 +2400,7 @@ def _render_itinerary(
                         )
                         if activity_story.practical_note:
                             st.caption(activity_story.practical_note)
-                    if activity is not None:
+                    if activity is not None and not read_only:
                         with st.popover(
                             "Replace activity",
                             key=(
@@ -2376,13 +2466,14 @@ def _render_itinerary(
                                 )
                                 st.rerun()
 
-        _render_change_proposals(
-            trip,
-            plan,
-            candidate_activities,
-            ranked_results,
-            owners_by_activity_id,
-        )
+        if not read_only:
+            _render_change_proposals(
+                trip,
+                plan,
+                candidate_activities,
+                ranked_results,
+                owners_by_activity_id,
+            )
 
         if plan.unscheduled:
             st.warning(
@@ -2394,7 +2485,53 @@ def _render_itinerary(
             for item in plan.unscheduled:
                 st.markdown(f"**{item.activity_name}** — {item.reason}")
 
-        _render_overall_experience_feedback(trip, plan)
+        if not read_only:
+            _render_overall_experience_feedback(trip, plan)
+
+
+def _open_saved_trip_editor() -> None:
+    """Return a saved itinerary to the normal matches-and-editing workspace."""
+
+    st.session_state.saved_trip_read_mode = False
+    st.session_state.planner_step = "results"
+    st.rerun()
+
+
+def _render_saved_trip_reader(
+    trip: TripRequest,
+    activity_by_id: dict[str, Activity],
+) -> None:
+    """Show a focused saved itinerary without re-running recommendation work."""
+
+    st.caption(
+        "Read this saved plan first. Edit matched attractions only when you "
+        "want to compare or change the itinerary."
+    )
+    if st.button(
+        "Edit matched attractions",
+        icon=":material/edit_calendar:",
+        type="primary",
+        key="edit-saved-trip-matches",
+    ):
+        _open_saved_trip_editor()
+    _render_summary(trip, show_edit=False)
+    plan_payload = st.session_state.itinerary_plan
+    if not plan_payload:
+        st.info(
+            "This trip was saved before an itinerary was built. Choose Edit "
+            "matched attractions to build one.",
+            icon=":material/calendar_month:",
+        )
+        return
+    _render_itinerary(
+        trip,
+        ItineraryPlan.model_validate(plan_payload),
+        activity_by_id,
+        [],
+        [],
+        {},
+        read_only=True,
+    )
 
 
 def _render_shortlist(
@@ -2469,7 +2606,6 @@ def _render_shortlist(
                         is_must_do=bool(owners),
                     )
                     st.toast(f"Removed {activity.name} from your trip.")
-                    st.rerun()
 
         st.space("small")
         auto_fill = st.toggle(
@@ -2517,7 +2653,6 @@ def _render_shortlist(
             st.session_state.itinerary_narrative = None
             st.session_state.itinerary_narration_error = None
             st.toast("Your itinerary is ready.")
-            st.rerun()
 
     if st.session_state.itinerary_plan:
         _render_itinerary(
@@ -2538,29 +2673,22 @@ def _render_results_step() -> None:
         st.rerun()
 
     trip = TripRequest.model_validate(st.session_state.trip_request)
+    activities = load_activity_catalog()
+    activity_by_id = _activity_lookup(activities)
+    if st.session_state.saved_trip_read_mode:
+        _render_saved_trip_reader(trip, activity_by_id)
+        return
     has_itinerary = bool(st.session_state.itinerary_plan)
-    if has_itinerary:
-        st.caption("Saving keeps your current itinerary inside this trip.")
-    if st.button(
-        "Save trip & itinerary" if has_itinerary else "Save this trip",
+    if not has_itinerary and st.button(
+        "Save this trip",
         icon=":material/bookmark_add:",
         key="save-trip",
     ):
-        saved = save_trip(
+        _save_current_trip(
             trip,
-            {
-                "selected_activity_ids": st.session_state.selected_activity_ids,
-                "dismissed_must_do_ids": st.session_state.dismissed_must_do_ids,
-                "itinerary_plan": st.session_state.itinerary_plan,
-                "rejected_activities": st.session_state.rejected_activities,
-            },
-            trip_id=st.session_state.saved_trip_id,
-            session_id=st.session_state.feedback_session_id,
+            save_itinerary_version=False,
         )
-        st.session_state.saved_trip_id = saved.trip_id
-        st.toast(f"Saved {saved.title}")
-    activities = load_activity_catalog()
-    activity_by_id = _activity_lookup(activities)
+        st.toast("Saved trip preferences")
     retrieval_response = _retrieve_for_current_trip(trip, activities)
     retrieval_by_activity_id = {
         result.activity_id: result

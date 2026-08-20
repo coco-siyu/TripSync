@@ -17,7 +17,15 @@ from src.catalog import (
     update_activities,
 )
 from src.catalog_backfill import backfill_coordinates, backfill_osm_details, wikidata_id_from_source
-from src.osm_enrichment import OsmDetails, _batch_query, _query, enrich_activity, parse_osm_details
+from src.osm_enrichment import (
+    OsmDetails,
+    _batch_query,
+    _nearby_name_batch_query,
+    _query,
+    enrich_activity,
+    parse_osm_details,
+    parse_osm_details_by_nearby_name,
+)
 from src.curation_seed import suggested_activities
 
 
@@ -134,6 +142,22 @@ class CatalogTests(unittest.TestCase):
         query = _batch_query(["Q51252", "Q123"])
         self.assertIn('["wikidata"~"^(Q51252|Q123)$"]', query)
 
+    def test_osm_nearby_name_match_requires_one_exact_candidate(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        query = _nearby_name_batch_query([activity])
+        self.assertIn('["name"="Uffizi Gallery"](around:350,43.7696,11.2558)', query)
+        payload = {
+            "elements": [{
+                "type": "way", "id": 123,
+                "tags": {"name": "Uffizi Gallery", "opening_hours": "Tu-Su 08:15-18:30"},
+            }]
+        }
+        matched = parse_osm_details_by_nearby_name(payload, [activity])
+        self.assertEqual(matched[activity.id].opening_hours, "Tu-Su 08:15-18:30")
+
+        duplicate = {"elements": payload["elements"] * 2}
+        self.assertEqual(parse_osm_details_by_nearby_name(duplicate, [activity]), {})
+
     def test_osm_backfill_uses_one_batch_lookup_by_default(self) -> None:
         first = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
         second = first.model_copy(update={"id": "florence_bargello", "wikidata_id": "Q123"})
@@ -157,6 +181,15 @@ class CatalogTests(unittest.TestCase):
         )
         updated = enrich_activity(activity, OsmDetails(address="OSM address", website="https://osm.example.org"))
         self.assertIsNone(updated)
+
+    def test_osm_enrichment_normalizes_a_legacy_official_url(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={"official_url": "arsenale.comune.venezia.it"}
+        )
+        updated = enrich_activity(activity, OsmDetails(opening_hours="Mo-Su 09:00-17:00"))
+        self.assertIsNotNone(updated)
+        assert updated is not None
+        self.assertEqual(str(updated.official_url), "https://arsenale.comune.venezia.it/")
 
     def test_updates_multiple_existing_records_in_one_local_write(self) -> None:
         first = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)

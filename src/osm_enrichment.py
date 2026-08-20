@@ -9,6 +9,8 @@ for tickets, access, and time-sensitive visitor information.
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from dataclasses import dataclass
 from collections.abc import Iterable
 from typing import Any
@@ -105,6 +107,48 @@ def parse_osm_details_by_wikidata(payload: dict[str, Any]) -> dict[str, OsmDetai
     return details_by_wikidata
 
 
+def _normalized_name(value: str) -> str:
+    """Compare names conservatively despite accents and punctuation."""
+
+    decomposed = unicodedata.normalize("NFKD", value)
+    ascii_value = "".join(character for character in decomposed if not unicodedata.combining(character))
+    return re.sub(r"[^a-z0-9]+", " ", ascii_value.casefold()).strip()
+
+
+def parse_osm_details_by_nearby_name(
+    payload: dict[str, Any], activities: Iterable[Activity]
+) -> dict[str, OsmDetails]:
+    """Return details only for unambiguous, nearby exact-name OSM matches.
+
+    The Overpass query restricts elements to a small radius around each stored
+    coordinate. We then require exactly one normalized-name candidate. This is
+    intentionally conservative: a duplicate or ambiguous name is left for a
+    later source/review pass instead of being attached to the wrong attraction.
+    """
+
+    elements = payload.get("elements", [])
+    if not isinstance(elements, list):
+        return {}
+    by_name: dict[str, list[dict[str, Any]]] = {}
+    for element in elements:
+        if not isinstance(element, dict):
+            continue
+        tags = element.get("tags", {})
+        if not isinstance(tags, dict):
+            continue
+        name = tags.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        by_name.setdefault(_normalized_name(name), []).append(element)
+
+    matches: dict[str, OsmDetails] = {}
+    for activity in activities:
+        candidates = by_name.get(_normalized_name(activity.name), [])
+        if len(candidates) == 1:
+            matches[activity.id] = parse_osm_details({"elements": candidates})
+    return matches
+
+
 def _wikidata_id(activity: Activity) -> str | None:
     """Use the dedicated ID when present, or recover it from older records."""
 
@@ -138,6 +182,20 @@ def _batch_query(wikidata_ids: Iterable[str]) -> str:
     if not ids:
         return ""
     return f'[out:json][timeout:25];nwr["wikidata"~"^({"|".join(ids)})$"];out tags center;'
+
+
+def _nearby_name_batch_query(activities: Iterable[Activity]) -> str:
+    """Build a bounded exact-name lookup for legacy records with coordinates."""
+
+    selectors: list[str] = []
+    for activity in activities:
+        if activity.latitude is None or activity.longitude is None:
+            continue
+        name = activity.name.replace('"', '\\"')
+        selectors.append(f'nwr["name"="{name}"](around:350,{activity.latitude},{activity.longitude});')
+    if not selectors:
+        return ""
+    return "[out:json][timeout:25];(" + "".join(selectors) + ");out tags center;"
 
 
 def _request_overpass(query: str, *, timeout: int) -> dict[str, Any]:
@@ -180,9 +238,10 @@ def fetch_osm_details_many(
     slow group cannot discard useful detail records found by earlier batches.
     """
 
+    rows = list(activities)
     ids_by_activity = {
         activity.id: wikidata_id
-        for activity in activities
+        for activity in rows
         if (wikidata_id := _wikidata_id(activity))
     }
     details_by_wikidata: dict[str, OsmDetails] = {}
@@ -208,11 +267,35 @@ def fetch_osm_details_many(
         raise CatalogImportError(
             "OpenStreetMap details are temporarily unavailable after trying two public endpoints. Try again later."
         )
-    return {
+    details_by_activity = {
         activity_id: details_by_wikidata[wikidata_id]
         for activity_id, wikidata_id in ids_by_activity.items()
         if wikidata_id in details_by_wikidata
     }
+
+    # Older catalog entries can have coordinates but no usable Wikidata tag,
+    # or an OSM feature that simply lacks its Wikidata tag.  Try an exact name
+    # within 350 metres as a second, lower-confidence route.  It still needs a
+    # single match, so a broad/ambiguous name never receives guessed details.
+    nearby_rows = [
+        activity for activity in rows
+        if activity.id not in details_by_activity
+        and activity.latitude is not None
+        and activity.longitude is not None
+    ]
+    for start in range(0, len(nearby_rows), batch_size):
+        batch = nearby_rows[start : start + batch_size]
+        query = _nearby_name_batch_query(batch)
+        if not query:
+            continue
+        try:
+            payload = _request_overpass(query, timeout=timeout)
+        except CatalogImportError:
+            # The stable-ID results remain useful even if this supplementary
+            # fallback is unavailable, so do not discard them.
+            continue
+        details_by_activity.update(parse_osm_details_by_nearby_name(payload, batch))
+    return details_by_activity
 
 
 def enrich_activity(activity: Activity, details: OsmDetails) -> Activity | None:
@@ -231,4 +314,7 @@ def enrich_activity(activity: Activity, details: OsmDetails) -> Activity | None:
     # left URL strings in fields declared as ``HttpUrl`` and produced serializer
     # warnings when the refreshed catalog was written.  Re-validating the full
     # record keeps enriched URLs typed exactly like curator-supplied URLs.
-    return Activity.model_validate({**activity.model_dump(mode="json"), **updates}) if updates else None
+    # ``dict(activity)`` exposes the original field values without asking
+    # Pydantic to serialize an older, untyped legacy URL before the validator
+    # above has had a chance to normalize it.
+    return Activity.model_validate({**dict(activity), **updates}) if updates else None

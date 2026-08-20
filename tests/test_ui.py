@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from pydantic import ValidationError
@@ -289,6 +290,29 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.session_state["dismissed_must_do_ids"],
         )
 
+    def test_activity_details_can_open_and_close_without_changing_shortlist(
+        self,
+    ) -> None:
+        app = self._sample_results_app()
+        detail_button = next(
+            button for button in app.button if button.label == "View details"
+        )
+
+        detail_button.click().run()
+
+        selected_detail_id = app.session_state["activity_detail_id"]
+        self.assertIsNotNone(selected_detail_id)
+        self.assertTrue(any(button.label == "Hide details" for button in app.button))
+        self.assertEqual(
+            app.session_state["selected_activity_ids"],
+            ["rome_colosseum", "rome_borghese_gallery"],
+        )
+
+        next(button for button in app.button if button.label == "Hide details").click().run()
+
+        self.assertIsNone(app.session_state["activity_detail_id"])
+        self.assertTrue(any(button.label == "View details" for button in app.button))
+
     def test_results_retrieval_is_reused_when_shortlisting_and_planning(
         self,
     ) -> None:
@@ -324,6 +348,25 @@ class StreamlitInteractionTests(unittest.TestCase):
                 day.planned_hours <= day.capacity_hours
                 for day in plan.days
             )
+        )
+
+    def test_itinerary_save_button_persists_trip_and_version(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+
+        with patch("src.ui.save_trip") as save:
+            save.return_value = SimpleNamespace(
+                trip_id="saved-trip",
+                title="Rome, Italy · 3 days",
+            )
+            app.button(key="save-itinerary").click().run()
+
+        self.assertEqual(app.session_state["saved_trip_id"], "saved-trip")
+        self.assertTrue(save.call_args.kwargs["save_itinerary_version"])
+        saved_state = save.call_args.args[1]
+        self.assertEqual(
+            saved_state["itinerary_plan"],
+            app.session_state["itinerary_plan"],
         )
 
     def test_itinerary_offers_a_grounded_adjustment_request(self) -> None:
