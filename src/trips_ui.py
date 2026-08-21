@@ -83,6 +83,122 @@ def _hours_label(hours: float) -> str:
     return f"{hours:g} {'hour' if hours == 1 else 'hours'}"
 
 
+def itinerary_comparison_for_versions(
+    record: SavedTrip,
+    first_version_id: str,
+    second_version_id: str,
+) -> tuple[dict[str, object], dict[str, object]] | None:
+    """Build a compact, read-only comparison for two saved itinerary snapshots."""
+
+    try:
+        first_plan = itinerary_plan_for_version(record, first_version_id)
+        second_plan = itinerary_plan_for_version(record, second_version_id)
+    except ValueError:
+        return None
+    if first_plan is None or second_plan is None:
+        return None
+
+    def summary(plan: ItineraryPlan) -> dict[str, object]:
+        activities = [activity for day in plan.days for activity in day.activities]
+        names_by_id = {activity.activity_id: activity.activity_name for activity in activities}
+        return {
+            "activity_count": len(activities),
+            "activity_hours": round(sum(day.activity_hours for day in plan.days), 2),
+            "planned_hours": round(sum(day.planned_hours for day in plan.days), 2),
+            "days": len(plan.days),
+            "pace_overrides": sum(
+                day.pace_override_approved for day in plan.days
+            ),
+            "unscheduled_count": len(plan.unscheduled),
+            "names_by_id": names_by_id,
+        }
+
+    first_summary = summary(first_plan)
+    second_summary = summary(second_plan)
+    first_ids = set(first_summary["names_by_id"])
+    second_ids = set(second_summary["names_by_id"])
+    first_summary["only_here"] = [
+        first_summary["names_by_id"][activity_id]
+        for activity_id in sorted(first_ids - second_ids)
+    ]
+    second_summary["only_here"] = [
+        second_summary["names_by_id"][activity_id]
+        for activity_id in sorted(second_ids - first_ids)
+    ]
+    return first_summary, second_summary
+
+
+def _render_itinerary_comparison(
+    record: SavedTrip,
+    versions: list[dict],
+) -> None:
+    """Let a traveler compare two saved alternatives without leaving My trips."""
+
+    if len(versions) < 2:
+        return
+    version_ids = [str(version["version_id"]) for version in versions]
+    labels = {
+        str(version["version_id"]): _version_label(version, position)
+        for position, version in enumerate(versions)
+    }
+    with st.expander("Compare itinerary versions"):
+        st.caption("Choose two saved alternatives to see what changes between them.")
+        first_column, second_column = st.columns(2)
+        first_version_id = first_column.selectbox(
+            "First version",
+            version_ids,
+            index=max(0, len(version_ids) - 2),
+            format_func=labels.__getitem__,
+            key=f"compare-first-{record.trip_id}",
+        )
+        second_version_id = second_column.selectbox(
+            "Second version",
+            version_ids,
+            index=len(version_ids) - 1,
+            format_func=labels.__getitem__,
+            key=f"compare-second-{record.trip_id}",
+        )
+        if first_version_id == second_version_id:
+            st.info("Choose two different itinerary versions to compare them.", icon=":material/info:")
+            return
+
+        comparison = itinerary_comparison_for_versions(
+            record,
+            first_version_id,
+            second_version_id,
+        )
+        if comparison is None:
+            st.info(
+                "One of these older itinerary versions cannot be compared yet.",
+                icon=":material/info:",
+            )
+            return
+
+        for column, version_id, summary in zip(
+            (first_column, second_column),
+            (first_version_id, second_version_id),
+            comparison,
+            strict=True,
+        ):
+            with column.container(border=True):
+                st.markdown(f"**{labels[version_id]}**")
+                st.metric("Activities", summary["activity_count"])
+                st.caption(
+                    f"{_hours_label(float(summary['activity_hours']))} of activities · "
+                    f"{_hours_label(float(summary['planned_hours']))} including transitions"
+                )
+                st.caption(
+                    f"{summary['days']} days · {summary['unscheduled_count']} unscheduled · "
+                    f"{summary['pace_overrides']} pace override(s)"
+                )
+                only_here = summary["only_here"]
+                if only_here:
+                    st.markdown("**Only in this version**")
+                    st.caption(" · ".join(str(name) for name in only_here))
+                else:
+                    st.caption("No activities are unique to this version.")
+
+
 def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> None:
     """Show a saved itinerary below its trip card without returning to the planner."""
 
@@ -213,6 +329,7 @@ def render_saved_trips() -> None:
                     on_click=_open_saved_itinerary,
                     args=(record, selected_version_id),
                 )
+                _render_itinerary_comparison(record, versions)
             else:
                 st.button(
                     "Edit trip",

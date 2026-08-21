@@ -15,7 +15,7 @@ from src.trips import (
     save_trip,
     state_for_itinerary_version,
 )
-from src.trips_ui import itinerary_plan_for_version
+from src.trips_ui import itinerary_comparison_for_versions, itinerary_plan_for_version
 
 
 class SavedTripsTests(unittest.TestCase):
@@ -122,3 +122,33 @@ class SavedTripsTests(unittest.TestCase):
         self.assertIsNotNone(restored)
         assert restored is not None
         self.assertEqual(restored.days[0].activities[0].activity_id, "rome_pantheon")
+
+    def test_compares_saved_itinerary_versions(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+
+        def plan(activity_id: str, activity_name: str) -> dict:
+            return {
+                "destination": "Rome", "country": "Italy", "pace": "balanced", "auto_fill": True,
+                "days": [{"day_number": 1, "activities": [{"activity_id": activity_id, "activity_name": activity_name, "duration_hours": 1.0, "source": "shortlist", "must_do_owners": [], "traveler_names": ["A"], "reason": "A saved choice."}], "activity_hours": 1.0, "transition_hours": 0.5, "planned_hours": 1.5, "capacity_hours": 6.0, "pace_override_approved": False}],
+                "unscheduled": [],
+            }
+
+        record = SavedTrip(
+            trip_id="saved-rome",
+            title="Rome · 2 days",
+            trip=trip,
+            state={"itinerary_versions": [
+                {"version_id": "first", "itinerary_plan": plan("rome_pantheon", "Pantheon")},
+                {"version_id": "second", "itinerary_plan": plan("rome_forum", "Roman Forum")},
+            ]},
+            updated_at="2026-08-19T19:00:00+00:00",
+        )
+
+        comparison = itinerary_comparison_for_versions(record, "first", "second")
+
+        self.assertIsNotNone(comparison)
+        assert comparison is not None
+        first, second = comparison
+        self.assertEqual(first["activity_count"], 1)
+        self.assertEqual(first["only_here"], ["Pantheon"])
+        self.assertEqual(second["only_here"], ["Roman Forum"])
