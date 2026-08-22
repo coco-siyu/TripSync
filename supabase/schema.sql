@@ -41,6 +41,18 @@ create table if not exists public.catalog_activities (
   updated_at timestamptz not null default now()
 );
 
+-- Lightweight autocomplete index derived from the live catalog. Because this
+-- is a view, activities that already exist appear immediately when the schema
+-- is applied, and future catalog inserts, edits, and deletes stay synchronized
+-- without a separate backfill or ingestion step.
+create or replace view public.catalog_destinations as
+select distinct
+  btrim(activity_json ->> 'city') as city,
+  btrim(activity_json ->> 'country') as country
+from public.catalog_activities
+where nullif(btrim(activity_json ->> 'city'), '') is not null
+  and nullif(btrim(activity_json ->> 'country'), '') is not null;
+
 -- Optional hosted semantic-search enrichment. The app stores an embedding for
 -- each published activity and compares only records from the trip's destination.
 -- JSONB avoids a heavy local ML runtime and does not require pgvector for this

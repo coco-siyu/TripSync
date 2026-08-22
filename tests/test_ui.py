@@ -19,9 +19,12 @@ from src.trips import SavedTrip
 from src.ui import (
     build_sample_trip,
     build_trip_request,
+    catalog_city_options,
+    catalog_destination_options,
     combine_interest_tags,
     format_duration,
     parse_tag_text,
+    split_destination,
 )
 
 
@@ -41,6 +44,33 @@ class PreferenceFlowHelpersTests(unittest.TestCase):
     def test_format_duration_uses_correct_grammar(self) -> None:
         self.assertEqual(format_duration(1), "1 hour")
         self.assertEqual(format_duration(1.5), "1.5 hours")
+
+    def test_catalog_destination_options_are_deduplicated_and_counted(self) -> None:
+        activities = load_curated_activities()
+        destinations = catalog_destination_options(activities)
+
+        self.assertIn("Rome, Italy", destinations)
+        self.assertGreater(destinations["Rome, Italy"], 0)
+        self.assertEqual(
+            sum(destinations.values()),
+            len(activities),
+        )
+
+    def test_catalog_city_options_are_names_without_activity_counts(self) -> None:
+        activities = load_curated_activities()
+        destinations = [
+            (activity.city, activity.country)
+            for activity in activities
+        ]
+        cities = catalog_city_options(destinations)
+
+        self.assertIn("Rome", cities)
+        self.assertEqual(cities["Rome"], "Italy")
+        self.assertFalse(any("activities" in city for city in cities))
+
+    def test_split_destination_supports_catalog_and_custom_values(self) -> None:
+        self.assertEqual(split_destination("Tokyo, Japan"), ("Tokyo", "Japan"))
+        self.assertEqual(split_destination("Tokyo"), ("Tokyo", ""))
 
     def test_build_trip_request_uses_shared_validation(self) -> None:
         trip = build_trip_request(
@@ -126,8 +156,14 @@ class StreamlitInteractionTests(unittest.TestCase):
         return app.run(timeout=10)
 
     def test_app_opens_on_trip_basics_without_exceptions(self) -> None:
-        app = AppTest.from_file("app.py")
-        app.run()
+        with patch(
+            "src.ui.load_activity_catalog",
+            side_effect=AssertionError(
+                "trip basics must not load the full activity catalog"
+            ),
+        ):
+            app = AppTest.from_file("app.py")
+            app.run()
 
         self.assertFalse(app.exception)
         self.assertEqual(
@@ -136,6 +172,102 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         self.assertTrue(
             any(button.label == "Continue to travelers" for button in app.button)
+        )
+
+    def test_destination_panel_starts_local_then_refreshes_remote_index(
+        self,
+    ) -> None:
+        with (
+            patch(
+                "src.ui.load_packaged_destination_index",
+                return_value=[("Rome", "Italy")],
+            ) as packaged_mock,
+            patch(
+                "src.ui.load_destination_index",
+                return_value=[
+                    ("Belgrade", "Serbia"),
+                    ("Rome", "Italy"),
+                ],
+            ) as remote_mock,
+        ):
+            app = AppTest.from_file("app.py").run()
+
+        self.assertFalse(app.exception)
+        destination_search = next(
+            item for item in app.selectbox if item.label == "Destination city"
+        )
+        self.assertIn("Belgrade", destination_search.options)
+        self.assertTrue(
+            app.session_state["catalog_destination_index_refreshed"]
+        )
+        packaged_mock.assert_called_once_with()
+        remote_mock.assert_called_once_with()
+
+    def test_destination_search_uses_prefix_suggestions_and_accepts_custom_city(
+        self,
+    ) -> None:
+        app = AppTest.from_file("app.py").run()
+        destination_search = next(
+            item
+            for item in app.selectbox
+            if item.label == "Destination city"
+        )
+
+        self.assertIn("Rome", destination_search.options)
+        self.assertNotIn("Rome · 17 activities", destination_search.options)
+        self.assertTrue(destination_search.proto.accept_new_options)
+        self.assertEqual(destination_search.proto.filter_mode, 2)
+
+        next(
+            item for item in app.text_input if item.label == "Country"
+        ).set_value("Japan").run()
+        next(
+            item
+            for item in app.selectbox
+            if item.label == "Destination city"
+        ).select("Florence").run()
+
+        self.assertEqual(
+            next(
+                item
+                for item in app.selectbox
+                if item.label == "Destination city"
+            ).value,
+            "Florence",
+        )
+        self.assertEqual(
+            next(item for item in app.text_input if item.label == "Country").value,
+            "Italy",
+        )
+
+    def test_plan_a_trip_navigation_starts_a_distinct_blank_trip(self) -> None:
+        app = self._sample_results_app()
+        app.session_state["saved_trip_id"] = "saved-rome-trip"
+        app.session_state["selected_activity_ids"] = ["rome_colosseum"]
+        app.session_state["traveler_name_0"] = "Coco"
+
+        next(
+            button for button in app.button if button.label == "Plan a trip"
+        ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertEqual(app.session_state["planner_step"], "trip")
+        self.assertIsNone(app.session_state["trip_request"])
+        self.assertIsNone(app.session_state["saved_trip_id"])
+        self.assertIsNone(app.session_state["saved_itinerary_version_id"])
+        self.assertEqual(app.session_state["selected_activity_ids"], [])
+        self.assertNotIn("traveler_name_0", app.session_state)
+        self.assertIsNone(
+            next(
+                item
+                for item in app.selectbox
+                if item.label == "Destination city"
+            ).value
+        )
+        self.assertEqual(
+            next(item for item in app.text_input if item.label == "Country").value,
+            "",
         )
 
     def test_complete_preference_flow_reaches_ranked_results(self) -> None:
@@ -303,9 +435,36 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertTrue(
             any(
-                "no entries for Tokyo, Japan" in warning.value
+                "no curated activities for Tokyo, Japan" in warning.value
                 for warning in app.warning
             )
+        )
+        self.assertFalse(
+            any(header.value == "Your trip shortlist" for header in app.header)
+        )
+
+        next(
+            button
+            for button in app.button
+            if button.label == "Change destination"
+        ).click().run()
+
+        self.assertEqual(app.session_state["planner_step"], "trip")
+        self.assertEqual(
+            next(
+                item
+                for item in app.selectbox
+                if item.label == "Destination city"
+            ).value,
+            "Tokyo",
+        )
+        self.assertEqual(
+            next(
+                item
+                for item in app.text_input
+                if item.label == "Country"
+            ).value,
+            "Japan",
         )
 
     def test_must_do_view_filters_cards_without_changing_shortlist(self) -> None:

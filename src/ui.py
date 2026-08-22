@@ -13,7 +13,11 @@ from uuid import uuid4
 import streamlit as st
 from pydantic import ValidationError
 
-from src.catalog import load_curated_activities
+from src.catalog import (
+    load_catalog_destinations,
+    load_curated_activities,
+    load_packaged_catalog_destinations,
+)
 from src.feedback import (
     FeedbackRating,
     FeedbackTargetType,
@@ -153,6 +157,61 @@ def format_duration(hours: float) -> str:
     return f"{label} {unit}"
 
 
+def catalog_destination_options(
+    activities: list[Activity],
+) -> dict[str, int]:
+    """Return searchable catalog destinations and their activity counts."""
+
+    destinations: dict[tuple[str, str], tuple[str, str, int]] = {}
+    for activity in activities:
+        key = (activity.city.casefold(), activity.country.casefold())
+        city, country, count = destinations.get(
+            key,
+            (activity.city, activity.country, 0),
+        )
+        destinations[key] = (city, country, count + 1)
+
+    ordered = sorted(
+        destinations.values(),
+        key=lambda item: (str(item[0]).casefold(), str(item[1]).casefold()),
+    )
+    return {
+        f"{city}, {country}": int(count)
+        for city, country, count in ordered
+    }
+
+
+def split_destination(value: str | None) -> tuple[str, str]:
+    """Split a destination picker value into city and optional country."""
+
+    normalized = (value or "").strip()
+    if "," not in normalized:
+        return normalized, ""
+    city, country = normalized.rsplit(",", maxsplit=1)
+    return city.strip(), country.strip()
+
+
+def catalog_city_options(
+    destinations: list[tuple[str, str]],
+) -> dict[str, str | None]:
+    """Return searchable city names and an unambiguous catalog country."""
+
+    cities: dict[str, tuple[str, set[str]]] = {}
+    for destination_city, destination_country in destinations:
+        key = destination_city.casefold()
+        city, countries = cities.get(key, (destination_city, set()))
+        countries.add(destination_country)
+        cities[key] = (city, countries)
+
+    return {
+        city: next(iter(countries)) if len(countries) == 1 else None
+        for city, countries in sorted(
+            cities.values(),
+            key=lambda item: item[0].casefold(),
+        )
+    }
+
+
 def build_trip_request(
     trip_basics: dict[str, Any],
     traveler_inputs: list[dict[str, Any]],
@@ -204,11 +263,25 @@ def build_sample_trip() -> TripRequest:
     )
 
 
-@st.cache_data(ttl="2m", max_entries=1)
+@st.cache_data(ttl="2m", max_entries=1, show_spinner=False)
 def load_activity_catalog() -> list[Activity]:
     """Load the canonical catalog without querying Supabase on every click."""
 
     return load_curated_activities()
+
+
+@st.cache_data(ttl="5m", max_entries=1, show_spinner=False)
+def load_destination_index() -> list[tuple[str, str]]:
+    """Load the lightweight published-destination index for autocomplete."""
+
+    return load_catalog_destinations()
+
+
+@st.cache_data(max_entries=1, show_spinner=False)
+def load_packaged_destination_index() -> list[tuple[str, str]]:
+    """Load instant first-paint suggestions from the bundled catalog."""
+
+    return load_packaged_catalog_destinations()
 
 
 def _initialize_state() -> None:
@@ -266,6 +339,48 @@ def _reset_activity_selections() -> None:
     st.session_state.saved_itinerary_version_id = None
 
 
+def _start_new_trip() -> None:
+    """Reset the planner so navigation creates a distinct saved trip."""
+
+    st.session_state.app_workspace = "Plan a trip"
+    st.session_state.planner_step = "trip"
+    st.session_state.trip_basics = {
+        "destination": "",
+        "country": "",
+        "days": 3,
+        "budget_level": "moderate",
+        "pace": "balanced",
+    }
+    st.session_state.traveler_count = 2
+    st.session_state.trip_request = None
+    _reset_activity_selections()
+    st.session_state.saved_trip_id = None
+    st.session_state.saved_trip_read_mode = False
+    st.session_state.saved_itinerary_version_id = None
+    st.session_state.pop("results_view", None)
+    st.session_state.pop("itinerary_auto_fill", None)
+    st.session_state.pop("open_saved_itinerary", None)
+    st.session_state.pop("trip_destination_choice", None)
+    st.session_state.pop("trip_custom_country", None)
+    st.session_state.pop("trip_destination_city", None)
+    st.session_state.pop("trip_destination_country", None)
+    st.session_state.pop("trip_destination_search", None)
+
+    traveler_widget_prefixes = (
+        "traveler_name_",
+        "traveler_interests_",
+        "traveler_custom_interests_",
+        "traveler_walking_",
+        "traveler_food_",
+        "traveler_must_do_",
+    )
+    for key in tuple(st.session_state):
+        if key == "traveler_count_control" or (
+            isinstance(key, str) and key.startswith(traveler_widget_prefixes)
+        ):
+            st.session_state.pop(key, None)
+
+
 def _invalidate_itinerary() -> None:
     """Discard a generated plan after its inputs change."""
 
@@ -276,6 +391,28 @@ def _invalidate_itinerary() -> None:
     st.session_state.itinerary_narration_error = None
     st.session_state.itinerary_change_proposals = None
     st.session_state.itinerary_change_error = None
+
+
+def _sync_catalog_country(city_countries: dict[str, str | None]) -> None:
+    """Fill the country for a selected catalog city, or clear a custom one."""
+
+    selected_city = str(
+        st.session_state.get("trip_destination_search", "")
+    ).strip()
+    matched_city = next(
+        (
+            city
+            for city in city_countries
+            if city.casefold() == selected_city.casefold()
+        ),
+        None,
+    )
+    if matched_city is None:
+        st.session_state.trip_destination_country = ""
+        return
+    country = city_countries[matched_city]
+    if country:
+        st.session_state.trip_destination_country = country
 
 
 def _retrieval_cache_key(
@@ -970,6 +1107,26 @@ def _render_progress() -> None:
 
 def _render_trip_step() -> None:
     basics = st.session_state.trip_basics
+    if "catalog_destination_index" not in st.session_state:
+        st.session_state.catalog_destination_index = (
+            load_packaged_destination_index()
+        )
+    destination_records = st.session_state.catalog_destination_index
+    city_countries = catalog_city_options(destination_records)
+    destination_options = list(city_countries)
+    current_destination = str(basics["destination"])
+    if current_destination and current_destination not in city_countries:
+        destination_options.append(current_destination)
+    destination_index = (
+        destination_options.index(current_destination)
+        if current_destination in destination_options
+        else None
+    )
+    st.session_state.setdefault(
+        "trip_destination_country",
+        str(basics["country"]),
+    )
+
     with st.container(key="trip-card"):
         st.markdown('<div class="ts-section-label">Start with the shape of the trip</div>', unsafe_allow_html=True)
         st.header("Where are you going?")
@@ -979,19 +1136,29 @@ def _render_trip_step() -> None:
             unsafe_allow_html=True,
         )
 
-        with st.form("trip_basics_form"):
-            destination_col, country_col = st.columns(2, gap="large")
-            destination = destination_col.text_input(
-                "Destination city",
-                value=basics["destination"],
-                placeholder="Rome",
-            )
-            country = country_col.text_input(
-                "Country",
-                value=basics["country"],
-                placeholder="Italy",
-            )
+        destination_col, country_col = st.columns(2, gap="large")
+        destination = destination_col.selectbox(
+            "Destination city",
+            destination_options,
+            index=destination_index,
+            key="trip_destination_search",
+            placeholder="Start typing any city",
+            accept_new_options=True,
+            filter_mode="prefix",
+            on_change=_sync_catalog_country,
+            args=(city_countries,),
+            help=(
+                "Start typing to see catalog cities with matching names. "
+                "You can also enter a city that is not listed."
+            ),
+        )
+        country = country_col.text_input(
+            "Country",
+            key="trip_destination_country",
+            placeholder="e.g. Italy",
+        )
 
+        with st.form("trip_basics_form"):
             days = st.slider(
                 "How many days?",
                 min_value=1,
@@ -1024,15 +1191,21 @@ def _render_trip_step() -> None:
             )
 
         if submitted:
-            st.session_state.trip_basics = {
-                "destination": destination,
-                "country": country,
-                "days": days,
-                "budget_level": budget_level,
-                "pace": pace,
-            }
-            st.session_state.planner_step = "travelers"
-            st.rerun()
+            if not destination or not country.strip():
+                st.error(
+                    "Choose a destination and enter its country before continuing.",
+                    icon=":material/error:",
+                )
+            else:
+                st.session_state.trip_basics = {
+                    "destination": destination,
+                    "country": country,
+                    "days": days,
+                    "budget_level": budget_level,
+                    "pace": pace,
+                }
+                st.session_state.planner_step = "travelers"
+                st.rerun()
 
         if st.button(
             "Preview a sample group",
@@ -1049,6 +1222,16 @@ def _render_trip_step() -> None:
             st.session_state.trip_request = sample_trip.model_dump(mode="json")
             _reset_activity_selections()
             st.session_state.planner_step = "results"
+            st.rerun()
+
+    # Draw the complete first-step UI before making the optional network call.
+    # The first session refreshes the small destination index once; subsequent
+    # reruns and sessions use Streamlit's cache and never reload full activities.
+    if not st.session_state.get("catalog_destination_index_refreshed"):
+        refreshed_destinations = load_destination_index()
+        st.session_state.catalog_destination_index_refreshed = True
+        if refreshed_destinations != destination_records:
+            st.session_state.catalog_destination_index = refreshed_destinations
             st.rerun()
 
 
@@ -2750,19 +2933,36 @@ def _render_results_step() -> None:
     )
 
     if not retrieval_response.destination_activity_ids:
+        available_destinations = catalog_destination_options(activities)
         st.warning(
-            "The current activity catalog has no entries for "
-            f"{trip.destination}, {trip.country}. Try Rome, Italy while "
-            "the prototype catalog expands.",
+            "There are no curated activities for "
+            f"{trip.destination}, {trip.country} yet.",
             icon=":material/location_off:",
         )
-        _render_shortlist(
-            trip,
-            retrieved_activities,
-            results,
-            activity_by_id,
-            owners_by_activity_id,
-        )
+        if available_destinations:
+            destination_labels = list(available_destinations)
+            visible_destinations = destination_labels[:6]
+            remaining_count = len(destination_labels) - len(visible_destinations)
+            availability_text = ", ".join(visible_destinations)
+            if remaining_count:
+                availability_text += (
+                    f", and {remaining_count} more in the destination picker"
+                )
+            st.caption(
+                f"Available now: {availability_text}."
+            )
+        if st.button(
+            "Change destination",
+            icon=":material/arrow_back:",
+            type="primary",
+            key="change-unsupported-destination",
+        ):
+            st.session_state.trip_basics = trip.model_dump(
+                mode="json",
+                exclude={"travelers"},
+            )
+            st.session_state.planner_step = "trip"
+            st.rerun()
         return
 
     retrieval_label = (

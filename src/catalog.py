@@ -20,6 +20,7 @@ CANDIDATE_DIRECTORY = REPOSITORY_ROOT / "data" / "candidates"
 ACTIVITY_CATALOG_PATH = REPOSITORY_ROOT / "data" / "activities.json"
 SAMPLE_ACTIVITY_PATH = REPOSITORY_ROOT / "data" / "sample_activities.json"
 SUPABASE_CATALOG_TABLE = "catalog_activities"
+SUPABASE_DESTINATION_VIEW = "catalog_destinations"
 SUPABASE_REVIEW_TABLE = "catalog_review_candidates"
 REVIEW_CANDIDATES_PATH = REPOSITORY_ROOT / "data" / "review_candidates.json"
 
@@ -108,6 +109,90 @@ def _remote_rows(activities: list[Activity]) -> list[dict[str, Any]]:
         }
         for activity in activities
     ]
+
+
+def _deduplicate_destinations(
+    destinations: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    unique: dict[tuple[str, str], tuple[str, str]] = {}
+    for raw_city, raw_country in destinations:
+        city = raw_city.strip()
+        country = raw_country.strip()
+        if not city or not country:
+            raise ValueError("Catalog destinations require a city and country")
+        unique.setdefault((city.casefold(), country.casefold()), (city, country))
+    return sorted(
+        unique.values(),
+        key=lambda item: (item[0].casefold(), item[1].casefold()),
+    )
+
+
+def _local_catalog_destinations(path: Path) -> list[tuple[str, str]]:
+    return _deduplicate_destinations(
+        [(activity.city, activity.country) for activity in _load_local_activities(path)]
+    )
+
+
+def load_packaged_catalog_destinations(
+    path: Path = ACTIVITY_CATALOG_PATH,
+) -> list[tuple[str, str]]:
+    """Load the bundled destination index without contacting Supabase."""
+
+    return _local_catalog_destinations(path)
+
+
+def _destinations_from_rows(rows: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    destinations: list[tuple[str, str]] = []
+    for row in rows:
+        city = row.get("city")
+        country = row.get("country")
+        if not isinstance(city, str) or not isinstance(country, str):
+            raise ValueError("Catalog destination query returned invalid data")
+        destinations.append((city, country))
+    return _deduplicate_destinations(destinations)
+
+
+def load_catalog_destinations(
+    path: Path = ACTIVITY_CATALOG_PATH,
+) -> list[tuple[str, str]]:
+    """Load only published city/country pairs for destination autocomplete.
+
+    The Supabase view derives its rows from the existing activity JSON, so it
+    covers records published before the view existed and stays synchronized
+    with future catalog inserts, updates, and deletions. A local checkout or a
+    database that has not applied the latest schema safely uses the packaged
+    catalog index instead.
+    """
+
+    if not _uses_supabase(path):
+        return _local_catalog_destinations(path)
+    try:
+        rows = select(
+            SUPABASE_DESTINATION_VIEW,
+            order="city",
+            columns="city,country",
+            desc=False,
+        )
+        if rows:
+            return _destinations_from_rows(rows)
+    except Exception:  # noqa: BLE001 - projection supports pre-migration databases
+        pass
+
+    # Existing Supabase projects may run the new app before schema.sql is
+    # reapplied. PostgREST can project only two JSON fields, preserving every
+    # already-published destination without downloading full activity records.
+    try:
+        rows = select(
+            SUPABASE_CATALOG_TABLE,
+            order="activity_id",
+            columns="activity_json->>city,activity_json->>country",
+            desc=False,
+        )
+        if rows:
+            return _destinations_from_rows(rows)
+    except Exception:  # noqa: BLE001 - local index keeps the first page usable
+        pass
+    return _local_catalog_destinations(path)
 
 
 def review_candidate_id(candidate: dict[str, Any], city: str) -> str:

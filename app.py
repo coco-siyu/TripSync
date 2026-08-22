@@ -5,7 +5,7 @@ import streamlit as st
 from src.catalog_ui import render_catalog_workspace
 from src.feedback_ui import render_feedback_insights
 from src.trips_ui import render_saved_trips
-from src.ui import _apply_styles, _initialize_state, render_app
+from src.ui import _apply_styles, _initialize_state, _start_new_trip, render_app
 
 
 st.set_page_config(
@@ -48,7 +48,10 @@ with st.container(key="workspace-nav"):
                     else "tertiary"
                 ),
             ):
-                st.session_state.app_workspace = workspace
+                if workspace == "Plan a trip":
+                    _start_new_trip()
+                else:
+                    st.session_state.app_workspace = workspace
                 st.rerun()
 
 view = st.session_state.app_workspace

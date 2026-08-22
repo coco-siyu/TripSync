@@ -5,6 +5,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from pydantic import ValidationError
 
@@ -12,7 +13,9 @@ from src.catalog import (
     activity_id,
     build_activity,
     consolidate_sample_activities,
+    load_catalog_destinations,
     load_curated_activities,
+    load_packaged_catalog_destinations,
     save_activity,
     update_activities,
 )
@@ -63,6 +66,83 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(load_curated_activities(path), [activity])
             with self.assertRaisesRegex(ValueError, "already"):
                 save_activity(activity, path)
+
+    def test_local_destination_index_includes_existing_catalog_rows(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "activities.json"
+            save_activity(activity, path)
+
+            self.assertEqual(
+                load_catalog_destinations(path),
+                [("Florence", "Italy")],
+            )
+
+    def test_packaged_destination_index_never_queries_supabase(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "activities.json"
+            save_activity(activity, path)
+            with patch("src.catalog.select") as select_mock:
+                destinations = load_packaged_catalog_destinations(path)
+
+        self.assertEqual(destinations, [("Florence", "Italy")])
+        select_mock.assert_not_called()
+
+    def test_remote_destination_index_queries_the_derived_view(self) -> None:
+        with (
+            patch("src.catalog._uses_supabase", return_value=True),
+            patch(
+                "src.catalog.select",
+                return_value=[
+                    {"city": "Rome", "country": "Italy"},
+                    {"city": "Florence", "country": "Italy"},
+                    {"city": "Rome", "country": "Italy"},
+                ],
+            ) as select_mock,
+        ):
+            destinations = load_catalog_destinations()
+
+        self.assertEqual(
+            destinations,
+            [("Florence", "Italy"), ("Rome", "Italy")],
+        )
+        select_mock.assert_called_once_with(
+            "catalog_destinations",
+            order="city",
+            columns="city,country",
+            desc=False,
+        )
+
+    def test_destination_index_preserves_remote_rows_before_view_migration(
+        self,
+    ) -> None:
+        with (
+            patch("src.catalog._uses_supabase", return_value=True),
+            patch(
+                "src.catalog.select",
+                side_effect=[
+                    RuntimeError("view has not been created"),
+                    [
+                        {"city": "Kyoto", "country": "Japan"},
+                        {"city": "London", "country": "United Kingdom"},
+                    ],
+                ],
+            ) as select_mock,
+        ):
+            destinations = load_catalog_destinations()
+
+        self.assertEqual(
+            destinations,
+            [("Kyoto", "Japan"), ("London", "United Kingdom")],
+        )
+        self.assertEqual(select_mock.call_count, 2)
+        select_mock.assert_called_with(
+            "catalog_activities",
+            order="activity_id",
+            columns="activity_json->>city,activity_json->>country",
+            desc=False,
+        )
 
     def test_rejects_incomplete_planning_details(self) -> None:
         invalid = {**FIELDS, "interests": []}

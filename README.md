@@ -155,7 +155,10 @@ travel writing sounds.
 `data/activities.json` is the seed and local fallback for the validated activity
 catalog. When Supabase is configured, the first catalog access copies this file
 into the shared `catalog_activities` table. Later additions and deletions remain
-there across Streamlit Cloud restarts. Historical candidate files in
+there across Streamlit Cloud restarts. The `catalog_destinations` view in the
+same schema gives the first planning page a lightweight autocomplete index. It
+derives from all existing catalog rows and automatically follows future catalog
+changes, so it does not require a separate backfill. Historical candidate files in
 `data/candidates/` are optional audit artifacts; they are not required for
 ingestion. The curation rules are in
 [docs/curation-standard.md](docs/curation-standard.md), and retrieval behavior

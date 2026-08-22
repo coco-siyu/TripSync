@@ -46,8 +46,20 @@ def insert(table: str, row: dict[str, Any]) -> None:
     client().table(table).insert(row).execute()
 
 
-def select(table: str, *, order: str) -> list[dict[str, Any]]:
-    response = client().table(table).select("*").order(order, desc=True).execute()
+def select(
+    table: str,
+    *,
+    order: str,
+    columns: str = "*",
+    desc: bool = True,
+) -> list[dict[str, Any]]:
+    response = (
+        client()
+        .table(table)
+        .select(columns)
+        .order(order, desc=desc)
+        .execute()
+    )
     return list(response.data)
 
 
