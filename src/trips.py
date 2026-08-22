@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable, Mapping
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
 from src.feedback import DEFAULT_FEEDBACK_DATABASE_PATH
-from src.models import TripRequest
+from src.models import ItineraryDay, ItineraryPlan, TripRequest
+from src.planner import PACE_RULES, TRANSITION_HOURS
 from src.supabase_store import is_configured, select_for_session, upsert
 
 
 _ITINERARY_STATE_KEYS = (
     "selected_activity_ids",
     "dismissed_must_do_ids",
+    "auto_select_must_dos",
     "itinerary_plan",
     "rejected_activities",
     "itinerary_narrative",
@@ -85,14 +88,99 @@ def state_for_itinerary_version(
     restored.update(
         {key: version.get(key) for key in _ITINERARY_STATE_KEYS if key in version}
     )
+    if "auto_select_must_dos" not in version:
+        restored["auto_select_must_dos"] = True
     restored["active_itinerary_version_id"] = version["version_id"]
     return restored
 
 
-def _snapshot_itinerary(state: dict, position: int) -> dict:
+def revise_itinerary_plan(
+    plan: ItineraryPlan,
+    *,
+    remove_activity_ids: Iterable[str] = (),
+    target_day_by_activity_id: Mapping[str, int] | None = None,
+    allow_pace_override: bool = False,
+) -> ItineraryPlan:
+    """Return a revised itinerary without changing its saved source snapshot."""
+    removed_ids = set(remove_activity_ids)
+    target_days = dict(target_day_by_activity_id or {})
+    known_ids = {
+        activity.activity_id
+        for day in plan.days
+        for activity in day.activities
+    }
+    unknown_ids = (removed_ids | set(target_days)) - known_ids
+    if unknown_ids:
+        raise ValueError("Cannot update activity IDs that are not in this itinerary.")
+
+    valid_day_numbers = {day.day_number for day in plan.days}
+    invalid_day_numbers = set(target_days.values()) - valid_day_numbers
+    if invalid_day_numbers:
+        raise ValueError("Choose one of the existing itinerary days for every moved stop.")
+
+    activities_by_day = {day.day_number: [] for day in plan.days}
+    for original_day in plan.days:
+        for activity in original_day.activities:
+            if activity.activity_id in removed_ids:
+                continue
+            target_day = target_days.get(activity.activity_id, original_day.day_number)
+            activities_by_day[target_day].append(activity)
+
+    revised_days = []
+    pace_rule = PACE_RULES[plan.pace]
+    for original_day in plan.days:
+        activities = activities_by_day[original_day.day_number]
+        activity_hours = round(sum(activity.duration_hours for activity in activities), 2)
+        transition_hours = round(TRANSITION_HOURS * max(0, len(activities) - 1), 2)
+        planned_hours = round(activity_hours + transition_hours, 2)
+        exceeds_capacity = planned_hours > original_day.capacity_hours
+        exceeds_activity_limit = len(activities) > pace_rule.max_activities
+        override_approved = original_day.pace_override_approved or allow_pace_override
+        if (exceeds_capacity or exceeds_activity_limit) and not override_approved:
+            pace_issues = []
+            if exceeds_activity_limit:
+                pace_issues.append(
+                    f"has more than {pace_rule.max_activities} activities for a "
+                    f"{plan.pace.value} pace"
+                )
+            if exceeds_capacity:
+                pace_issues.append(
+                    f"would be {planned_hours:g} hours, over its "
+                    f"{original_day.capacity_hours:g}-hour capacity"
+                )
+            raise ValueError(
+                f"Day {original_day.day_number} {' and '.join(pace_issues)}. "
+                "Confirm the pace override before saving."
+            )
+        revised_days.append(
+            ItineraryDay(
+                day_number=original_day.day_number,
+                activities=activities,
+                activity_hours=activity_hours,
+                transition_hours=transition_hours,
+                planned_hours=planned_hours,
+                capacity_hours=original_day.capacity_hours,
+                pace_override_approved=(
+                    exceeds_capacity or exceeds_activity_limit
+                )
+                and override_approved,
+            )
+        )
+
+    return ItineraryPlan.model_validate(
+        {
+            **plan.model_dump(mode="json"),
+            "days": [day.model_dump(mode="json") for day in revised_days],
+        }
+    )
+
+
+def _snapshot_itinerary(
+    state: dict, position: int, *, label: str | None = None
+) -> dict:
     return {
         "version_id": uuid4().hex,
-        "label": f"Itinerary {position}",
+        "label": (label or "").strip() or f"Itinerary {position}",
         "saved_at": datetime.now(UTC).isoformat(),
         **{
             key: state.get(key)
@@ -123,6 +211,8 @@ def save_trip(
     trip_id: str | None = None,
     session_id: str = "local",
     save_itinerary_version: bool = False,
+    itinerary_label: str | None = None,
+    force_new_itinerary_version: bool = False,
 ) -> SavedTrip:
     """Save a validated trip and its serializable planner state."""
 
@@ -135,15 +225,19 @@ def save_trip(
         versions = itinerary_versions(
             previous_state, fallback_updated_at=previous_updated_at
         )
-        snapshot = _snapshot_itinerary(state, len(versions) + 1)
-        matching_version = next(
-            (
-                version
-                for version in versions
-                if version.get("itinerary_plan") == snapshot.get("itinerary_plan")
-            ),
-            None,
+        snapshot = _snapshot_itinerary(
+            state, len(versions) + 1, label=itinerary_label
         )
+        matching_version = None
+        if not force_new_itinerary_version:
+            matching_version = next(
+                (
+                    version
+                    for version in versions
+                    if version.get("itinerary_plan") == snapshot.get("itinerary_plan")
+                ),
+                None,
+            )
         if matching_version is None:
             versions.append(snapshot)
             matching_version = snapshot

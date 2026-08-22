@@ -225,6 +225,7 @@ def _initialize_state() -> None:
         "trip_request": None,
         "selected_activity_ids": [],
         "dismissed_must_do_ids": [],
+        "auto_select_must_dos": True,
         "itinerary_plan": None,
         "rejected_activities": {},
         "itinerary_undo": None,
@@ -250,6 +251,7 @@ def _reset_activity_selections() -> None:
 
     st.session_state.selected_activity_ids = []
     st.session_state.dismissed_must_do_ids = []
+    st.session_state.auto_select_must_dos = True
     st.session_state.itinerary_plan = None
     st.session_state.rejected_activities = {}
     st.session_state.itinerary_undo = None
@@ -1228,6 +1230,9 @@ def _owner_names(owners: tuple[str, ...]) -> str:
 def _sync_initial_must_dos(must_do_ids: list[str]) -> None:
     """Add new must-dos once while respecting deliberate removals."""
 
+    if not st.session_state.auto_select_must_dos:
+        return
+
     selected = list(st.session_state.selected_activity_ids)
     dismissed = set(st.session_state.dismissed_must_do_ids)
     for activity_id in must_do_ids:
@@ -2197,6 +2202,7 @@ def _save_current_trip(
         {
             "selected_activity_ids": st.session_state.selected_activity_ids,
             "dismissed_must_do_ids": st.session_state.dismissed_must_do_ids,
+            "auto_select_must_dos": st.session_state.auto_select_must_dos,
             "itinerary_plan": st.session_state.itinerary_plan,
             "rejected_activities": st.session_state.rejected_activities,
             "itinerary_narrative": st.session_state.itinerary_narrative,

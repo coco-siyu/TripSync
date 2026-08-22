@@ -15,6 +15,7 @@ from src.llm import NarrationGenerationError
 from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
 from src.catalog import load_curated_activities
 from src.search import retrieve_activities as real_retrieve_activities
+from src.trips import SavedTrip
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -172,6 +173,64 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertEqual(app.session_state["planner_step"], "results")
         self.assertEqual(app.header[0].value, "Your strongest matches")
+
+    def test_saved_trip_selector_starts_a_new_itinerary_empty(self) -> None:
+        rome = build_sample_trip()
+        paris = rome.model_copy(
+            update={"destination": "Paris", "country": "France"}
+        )
+        records = [
+            SavedTrip(
+                trip_id="rome-trip",
+                title="Rome · 3 days",
+                trip=rome,
+                state={},
+                updated_at="2026-08-22T05:05:00+00:00",
+            ),
+            SavedTrip(
+                trip_id="paris-trip",
+                title="Paris · 3 days",
+                trip=paris,
+                state={},
+                updated_at="2026-08-22T04:05:00+00:00",
+            ),
+        ]
+
+        with patch("src.trips_ui.list_saved_trips", return_value=records):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "My trips"
+            app.run(timeout=10)
+
+            trip_selector = next(
+                box for box in app.selectbox if box.label == "Choose a trip"
+            )
+            self.assertEqual(len(trip_selector.options), 2)
+            self.assertEqual(
+                [heading.value for heading in app.subheader],
+                ["Rome · 3 days"],
+            )
+
+            trip_selector.select("paris-trip").run(timeout=10)
+            self.assertEqual(
+                [heading.value for heading in app.subheader],
+                ["Paris · 3 days"],
+            )
+
+            next(
+                box for box in app.selectbox if box.label == "Choose a trip"
+            ).select("rome-trip").run(timeout=10)
+            next(
+                button
+                for button in app.button
+                if button.label == "Create new itinerary"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertEqual(app.session_state["saved_trip_id"], "rome-trip")
+        self.assertEqual(app.session_state["selected_activity_ids"], [])
+        self.assertFalse(app.session_state["auto_select_must_dos"])
+        self.assertIsNone(app.session_state["itinerary_plan"])
 
     def test_results_views_are_ordered_and_must_dos_initialize_shortlist(
         self,

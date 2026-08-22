@@ -9,6 +9,8 @@ from src.trips import (
     SavedTrip,
     itinerary_versions,
     list_saved_trips,
+    revise_itinerary_plan,
+    save_trip,
     state_for_itinerary_version,
 )
 
@@ -16,11 +18,13 @@ from src.trips import (
 _RESTORED_STATE_DEFAULTS = {
     "selected_activity_ids": [],
     "dismissed_must_do_ids": [],
+    "auto_select_must_dos": True,
     "itinerary_plan": None,
     "rejected_activities": {},
     "itinerary_narrative": None,
 }
 _OPEN_SAVED_ITINERARY_KEY = "open_saved_itinerary"
+_SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 
 
 def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> None:
@@ -44,6 +48,38 @@ def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> Non
     st.session_state.saved_trip_read_mode = False
     st.session_state.planner_step = "results"
     st.session_state.app_workspace = "Plan a trip"
+
+
+def _start_new_itinerary(record: SavedTrip) -> None:
+    """Open this saved trip's recommendations with no inherited selections."""
+
+    st.session_state.trip_request = record.trip.model_dump(mode="json")
+    st.session_state.trip_basics = record.trip.model_dump(
+        mode="json",
+        exclude={"travelers"},
+    )
+    st.session_state.traveler_count = len(record.trip.travelers)
+    st.session_state.selected_activity_ids = []
+    st.session_state.dismissed_must_do_ids = []
+    st.session_state.auto_select_must_dos = False
+    st.session_state.itinerary_plan = None
+    st.session_state.rejected_activities = {}
+    st.session_state.itinerary_undo = None
+    st.session_state.itinerary_notice = None
+    st.session_state.itinerary_narrative = None
+    st.session_state.itinerary_narration_error = None
+    st.session_state.itinerary_change_proposals = None
+    st.session_state.itinerary_change_error = None
+    st.session_state.retrieval_cache = None
+    st.session_state.activity_detail_id = None
+    st.session_state.saved_trip_id = record.trip_id
+    st.session_state.saved_itinerary_version_id = None
+    st.session_state.saved_trip_read_mode = False
+    st.session_state.planner_step = "results"
+    st.session_state.app_workspace = "Plan a trip"
+    st.session_state.pop("results_view", None)
+    st.session_state.pop("itinerary_auto_fill", None)
+    _close_saved_itinerary()
 
 
 def _open_saved_itinerary(record: SavedTrip, version_id: str) -> None:
@@ -81,6 +117,30 @@ def itinerary_plan_for_version(
 
 def _hours_label(hours: float) -> str:
     return f"{hours:g} {'hour' if hours == 1 else 'hours'}"
+
+
+def _render_trip_brief(record: SavedTrip) -> None:
+    """Show the saved planning brief without reopening the planner."""
+
+    trip = record.trip
+    st.caption(
+        f"{trip.destination}, {trip.country} · {trip.days} days · "
+        f"{len(trip.travelers)} travelers · {trip.budget_level.value} budget · "
+        f"{trip.pace.value} pace"
+    )
+    st.caption(
+        " · ".join(
+            f"{traveler.name}: {', '.join(traveler.interests)}"
+            for traveler in trip.travelers
+        )
+    )
+    must_do_briefs = [
+        f"{traveler.name}: {', '.join(traveler.must_do_activities)}"
+        for traveler in trip.travelers
+        if traveler.must_do_activities
+    ]
+    if must_do_briefs:
+        st.caption(f"Must-dos · {' · '.join(must_do_briefs)}")
 
 
 def itinerary_comparison_for_versions(
@@ -199,6 +259,127 @@ def _render_itinerary_comparison(
                     st.caption("No activities are unique to this version.")
 
 
+def _render_itinerary_alternative_editor(
+    record: SavedTrip,
+    version: dict,
+    position: int,
+    plan: ItineraryPlan,
+) -> None:
+    """Save a named variant without altering the source itinerary snapshot."""
+    version_id = str(version["version_id"])
+    activity_locations = [
+        (day.day_number, activity)
+        for day in plan.days
+        for activity in day.activities
+    ]
+    if not activity_locations:
+        st.caption("This itinerary has no stops to revise yet.")
+        return
+
+    day_numbers = [day.day_number for day in plan.days]
+    activity_labels = {
+        activity.activity_id: f"{activity.activity_name} · Day {day_number}"
+        for day_number, activity in activity_locations
+    }
+    default_label = f"{version.get('label') or f'Itinerary {position + 1}'} alternative"
+
+    with st.expander("Create itinerary alternative"):
+        st.caption(
+            "The itinerary above stays unchanged. Remove or move stops, then save a new "
+            "version to compare with it."
+        )
+        with st.form(f"itinerary-alternative-form-{record.trip_id}-{version_id}"):
+            label = st.text_input(
+                "Alternative name", value=default_label, max_chars=80
+            )
+            removed_ids = st.multiselect(
+                "Remove stops",
+                options=list(activity_labels),
+                format_func=activity_labels.__getitem__,
+                placeholder="Keep every stop",
+            )
+            removed_id_set = set(removed_ids)
+            remaining_activities = [
+                (day_number, activity)
+                for day_number, activity in activity_locations
+                if activity.activity_id not in removed_id_set
+            ]
+            if remaining_activities:
+                st.caption("Move a stop to a different day if you want to try another balance.")
+
+            target_days: dict[str, int] = {}
+            moved_activity_ids: set[str] = set()
+            for original_day, activity in remaining_activities:
+                target_days[activity.activity_id] = st.selectbox(
+                    f"Day for {activity.activity_name}",
+                    options=day_numbers,
+                    index=day_numbers.index(original_day),
+                    format_func=lambda day_number: f"Day {day_number}",
+                    key=(
+                        f"alternative-day-{record.trip_id}-{version_id}-"
+                        f"{activity.activity_id}"
+                    ),
+                )
+                if target_days[activity.activity_id] != original_day:
+                    moved_activity_ids.add(activity.activity_id)
+
+            pace_override_approved = st.checkbox(
+                "I understand this alternative may exceed the recommended pace. Save it anyway."
+            )
+            submitted = st.form_submit_button(
+                "Save itinerary alternative",
+                type="primary",
+                icon=":material/bookmark_add:",
+                width="stretch",
+            )
+
+        if not submitted:
+            return
+        if not removed_id_set and not moved_activity_ids:
+            st.info(
+                "Remove or move at least one stop before saving an alternative.",
+                icon=":material/info:",
+            )
+            return
+
+        try:
+            revised_plan = revise_itinerary_plan(
+                plan,
+                remove_activity_ids=removed_ids,
+                target_day_by_activity_id=target_days,
+                allow_pace_override=pace_override_approved,
+            )
+        except ValueError as error:
+            st.error(str(error), icon=":material/error:")
+            return
+
+        source_state = state_for_itinerary_version(record.state, version_id=version_id)
+        source_state["itinerary_plan"] = revised_plan.model_dump(mode="json")
+        source_state["itinerary_narrative"] = None
+        source_state["selected_activity_ids"] = [
+            activity_id
+            for activity_id in source_state.get("selected_activity_ids", [])
+            if activity_id not in removed_id_set
+        ]
+        saved_record = save_trip(
+            record.trip,
+            source_state,
+            trip_id=record.trip_id,
+            session_id=st.session_state.feedback_session_id,
+            save_itinerary_version=True,
+            itinerary_label=label,
+            force_new_itinerary_version=True,
+        )
+        saved_version_id = str(
+            saved_record.state.get("active_itinerary_version_id", version_id)
+        )
+        _open_saved_itinerary(saved_record, saved_version_id)
+        st.session_state[_SAVED_ITINERARY_FLASH_KEY] = (
+            f"Saved {label.strip() or 'a new itinerary alternative'}."
+        )
+        st.rerun()
+
+
 def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> None:
     """Show a saved itinerary below its trip card without returning to the planner."""
 
@@ -234,7 +415,7 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
             f"{plan.pace.value} pace"
         )
         st.caption(
-            "This is a saved snapshot. Edit matched attractions to make a new itinerary version."
+            "This is a saved snapshot. Create an alternative here, or edit matched attractions in the planner."
         )
 
         for day in plan.days:
@@ -265,22 +446,22 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
                 for activity in plan.unscheduled:
                     st.markdown(f"**{activity.activity_name}** — {activity.reason}")
 
-        edit, close = st.columns(2)
-        edit.button(
-            "Edit matched attractions",
-            icon=":material/edit:",
-            key=f"edit-saved-itinerary-{record.trip_id}-{version_id}",
-            on_click=_open_trip_for_edit,
-            args=(record, version_id),
-            use_container_width=True,
-        )
-        close.button(
-            "Close itinerary",
-            icon=":material/close:",
-            key=f"close-saved-itinerary-{record.trip_id}-{version_id}",
-            on_click=_close_saved_itinerary,
-            use_container_width=True,
-        )
+        _render_itinerary_alternative_editor(record, version, position, plan)
+
+        with st.container(horizontal=True):
+            st.button(
+                "Edit recommendations",
+                icon=":material/edit:",
+                key=f"edit-saved-itinerary-{record.trip_id}-{version_id}",
+                on_click=_open_trip_for_edit,
+                args=(record, version_id),
+            )
+            st.button(
+                "Close itinerary",
+                icon=":material/close:",
+                key=f"close-saved-itinerary-{record.trip_id}-{version_id}",
+                on_click=_close_saved_itinerary,
+            )
 
 
 def render_saved_trips() -> None:
@@ -290,38 +471,78 @@ def render_saved_trips() -> None:
         "Saved trips include the itinerary you had at the time of saving. This "
         "demo shows plans saved in this browser session; other visitors' plans stay private."
     )
+    if notice := st.session_state.pop(_SAVED_ITINERARY_FLASH_KEY, None):
+        st.toast(notice, icon=":material/check_circle:")
     records = list_saved_trips(st.session_state.feedback_session_id)
     if not records:
         st.info("Save a plan from the results screen and it will appear here.", icon=":material/bookmark:")
         return
+
+    records_by_id = {record.trip_id: record for record in records}
+    versions_by_trip_id = {
+        record.trip_id: itinerary_versions(
+            record.state,
+            fallback_updated_at=record.updated_at,
+        )
+        for record in records
+    }
+    trip_labels = {
+        record.trip_id: (
+            f"{record.title} · {len(versions_by_trip_id[record.trip_id])} saved "
+            f"{'itinerary' if len(versions_by_trip_id[record.trip_id]) == 1 else 'itineraries'}"
+        )
+        for record in records
+    }
+    selected_trip_id = st.selectbox(
+        "Choose a trip",
+        options=list(records_by_id),
+        format_func=trip_labels.__getitem__,
+        key="saved-trip-selector",
+        persist_state="session",
+    )
+    record = records_by_id[selected_trip_id]
     open_itinerary = st.session_state.get(_OPEN_SAVED_ITINERARY_KEY, {})
-    for record in records:
-        versions = itinerary_versions(record.state, fallback_updated_at=record.updated_at)
-        version_ids = [version["version_id"] for version in versions]
-        with st.container(border=True):
-            st.subheader(record.title)
-            st.caption(f"Last saved {record.updated_at[:16].replace('T', ' ')} UTC")
-            if versions:
-                st.caption(
-                    f"{len(versions)} saved itinerary "
-                    f"{'version' if len(versions) == 1 else 'versions'}"
-                )
-                version_ids = [version["version_id"] for version in versions]
-                selected_version_id = st.selectbox(
-                    "Itinerary to open",
-                    version_ids,
-                    index=len(version_ids) - 1,
-                    format_func=lambda version_id: _version_label(
-                        next(
-                            version
-                            for version in versions
-                            if version["version_id"] == version_id
-                        ),
-                        version_ids.index(version_id),
-                    ),
-                    key=f"saved-version-{record.trip_id}",
-                    label_visibility="collapsed",
-                )
+    versions = versions_by_trip_id[record.trip_id]
+    version_ids = [version["version_id"] for version in versions]
+    version_labels = {
+        version["version_id"]: _version_label(version, position)
+        for position, version in enumerate(versions)
+    }
+
+    with st.container(border=True):
+        st.subheader(record.title)
+        st.caption(f"Last saved {record.updated_at[:16].replace('T', ' ')} UTC")
+        _render_trip_brief(record)
+        st.button(
+            "Create new itinerary",
+            icon=":material/add_circle:",
+            type="primary",
+            key=f"new-itinerary-{record.trip_id}",
+            on_click=_start_new_itinerary,
+            args=(record,),
+        )
+        st.caption(
+            "Start from this trip's curated activities with an empty shortlist."
+        )
+
+        if versions:
+            st.markdown("#### Saved itineraries")
+            st.caption(
+                f"{len(versions)} saved itinerary "
+                f"{'version' if len(versions) == 1 else 'versions'} for this trip"
+            )
+            selected_version_id = st.selectbox(
+                "Choose an itinerary",
+                version_ids,
+                index=len(version_ids) - 1,
+                format_func=version_labels.__getitem__,
+                key=(
+                    f"saved-version-{record.trip_id}-"
+                    f"{versions[-1]['version_id']}"
+                ),
+                persist_state="session",
+            )
+            with st.container(horizontal=True):
                 st.button(
                     "Open itinerary",
                     icon=":material/folder_open:",
@@ -329,30 +550,34 @@ def render_saved_trips() -> None:
                     on_click=_open_saved_itinerary,
                     args=(record, selected_version_id),
                 )
-                _render_itinerary_comparison(record, versions)
-            else:
                 st.button(
-                    "Edit trip",
+                    "Edit recommendations",
                     icon=":material/edit:",
-                    key=f"open-{record.trip_id}",
+                    key=f"edit-recommendations-{record.trip_id}",
                     on_click=_open_trip_for_edit,
-                    args=(record,),
+                    args=(record, selected_version_id),
                 )
-        if open_itinerary.get("trip_id") == record.trip_id:
-            active_version_id = str(open_itinerary.get("version_id") or "")
-            active_version = next(
-                (
-                    version
-                    for version in versions
-                    if version["version_id"] == active_version_id
-                ),
-                None,
-            )
-            if active_version is None:
-                st.info("This saved itinerary is no longer available.", icon=":material/info:")
-            else:
-                _render_saved_itinerary(
-                    record,
-                    active_version,
-                    version_ids.index(active_version_id),
-                )
+            _render_itinerary_comparison(record, versions)
+        else:
+            st.caption("No itineraries have been saved for this trip yet.")
+
+    if open_itinerary.get("trip_id") != record.trip_id:
+        return
+
+    active_version_id = str(open_itinerary.get("version_id") or "")
+    active_version = next(
+        (
+            version
+            for version in versions
+            if version["version_id"] == active_version_id
+        ),
+        None,
+    )
+    if active_version is None:
+        st.info("This saved itinerary is no longer available.", icon=":material/info:")
+    else:
+        _render_saved_itinerary(
+            record,
+            active_version,
+            version_ids.index(active_version_id),
+        )
