@@ -238,6 +238,15 @@ def automatic_activity_fields(candidate: dict, city: str) -> dict | None:
         "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
         "description": f"Visit {name}, a curated {draft.category.replace('_', ' ')} experience in {city}.",
         "source_url": candidate["source_url"],
-        "official_url": candidate.get("official_url"),
+        "official_url": (
+            candidate.get("official_url")
+            if candidate.get("official_site_verified")
+            else None
+        ),
+        "official_site_verified": bool(candidate.get("official_site_verified")),
+        "official_visit_url": candidate.get("official_visit_url"),
+        "official_hours_url": candidate.get("official_hours_url"),
+        "official_tickets_url": candidate.get("official_tickets_url"),
+        "official_site_checked_at": candidate.get("official_site_checked_at"),
         "wikipedia_url": candidate.get("wikipedia_url"),
     }

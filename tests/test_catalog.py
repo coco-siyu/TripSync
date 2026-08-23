@@ -19,7 +19,12 @@ from src.catalog import (
     save_activity,
     update_activities,
 )
-from src.catalog_backfill import backfill_coordinates, backfill_osm_details, wikidata_id_from_source
+from src.catalog_backfill import (
+    backfill_coordinates,
+    backfill_official_sites,
+    backfill_osm_details,
+    wikidata_id_from_source,
+)
 from src.osm_enrichment import (
     OsmDetails,
     _batch_query,
@@ -29,6 +34,7 @@ from src.osm_enrichment import (
     parse_osm_details,
     parse_osm_details_by_nearby_name,
 )
+from src.official_sites import OfficialSiteDetails
 from src.curation_seed import suggested_activities
 
 
@@ -39,6 +45,7 @@ CANDIDATE = {
     "longitude": 11.2558,
     "wikidata_id": "Q51252",
     "official_url": "https://www.uffizi.it/",
+    "official_site_verified": True,
     "wikipedia_url": "https://en.wikipedia.org/wiki/Uffizi",
 }
 FIELDS = {
@@ -60,6 +67,7 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(activity.longitude, 11.2558)
         self.assertEqual(activity.wikidata_id, "Q51252")
         self.assertEqual(str(activity.official_url), "https://www.uffizi.it/")
+        self.assertTrue(activity.official_site_verified)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "activities.json"
             save_activity(activity, path)
@@ -186,6 +194,89 @@ class CatalogTests(unittest.TestCase):
             update={"source_url": "https://www.uffizi.it/", "latitude": None, "longitude": None}
         )
         self.assertEqual(wikidata_id_from_source(activity), "Q51252")
+
+    def test_backfills_real_official_site_from_a_wikidata_locator(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={
+                "official_url": None,
+                "official_site_verified": False,
+                "official_site_checked_at": None,
+            }
+        )
+        locator_calls: list[list[str]] = []
+
+        def locate(ids: list[str]) -> dict[str, str]:
+            locator_calls.append(ids)
+            return {"Q51252": "https://www.uffizi.it/"}
+
+        def verify(rows: list[object]) -> dict[str, OfficialSiteDetails]:
+            self.assertEqual(len(rows), 1)
+            return {
+                activity.id: OfficialSiteDetails(
+                    "https://www.uffizi.it/",
+                    visit_url="https://www.uffizi.it/en/visit",
+                    hours_url="https://www.uffizi.it/en/opening-hours",
+                    tickets_url="https://www.uffizi.it/en/tickets",
+                )
+            }
+
+        updated, refreshed, unresolved = backfill_official_sites(
+            [activity], locator_fetcher=locate, batch_verifier=verify
+        )
+
+        self.assertEqual(locator_calls, [["Q51252"]])
+        self.assertEqual((refreshed, unresolved), (1, 0))
+        self.assertTrue(updated[0].official_site_verified)
+        self.assertEqual(
+            str(updated[0].official_hours_url),
+            "https://www.uffizi.it/en/opening-hours",
+        )
+
+    def test_backfill_reuses_a_curated_direct_source_without_locator(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={
+                "source_url": "https://www.uffizi.it/",
+                "official_url": None,
+                "official_site_verified": False,
+            }
+        )
+
+        updated, refreshed, unresolved = backfill_official_sites(
+            [activity],
+            locator_fetcher=lambda _: self.fail("locator should not be called"),
+            batch_verifier=lambda rows: {
+                activity.id: OfficialSiteDetails(rows[0].candidate_url)
+            },
+        )
+
+        self.assertEqual((refreshed, unresolved), (1, 0))
+        self.assertEqual(str(updated[0].official_url), "https://www.uffizi.it/")
+
+    def test_can_recheck_a_previously_verified_official_site(self) -> None:
+        activity = build_activity(CANDIDATE, "Florence", "Italy", FIELDS).model_copy(
+            update={
+                "official_hours_url": "https://www.uffizi.it/old-hours",
+            }
+        )
+
+        updated, refreshed, unresolved = backfill_official_sites(
+            [activity],
+            include_verified=True,
+            locator_fetcher=lambda _: {},
+            batch_verifier=lambda candidates: {
+                candidate.activity_id: OfficialSiteDetails(
+                    "https://www.uffizi.it/",
+                    hours_url="https://www.uffizi.it/new-hours",
+                )
+                for candidate in candidates
+            },
+        )
+
+        self.assertEqual((refreshed, unresolved), (1, 0))
+        self.assertEqual(
+            str(updated[0].official_hours_url),
+            "https://www.uffizi.it/new-hours",
+        )
 
     def test_parses_and_backfills_optional_osm_visit_details(self) -> None:
         details = parse_osm_details({

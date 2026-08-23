@@ -56,6 +56,7 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
     """Merge reviewed form fields with provenance and validate with Pydantic."""
 
     name = fields["name"]
+    candidate_site_verified = bool(candidate.get("official_site_verified"))
     return Activity.model_validate({
         "id": activity_id(city, name), "name": name, "city": city, "country": country,
         "category": fields["category"], "category_tags": fields.get("category_tags", []), "interests": fields["interests"],
@@ -66,7 +67,16 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
         "reservation_required": fields["reservation_required"],
         "description": fields["description"],
         "source_url": fields.get("source_url") or candidate["source_url"],
-        "official_url": fields.get("official_url") or candidate.get("official_url"),
+        "official_url": fields.get("official_url") or (
+            candidate.get("official_url") if candidate_site_verified else None
+        ),
+        "official_site_verified": fields.get(
+            "official_site_verified", candidate_site_verified
+        ),
+        "official_visit_url": fields.get("official_visit_url"),
+        "official_hours_url": fields.get("official_hours_url"),
+        "official_tickets_url": fields.get("official_tickets_url"),
+        "official_site_checked_at": fields.get("official_site_checked_at"),
         "wikipedia_url": fields.get("wikipedia_url") or candidate.get("wikipedia_url"),
         "wikidata_id": candidate.get("wikidata_id"),
         "address": fields.get("address"),
@@ -423,7 +433,16 @@ def review_curate_candidates(
             "accessibility_notes": "Verify current accessibility and visitor information before visiting.",
             "description": f"Visit {name}, a curated {draft.category.replace('_', ' ')} experience in {city}.",
             "source_url": candidate.get("source_url"),
-            "official_url": candidate.get("official_url"),
+            "official_url": (
+                candidate.get("official_url")
+                if candidate.get("official_site_verified")
+                else None
+            ),
+            "official_site_verified": bool(candidate.get("official_site_verified")),
+            "official_visit_url": candidate.get("official_visit_url"),
+            "official_hours_url": candidate.get("official_hours_url"),
+            "official_tickets_url": candidate.get("official_tickets_url"),
+            "official_site_checked_at": candidate.get("official_site_checked_at"),
             "wikipedia_url": candidate.get("wikipedia_url"),
         }
         try:

@@ -19,9 +19,17 @@ from src.catalog import (
     save_activities,
     save_review_candidates,
     update_activity,
+    update_activities,
+)
+from src.catalog_backfill import backfill_official_sites
+from src.catalog_quality import (
+    catalog_quality_rows,
+    destination_quality_rows,
+    summarize_catalog_quality,
 )
 from src.catalog_import import CatalogImportError, fetch_candidates, resolve_city
 from src.models import Activity, BudgetLevel, WalkingLevel
+from src.official_sites import enrich_candidate_official_sites
 from src.ui import INTEREST_OPTIONS
 
 
@@ -135,9 +143,30 @@ def _render_published_activity_editor(activity: Activity) -> None:
         description = st.text_area("Short factual description", value=activity.description)
         source_url = st.text_input("Verification URL", value=str(activity.source_url))
         official_url = st.text_input(
-            "Official visitor information URL",
+            "Possible official website",
             value=str(activity.official_url or ""),
-            help="Use the attraction's own visitor or ticketing site when known.",
+            help=(
+                "TripSync verifies changed URLs automatically before showing them "
+                "to travelers as official sources."
+            ),
+        )
+        st.text_input(
+            "Official visit-planning URL",
+            value=str(activity.official_visit_url or ""),
+            disabled=True,
+            help="Discovered automatically from the verified official website.",
+        )
+        st.text_input(
+            "Official opening-hours URL",
+            value=str(activity.official_hours_url or ""),
+            disabled=True,
+            help="Discovered automatically from the verified official website.",
+        )
+        st.text_input(
+            "Official tickets URL",
+            value=str(activity.official_tickets_url or ""),
+            disabled=True,
+            help="Discovered automatically from the verified official website.",
         )
         address = st.text_input("Address", value=activity.address or "")
         opening_hours = st.text_input(
@@ -149,6 +178,13 @@ def _render_published_activity_editor(activity: Activity) -> None:
         save = st.form_submit_button("Validate and save changes", icon=":material/save:", type="primary")
     if save:
         try:
+            normalized_official_url = official_url.strip().rstrip("/")
+            existing_official_url = str(activity.official_url or "").rstrip("/")
+            keep_verified_site = bool(
+                activity.official_site_verified
+                and normalized_official_url
+                and normalized_official_url == existing_official_url
+            )
             updated = Activity.model_validate({
                 **activity.model_dump(mode="json"),
                 "category": category,
@@ -164,6 +200,19 @@ def _render_published_activity_editor(activity: Activity) -> None:
                 "description": description,
                 "source_url": source_url,
                 "official_url": official_url or None,
+                "official_site_verified": keep_verified_site,
+                "official_visit_url": (
+                    activity.official_visit_url if keep_verified_site else None
+                ),
+                "official_hours_url": (
+                    activity.official_hours_url if keep_verified_site else None
+                ),
+                "official_tickets_url": (
+                    activity.official_tickets_url if keep_verified_site else None
+                ),
+                "official_site_checked_at": (
+                    activity.official_site_checked_at if keep_verified_site else None
+                ),
                 "address": address or None,
                 "opening_hours": opening_hours or None,
                 "osm_url": osm_url or None,
@@ -276,6 +325,143 @@ def _render_published_catalog() -> None:
                     _show_catalog_write_error(error)
 
 
+def _render_catalog_quality() -> None:
+    """Show official-source coverage and run one automatic retry for all gaps."""
+
+    completed_refresh = st.session_state.pop(
+        "catalog-quality-refresh-result", None
+    )
+    if completed_refresh:
+        st.toast(
+            completed_refresh,
+            icon=":material/verified:",
+            duration=4,
+        )
+    activities = load_curated_activities()
+    st.subheader("Official source coverage")
+    st.caption(
+        "TripSync saves a website only after opening the real organization domain. "
+        "Wikidata may provide a locator URL, but visitor links come from the verified site itself."
+    )
+    if not activities:
+        st.info("No published activities yet.", icon=":material/dataset:")
+        return
+
+    summary = summarize_catalog_quality(activities)
+    metric_columns = st.columns(4)
+    metric_columns[0].metric(
+        "Verified official sites",
+        f"{summary.verified_official_sites}/{summary.total}",
+    )
+    metric_columns[1].metric(
+        "Official hours links",
+        f"{summary.official_hours_links}/{summary.total}",
+    )
+    metric_columns[2].metric(
+        "Official ticket links",
+        f"{summary.official_ticket_links}/{summary.total}",
+    )
+    metric_columns[3].metric(
+        "Mapped coordinates",
+        f"{summary.coordinates}/{summary.total}",
+    )
+
+    st.markdown("#### Coverage by destination")
+    st.dataframe(
+        pd.DataFrame(destination_quality_rows(activities)),
+        hide_index=True,
+        column_config={
+            column: st.column_config.ProgressColumn(
+                column, min_value=0.0, max_value=1.0, format="percent"
+            )
+            for column in (
+                "Official sites", "Hours links", "Ticket links", "Addresses",
+                "Coordinates",
+            )
+        },
+        key="catalog-quality-destinations",
+    )
+
+    quality_filter = st.selectbox(
+        "Show activities",
+        [
+            "Missing verified official site",
+            "Missing official hours link",
+            "Missing official ticket link",
+            "All activities",
+        ],
+        key="catalog-quality-filter",
+    )
+    if quality_filter == "Missing verified official site":
+        filtered = [
+            activity for activity in activities
+            if not activity.official_site_verified
+        ]
+    elif quality_filter == "Missing official hours link":
+        filtered = [
+            activity for activity in activities
+            if activity.official_hours_url is None
+        ]
+    elif quality_filter == "Missing official ticket link":
+        filtered = [
+            activity for activity in activities
+            if activity.official_tickets_url is None
+        ]
+    else:
+        filtered = activities
+    st.dataframe(
+        pd.DataFrame(catalog_quality_rows(filtered)),
+        hide_index=True,
+        column_config={
+            "Official website": st.column_config.LinkColumn("Official website"),
+            "Hours page": st.column_config.LinkColumn("Hours page"),
+            "Tickets page": st.column_config.LinkColumn("Tickets page"),
+        },
+        key=f"catalog-quality-activities-{quality_filter}",
+    )
+
+    with st.container(border=True):
+        st.markdown("#### Automatic source refresh")
+        st.caption(
+            "Retry every missing source in one batch. Verified links are saved directly; "
+            "unreachable or mismatched sites remain missing and can retry next week."
+        )
+        if st.button(
+            "Refresh missing official sources",
+            icon=":material/sync:",
+            type="primary",
+            key="refresh-official-sites",
+        ):
+            try:
+                with st.status(
+                    "Checking actual official websites…", expanded=True
+                ) as status:
+                    updated, refreshed, unresolved = backfill_official_sites(
+                        activities
+                    )
+                    update_activities(
+                        updated,
+                        sync_embeddings=False,
+                    )
+                    status.update(
+                        label=(
+                            f"Saved {refreshed} verified official source(s); "
+                            f"{unresolved} remain unavailable."
+                        ),
+                        state="complete",
+                        expanded=False,
+                    )
+                st.session_state["catalog-quality-refresh-result"] = (
+                    f"Saved {refreshed} verified official source(s); "
+                    f"{unresolved} remain unavailable."
+                )
+                st.rerun()
+            except CatalogImportError as error:
+                st.error(str(error), icon=":material/cloud_off:")
+            except Exception as error:  # noqa: BLE001 - remote persistence must remain actionable
+                _show_catalog_write_error(error)
+
+
 def _render_catalog_import() -> None:
     """Fetch one city and publish quality-approved attractions directly."""
 
@@ -297,11 +483,14 @@ def _render_catalog_import() -> None:
                     city = resolve_city(city_name, country_name)
                     candidates = fetch_candidates(city, limit=limit)
                     raw_candidates = [candidate.__dict__ for candidate in candidates]
+                    enriched_candidates = enrich_candidate_official_sites(
+                        raw_candidates
+                    )
                     activities, _ = auto_curate_candidates(
-                        raw_candidates, city.name, city.country
+                        enriched_candidates, city.name, city.country
                     )
                     held_for_review = save_review_candidates(
-                        raw_candidates, city.name, city.country
+                        enriched_candidates, city.name, city.country
                     )
                     published_ids = {activity.id for activity in load_curated_activities()}
                     ready = [activity for activity in activities if activity.id not in published_ids]
@@ -473,14 +662,22 @@ def render_catalog_workspace() -> None:
     st.markdown('<div class="ts-section-label">Build the catalog</div>', unsafe_allow_html=True)
     st.title("Curate places your travelers will love")
     st.caption("Manage published activities, resolve ambiguous places, and fetch new source candidates.")
-    published_tab, review_tab, fetch_tab = st.tabs(
-        ["Published activities", "Needs review", "Fetch & batch curate"],
+    published_tab, quality_tab, review_tab, fetch_tab = st.tabs(
+        [
+            "Published activities",
+            "Data quality",
+            "Needs review",
+            "Fetch & batch curate",
+        ],
         key="catalog-workspace-tabs",
         on_change="rerun",
     )
     if published_tab.open:
         with published_tab:
             _render_published_catalog()
+    if quality_tab.open:
+        with quality_tab:
+            _render_catalog_quality()
     if review_tab.open:
         with review_tab:
             _render_needs_review()

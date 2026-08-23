@@ -190,6 +190,98 @@ SELECT ?item ?coord WHERE {{
 """.strip()
 
 
+def official_url_candidates_query(wikidata_ids: list[str]) -> str:
+    """Build a bounded locator query for official-site candidates.
+
+    P856 values are inputs to TripSync's real-site validator. They are never
+    displayed or treated as visitor information until that website is opened
+    and verified separately.
+    """
+
+    ids = sorted({item.strip() for item in wikidata_ids if item.strip()})
+    if not ids:
+        raise ValueError("at least one Wikidata identifier is required")
+    if len(ids) > 100:
+        raise ValueError("an official URL query supports at most 100 identifiers")
+    if any(not item.startswith("Q") or not item[1:].isdigit() for item in ids):
+        raise ValueError("Wikidata identifiers must look like Q123")
+    values = " ".join(f"wd:{item}" for item in ids)
+    return f"""
+SELECT ?item ?officialWebsite WHERE {{
+  VALUES ?item {{ {values} }}
+  ?item wdt:P856 ?officialWebsite .
+}}
+""".strip()
+
+
+def parse_official_url_candidates(payload: dict[str, Any]) -> dict[str, str]:
+    """Return one deterministic locator URL per stable Wikidata item."""
+
+    bindings = payload.get("results", {}).get("bindings", [])
+    if not isinstance(bindings, list):
+        raise ValueError("Wikidata response does not contain a bindings list")
+    urls_by_id: dict[str, set[str]] = {}
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            continue
+        try:
+            item_id = _wikidata_id(binding["item"]["value"])
+            candidate_url = binding["officialWebsite"]["value"].strip()
+        except (KeyError, AttributeError, TypeError, ValueError):
+            continue
+        if candidate_url.startswith(("https://", "http://")):
+            urls_by_id.setdefault(item_id, set()).add(candidate_url)
+    return {
+        item_id: min(
+            urls,
+            key=lambda url: (
+                not url.startswith("https://"),
+                len(url),
+                url.casefold(),
+            ),
+        )
+        for item_id, urls in urls_by_id.items()
+        if urls
+    }
+
+
+def fetch_official_url_candidates(
+    wikidata_ids: list[str], *, timeout: int = 20, retries: int = 3
+) -> dict[str, str]:
+    """Fetch locator URLs for later verification against the real websites."""
+
+    if retries < 0:
+        raise ValueError("retries must not be negative")
+    query = official_url_candidates_query(wikidata_ids)
+    request = Request(
+        f"{WIKIDATA_SPARQL_URL}?{urlencode({'query': query, 'format': 'json'})}",
+        headers={
+            "Accept": "application/sparql-results+json",
+            "User-Agent": "TripSync official-site locator (educational project)",
+        },
+    )
+    for attempt in range(retries + 1):
+        try:
+            with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed HTTPS endpoint
+                payload = json.load(response)
+            break
+        except HTTPError as error:
+            if error.code not in TRANSIENT_HTTP_STATUSES or attempt == retries:
+                raise CatalogImportError(
+                    f"Wikidata returned HTTP {error.code} while locating official sites. "
+                    "Please try again later."
+                ) from error
+        except (TimeoutError, URLError) as error:
+            if attempt == retries:
+                raise CatalogImportError(
+                    "Wikidata timed out while locating official sites. Try again later."
+                ) from error
+        time.sleep(2**attempt)
+    if not isinstance(payload, dict):
+        raise ValueError("Wikidata response must be a JSON object")
+    return parse_official_url_candidates(payload)
+
+
 def fetch_coordinates(
     wikidata_ids: list[str], *, timeout: int = 20, retries: int = 3
 ) -> dict[str, tuple[float, float]]:

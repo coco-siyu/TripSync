@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from datetime import datetime
 from typing import Any
 
 from pydantic import (
@@ -153,6 +154,11 @@ class Activity(TripSyncModel):
     description: str = Field(min_length=1, max_length=800)
     source_url: HttpUrl
     official_url: HttpUrl | None = None
+    official_site_verified: bool = False
+    official_visit_url: HttpUrl | None = None
+    official_hours_url: HttpUrl | None = None
+    official_tickets_url: HttpUrl | None = None
+    official_site_checked_at: datetime | None = None
     wikipedia_url: HttpUrl | None = None
     wikidata_id: str | None = Field(default=None, pattern=r"^Q\d+$")
     address: str | None = Field(default=None, min_length=1, max_length=300)
@@ -161,7 +167,15 @@ class Activity(TripSyncModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 
-    @field_validator("official_url", "wikipedia_url", "osm_url", mode="before")
+    @field_validator(
+        "official_url",
+        "official_visit_url",
+        "official_hours_url",
+        "official_tickets_url",
+        "wikipedia_url",
+        "osm_url",
+        mode="before",
+    )
     @classmethod
     def normalize_optional_urls(cls, value: Any) -> Any:
         """Accept older catalog links that were stored without a scheme.
@@ -208,6 +222,17 @@ class Activity(TripSyncModel):
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError(
                 "latitude and longitude must be provided together"
+            )
+        official_detail_urls = (
+            self.official_visit_url,
+            self.official_hours_url,
+            self.official_tickets_url,
+        )
+        if self.official_site_verified and self.official_url is None:
+            raise ValueError("a verified official site requires official_url")
+        if any(official_detail_urls) and not self.official_site_verified:
+            raise ValueError(
+                "official visitor links require a verified official site"
             )
         return self
 

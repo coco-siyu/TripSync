@@ -115,6 +115,18 @@ class ActivityTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             Activity.model_validate(raw_activity)
 
+    def test_official_detail_links_require_a_verified_real_site(self) -> None:
+        raw_activity = json.loads(SAMPLE_DATA_PATH.read_text(encoding="utf-8"))[0]
+        raw_activity["official_url"] = "https://museum.example.org"
+        raw_activity["official_hours_url"] = "https://museum.example.org/hours"
+
+        with self.assertRaisesRegex(ValidationError, "verified official site"):
+            Activity.model_validate(raw_activity)
+
+        raw_activity["official_site_verified"] = True
+        activity = Activity.model_validate(raw_activity)
+        self.assertTrue(activity.official_site_verified)
+
 
 if __name__ == "__main__":
     unittest.main()

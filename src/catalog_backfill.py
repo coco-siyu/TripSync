@@ -9,16 +9,32 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Callable
+from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 from src.catalog import ACTIVITY_CATALOG_PATH, load_curated_activities, update_activities
-from src.catalog_import import CatalogImportError, WIKIDATA_ENTITY_URL, fetch_coordinates
+from src.catalog_import import (
+    CatalogImportError,
+    WIKIDATA_ENTITY_URL,
+    fetch_coordinates,
+    fetch_official_url_candidates,
+)
 from src.models import Activity
+from src.official_sites import (
+    OfficialSiteCandidate,
+    OfficialSiteDetails,
+    verify_official_sites,
+)
 from src.osm_enrichment import OsmDetails, enrich_activity, fetch_osm_details_many
 
 
 CoordinateFetcher = Callable[[list[str]], dict[str, tuple[float, float]]]
 OsmFetcher = Callable[[Activity], OsmDetails]
 OsmBatchFetcher = Callable[[list[Activity]], dict[str, OsmDetails]]
+OfficialLocatorFetcher = Callable[[list[str]], dict[str, str]]
+OfficialBatchVerifier = Callable[
+    [list[OfficialSiteCandidate]], dict[str, OfficialSiteDetails]
+]
 
 
 def wikidata_id_from_source(activity: Activity) -> str | None:
@@ -66,6 +82,96 @@ def backfill_coordinates(
         updated.append(activity.model_copy(update={"latitude": latitude, "longitude": longitude}))
         refreshed += 1
     return updated, refreshed, unresolved
+
+
+def _direct_official_source(activity: Activity) -> str | None:
+    """Recover a curated official URL from older primary-source records."""
+
+    source_url = str(activity.source_url)
+    hostname = (urlparse(source_url).hostname or "").casefold()
+    reference_hosts = (
+        "wikidata.org",
+        "wikipedia.org",
+        "openstreetmap.org",
+    )
+    if any(
+        hostname == host or hostname.endswith(f".{host}")
+        for host in reference_hosts
+    ):
+        return None
+    return source_url
+
+
+def backfill_official_sites(
+    activities: list[Activity],
+    *,
+    locator_fetcher: OfficialLocatorFetcher = fetch_official_url_candidates,
+    batch_verifier: OfficialBatchVerifier = verify_official_sites,
+    include_verified: bool = False,
+) -> tuple[list[Activity], int, int]:
+    """Validate real official sites and add direct visitor-information links."""
+
+    targets = (
+        activities
+        if include_verified
+        else [
+            activity
+            for activity in activities
+            if not activity.official_site_verified
+        ]
+    )
+    ids_by_activity = {
+        activity.id: wikidata_id_from_source(activity) for activity in targets
+    }
+    locator_ids = sorted(
+        {
+            item_id
+            for activity in targets
+            if not activity.official_url and not _direct_official_source(activity)
+            if (item_id := ids_by_activity[activity.id])
+        }
+    )
+    locator_urls: dict[str, str] = {}
+    for start in range(0, len(locator_ids), 100):
+        locator_urls.update(locator_fetcher(locator_ids[start : start + 100]))
+
+    site_candidates: list[OfficialSiteCandidate] = []
+    for activity in targets:
+        item_id = ids_by_activity[activity.id]
+        candidate_url = (
+            str(activity.official_url)
+            if activity.official_url
+            else _direct_official_source(activity)
+            or (locator_urls.get(item_id) if item_id else None)
+        )
+        if candidate_url:
+            site_candidates.append(
+                OfficialSiteCandidate(
+                    activity.id,
+                    activity.name,
+                    candidate_url,
+                )
+            )
+    verified = batch_verifier(site_candidates)
+    checked_at = datetime.now(UTC)
+    updated: list[Activity] = []
+    for activity in targets:
+        details = verified.get(activity.id)
+        if details is None:
+            continue
+        updates = {
+            "official_url": details.official_url,
+            "official_site_verified": True,
+            "official_visit_url": details.visit_url,
+            "official_hours_url": details.hours_url,
+            "official_tickets_url": details.tickets_url,
+            "official_site_checked_at": checked_at,
+        }
+        item_id = ids_by_activity[activity.id]
+        if item_id and not activity.wikidata_id:
+            updates["wikidata_id"] = item_id
+        updated.append(Activity.model_validate({**dict(activity), **updates}))
+    return updated, len(updated), len(targets) - len(updated)
 
 
 def backfill_osm_details(
@@ -116,16 +222,32 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Backfill TripSync route coordinates and optional OSM visit details.")
     parser.add_argument("--dry-run", action="store_true", help="Report possible updates without saving them.")
+    detail_group = parser.add_mutually_exclusive_group()
+    detail_group.add_argument(
+        "--osm-details", action="store_true",
+        help="Add missing supplementary OpenStreetMap details.",
+    )
+    detail_group.add_argument(
+        "--official-sites", action="store_true",
+        help="Validate actual official sites and discover visit, hours, and ticket links.",
+    )
     parser.add_argument(
-        "--osm-details",
-        action="store_true",
-        help="Add missing OpenStreetMap address, opening-hours, and source-link details.",
+        "--refresh-verified", action="store_true",
+        help="With --official-sites, recheck previously verified sites as well as missing ones.",
     )
     arguments = parser.parse_args()
+    if arguments.refresh_verified and not arguments.official_sites:
+        parser.error("--refresh-verified requires --official-sites")
 
     activities = load_curated_activities(ACTIVITY_CATALOG_PATH)
     try:
-        if arguments.osm_details:
+        if arguments.official_sites:
+            updated, refreshed, unresolved = backfill_official_sites(
+                activities,
+                include_verified=arguments.refresh_verified,
+            )
+            detail_label = "verified official-site links"
+        elif arguments.osm_details:
             updated, refreshed, unresolved = backfill_osm_details(activities)
             detail_label = "OpenStreetMap visit details"
         else:

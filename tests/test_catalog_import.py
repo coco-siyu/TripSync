@@ -14,6 +14,8 @@ from src.catalog_import import (
     SUPPORTED_CITIES,
     build_query,
     fetch_candidates,
+    official_url_candidates_query,
+    parse_official_url_candidates,
     coordinates_query,
     parse_candidates,
     supported_city,
@@ -51,6 +53,33 @@ PAYLOAD = {
 
 
 class CatalogImportTests(unittest.TestCase):
+    def test_official_url_query_is_only_a_bounded_locator(self) -> None:
+        query = official_url_candidates_query(["Q2", "Q1", "Q2"])
+        self.assertIn("VALUES ?item { wd:Q1 wd:Q2 }", query)
+        self.assertIn("wdt:P856", query)
+        with self.assertRaises(ValueError):
+            official_url_candidates_query(["not-an-id"])
+
+    def test_parses_https_official_url_locator_deterministically(self) -> None:
+        payload = {
+            "results": {
+                "bindings": [
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q1"},
+                        "officialWebsite": {"value": "http://example.org"},
+                    },
+                    {
+                        "item": {"value": "http://www.wikidata.org/entity/Q1"},
+                        "officialWebsite": {"value": "https://example.org"},
+                    },
+                ]
+            }
+        }
+        self.assertEqual(
+            parse_official_url_candidates(payload),
+            {"Q1": "https://example.org"},
+        )
+
     def test_builds_coordinate_query_for_known_items(self) -> None:
         query = coordinates_query(["Q2", "Q1", "Q2"])
         self.assertIn("VALUES ?item { wd:Q1 wd:Q2 }", query)

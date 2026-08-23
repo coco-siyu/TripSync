@@ -19,10 +19,18 @@ does not change it.
 1. Retrieves bounded place candidates from Wikidata for each requested city.
 2. Rejects clear non-visitor records such as hotels, transport, organisations,
    tragic events, and anonymous placeholder records.
-3. Converts recognised attractions into conservative, Pydantic-validated
+3. Uses Wikidata's official-website property only as a URL locator, then opens
+   the attraction's real website and validates its domain and page identity.
+   Same-organization visit, hours, and ticket links are discovered from that
+   website. A Wikidata page is never stored as official visitor information.
+4. Converts recognised attractions into conservative, Pydantic-validated
    activity records and upserts only new records into the shared Supabase catalog.
-4. Appends the retrieved record and its quality outcome to the local DuckDB
+5. Appends the retrieved record and its quality outcome to the local DuckDB
    provenance log through `dlt`.
+
+Official-source enrichment is fully automatic. Verified links publish directly;
+unreachable or mismatched sites remain missing and retry on a later scheduled or
+manual refresh. A curator does not need to approve each place.
 
 Ambiguous records such as universities, libraries, stadiums, islands, and
 seasonal events are kept in the separate **Needs review** queue. They never
@@ -55,6 +63,17 @@ workspace has the equivalent city-and-country form):
 python -m src.catalog_dlt --cities Paris Lyon --country France --limit 50
 ```
 
+To retry official sources for all existing catalog records without changing any
+curated planning fields:
+
+```bash
+python -m src.catalog_backfill --official-sites --dry-run
+python -m src.catalog_backfill --official-sites
+```
+
+Add `--refresh-verified` to intentionally recheck previously verified sites;
+normal scheduled runs retry only missing records to keep network work bounded.
+
 ## Scheduled GitHub workflow
 
 `.github/workflows/catalog-ingestion.yml` runs every Monday at 05:17 UTC and is
@@ -62,6 +81,10 @@ also available from **Actions â†’ Refresh quality-screened catalog attractions â
 Run workflow**. It rotates through three destinations and writes directly to
 the shared catalog. Configure `SUPABASE_URL` and `SUPABASE_SECRET_KEY` as
 repository secrets before enabling the scheduled workflow.
+
+After ingesting the rotating destination batch, the workflow automatically runs
+the official-site backfill across the shared catalog. These fields are stored in
+the existing activity JSONB document; no Supabase schema rerun is needed.
 
 If Wikidata is temporarily unavailable for one destination, the workflow logs
 the failure, records it in the ingestion history, and leaves the cursor at that

@@ -1545,44 +1545,45 @@ def _render_activity_details(
                 f"{'Yes' if activity.family_friendly else 'Check before visiting'}"
             )
             st.markdown(f"**Address:** {activity.address or 'Not available yet'}")
-            st.markdown(
-                "**Opening hours:** "
-                f"{activity.opening_hours or 'Check the official visitor source'}"
-            )
+            if activity.official_hours_url:
+                st.markdown("**Opening hours:** See the official hours page")
+            else:
+                st.markdown(
+                    "**Opening hours:** "
+                    f"{activity.opening_hours or 'Not available yet'}"
+                )
 
         st.caption(
             "Opening hours and access can change. Confirm them with the "
             "official visitor source before you go."
         )
-        link_columns = st.columns(4)
-        if activity.latitude is not None and activity.longitude is not None:
-            map_url = (
-                "https://www.google.com/maps/search/?api=1&query="
-                f"{activity.latitude},{activity.longitude}"
-            )
-            link_columns[0].link_button(
-                "Open map", map_url, icon=":material/location_on:", width="stretch"
-            )
-        if activity.official_url:
-            link_columns[1].link_button(
-                "Official site",
-                str(activity.official_url),
-                icon=":material/open_in_new:",
-                width="stretch",
-            )
-        link_columns[2].link_button(
-            "Primary source",
-            str(activity.source_url),
-            icon=":material/open_in_new:",
-            width="stretch",
-        )
-        if activity.wikipedia_url:
-            link_columns[3].link_button(
-                "Wikipedia",
-                str(activity.wikipedia_url),
-                icon=":material/menu_book:",
-                width="stretch",
-            )
+        with st.container(horizontal=True):
+            if activity.official_site_verified and activity.official_url:
+                st.link_button(
+                    "Official site",
+                    str(activity.official_url),
+                    icon=":material/verified:",
+                )
+            if activity.official_hours_url:
+                st.link_button(
+                    "Official hours",
+                    str(activity.official_hours_url),
+                    icon=":material/schedule:",
+                )
+            if activity.official_tickets_url:
+                st.link_button(
+                    "Official tickets",
+                    str(activity.official_tickets_url),
+                    icon=":material/confirmation_number:",
+                )
+            if activity.latitude is not None and activity.longitude is not None:
+                map_url = (
+                    "https://www.google.com/maps/search/?api=1&query="
+                    f"{activity.latitude},{activity.longitude}"
+                )
+                st.link_button(
+                    "Open map", map_url, icon=":material/location_on:"
+                )
 
 
 def _render_result_card(
@@ -1707,11 +1708,6 @@ def _render_result_card(
                         st.caption(explanation)
 
                 st.caption(activity.accessibility_notes)
-                st.link_button(
-                    "View primary source",
-                    str(activity.source_url),
-                    icon=":material/open_in_new:",
-                )
 
             if rejection is not None:
                 if st.button(

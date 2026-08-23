@@ -176,6 +176,26 @@ python -m src.catalog_backfill --dry-run
 python -m src.catalog_backfill
 ```
 
+### Backfill verified official visitor links
+
+TripSync can also enrich every existing catalog record without reviewing places
+one at a time. Wikidata's official-website property is used only to locate a
+possible URL; TripSync opens the attraction's actual website, checks that the
+page matches the attraction, and saves only same-organization visit, hours, and
+ticket links. A Wikidata page is never presented as an official visitor site.
+Unreachable or mismatched sites remain blank and are retried by later runs.
+
+```bash
+python -m src.catalog_backfill --official-sites --dry-run
+python -m src.catalog_backfill --official-sites
+```
+
+Use `--refresh-verified` with `--official-sites` when the verifier changes or
+when previously saved official sites should be rechecked too.
+
+The new fields live inside the existing `activity_json` JSONB value, so this
+enrichment does not require rerunning `supabase/schema.sql`.
+
 ### One-off city import
 
 The Curate catalog workspace is primarily for managing the live catalog: filter
@@ -201,8 +221,9 @@ The project also has a `dlt` ingestion pipeline and a weekly GitHub Actions
 workflow. Its versioned destination queue starts with Italian cities, Paris,
 Barcelona, London, Kyoto, and New York City. The workflow rotates through three
 active destinations, filters obvious non-visitor records, records provenance in
-DuckDB, and publishes only clear, Pydantic-valid attractions to the shared
-catalog. A manual run processes the entire queue.
+DuckDB, publishes only clear, Pydantic-valid attractions to the shared catalog,
+then retries missing official visitor sources across the existing catalog. A
+manual run processes the entire queue.
 
 ```bash
 python -m src.catalog_dlt --limit 50

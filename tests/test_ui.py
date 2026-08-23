@@ -525,6 +525,11 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.session_state["selected_activity_ids"],
             ["rome_colosseum", "rome_borghese_gallery"],
         )
+        traveler_link_labels = [
+            link.label for link in app.get("link_button")
+        ]
+        self.assertNotIn("Catalog source", traveler_link_labels)
+        self.assertNotIn("View primary source", traveler_link_labels)
 
         next(button for button in app.button if button.label == "Hide details").click().run()
 

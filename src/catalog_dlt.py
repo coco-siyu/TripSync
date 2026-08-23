@@ -39,6 +39,7 @@ from src.destination_queue import (
     load_destination_queue,
     load_initial_destination,
 )
+from src.official_sites import enrich_candidate_official_sites
 from src.supabase_store import is_configured
 
 
@@ -147,8 +148,11 @@ def ingest_destinations(
         if records:
             pipeline.run(records, table_name="candidate_runs", write_disposition="append")
         raw_candidates = [asdict(candidate) for candidate in candidates]
-        activities, _ = auto_curate_candidates(raw_candidates, city.name, city.country)
-        save_review_candidates(raw_candidates, city.name, city.country)
+        enriched_candidates = enrich_candidate_official_sites(raw_candidates)
+        activities, _ = auto_curate_candidates(
+            enriched_candidates, city.name, city.country
+        )
+        save_review_candidates(enriched_candidates, city.name, city.country)
         added, _ = save_activities(activities, catalog_path) if catalog_path else save_activities(activities)
         summary[city.name] = len(added)
     return IngestionOutcome(summary, failures)

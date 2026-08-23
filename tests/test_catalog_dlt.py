@@ -13,6 +13,7 @@ from src.catalog_cursor import destination_key, next_destination_after, select_f
 from src.catalog_dlt import candidate_records, ingest_cities, ingest_destinations, rotate_destinations
 from src.destination_queue import DestinationQueueItem, load_destination_queue
 from src.catalog_import import CatalogCandidate, CatalogImportError, CitySource, supported_city
+from src.catalog import load_curated_activities
 
 
 class CatalogDltTests(unittest.TestCase):
@@ -56,6 +57,49 @@ class CatalogDltTests(unittest.TestCase):
         self.assertEqual(summary.published_by_city, {"Rome": 1})
         pipeline.run.assert_called_once()
         self.assertEqual(pipeline.run.call_args.kwargs["table_name"], "candidate_runs")
+
+    @patch("src.catalog_dlt.enrich_candidate_official_sites")
+    @patch("src.catalog_dlt.resolve_city")
+    @patch("src.catalog_dlt.dlt.pipeline")
+    def test_ingestion_persists_only_automatically_verified_official_links(
+        self,
+        mock_pipeline_factory: MagicMock,
+        mock_resolve_city: MagicMock,
+        mock_enrich: MagicMock,
+    ) -> None:
+        city = supported_city("Rome")
+        mock_resolve_city.return_value = city
+        candidate = CatalogCandidate(
+            "Q123", "Example museum", 41.9, 12.5,
+            "https://www.wikidata.org/wiki/Q123", ("museum",), (),
+            official_url="https://museum.example.org",
+        )
+        mock_enrich.return_value = [
+            {
+                **candidate.__dict__,
+                "official_site_verified": True,
+                "official_hours_url": "https://museum.example.org/hours",
+                "official_tickets_url": "https://museum.example.org/tickets",
+            }
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            catalog_path = Path(directory) / "activities.json"
+            ingest_cities(
+                ["Rome"], "Italy",
+                destination_path=Path(directory) / "ingestion.duckdb",
+                catalog_path=catalog_path,
+                fetcher=lambda _: [candidate],
+            )
+            published = load_curated_activities(catalog_path)
+
+        self.assertEqual(len(published), 1)
+        self.assertTrue(published[0].official_site_verified)
+        self.assertEqual(
+            str(published[0].official_hours_url),
+            "https://museum.example.org/hours",
+        )
+        mock_enrich.assert_called_once()
 
     def test_ingestion_requires_a_city(self) -> None:
         with self.assertRaisesRegex(ValueError, "at least one destination"):
