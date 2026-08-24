@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
 import streamlit as st
@@ -14,6 +15,7 @@ from src.auth import (
     sign_in,
     sign_out,
     sign_up,
+    update_password,
 )
 from src.supabase_store import account_feature_is_configured
 from src.trips import claim_anonymous_trips
@@ -23,6 +25,26 @@ AUTH_SESSION_KEY = "account_session"
 ACCOUNT_NOTICE_KEY = "account_notice"
 TRIP_TRANSFER_NOTICE_KEY = "account_trip_transfer_notice"
 TRIP_TRANSFER_ERROR_KEY = "account_trip_transfer_error"
+
+
+def app_origin_from_url(value: str) -> str | None:
+    """Reduce a Streamlit session URL to a safe confirmation origin."""
+
+    parsed = urlsplit(value.strip())
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        return None
+    return urlunsplit((parsed.scheme.casefold(), parsed.netloc, "", "", ""))
+
+
+def current_app_origin() -> str | None:
+    """Return the active local or deployed TripSync origin."""
+
+    return app_origin_from_url(str(st.context.url or ""))
 
 
 def current_account_session() -> AccountSession | None:
@@ -137,6 +159,40 @@ def _render_signed_in_account(session: AccountSession) -> None:
         ):
             _claim_browser_trips(session)
             st.rerun()
+    with st.expander(
+        "Security",
+        icon=":material/lock:",
+    ):
+        st.caption("Change the password used to sign in to this account.")
+        with st.form("change-password-form", border=False, clear_on_submit=True):
+            new_password = st.text_input(
+                "New password",
+                type="password",
+                autocomplete="new-password",
+            )
+            confirmed_password = st.text_input(
+                "Confirm new password",
+                type="password",
+                autocomplete="new-password",
+            )
+            change_password = st.form_submit_button(
+                "Update password",
+                icon=":material/password:",
+            )
+        if change_password:
+            if new_password != confirmed_password:
+                st.error("The new passwords do not match.", icon=":material/error:")
+            else:
+                try:
+                    refreshed_session = update_password(session, new_password)
+                except AccountError as error:
+                    st.error(str(error), icon=":material/error:")
+                else:
+                    _use_account_session(refreshed_session)
+                    st.success(
+                        "Your password has been updated.",
+                        icon=":material/check_circle:",
+                    )
     if st.button("Sign out", icon=":material/logout:"):
         sign_out_error = False
         try:
@@ -186,7 +242,11 @@ def _render_auth_forms() -> None:
         return
     try:
         if mode == "Create account":
-            result = sign_up(email, password)
+            result = sign_up(
+                email,
+                password,
+                email_redirect_to=current_app_origin(),
+            )
             if result.confirmation_required:
                 st.success(
                     "Check your email to confirm the account, then return here to sign in.",

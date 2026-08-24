@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.auth import (
     AccountError,
@@ -14,7 +14,9 @@ from src.auth import (
     refresh_account_session,
     sign_in,
     sign_up,
+    update_password,
 )
+from src.auth_ui import app_origin_from_url
 from src.invitations import (
     build_invitation_url,
     claim_trip_invitation,
@@ -72,6 +74,89 @@ class AccountTests(unittest.TestCase):
     def test_sign_up_requires_a_reasonable_password_before_network_call(self) -> None:
         with self.assertRaisesRegex(AccountError, "at least 8"):
             sign_up("traveler@example.com", "short")
+
+    def test_sign_up_sends_the_validated_current_app_origin(self) -> None:
+        sign_up_mock = Mock(return_value=_auth_response(session=False))
+        auth_client = SimpleNamespace(auth=SimpleNamespace(sign_up=sign_up_mock))
+        with (
+            patch("src.auth.auth_is_configured", return_value=True),
+            patch("src.auth.public_client", return_value=auth_client),
+        ):
+            result = sign_up(
+                " Traveler@Example.com ",
+                "password123",
+                email_redirect_to="http://localhost:8501/account?step=signup#ignored",
+            )
+
+        self.assertTrue(result.confirmation_required)
+        sign_up_mock.assert_called_once_with(
+            {
+                "email": "traveler@example.com",
+                "password": "password123",
+                "options": {
+                    "email_redirect_to": "http://localhost:8501",
+                },
+            }
+        )
+
+    def test_rejects_an_unsafe_confirmation_redirect(self) -> None:
+        with (
+            patch("src.auth.auth_is_configured", return_value=True),
+            self.assertRaisesRegex(AccountError, "confirmation address"),
+        ):
+            sign_up(
+                "traveler@example.com",
+                "password123",
+                email_redirect_to="javascript:alert(1)",
+            )
+
+    def test_streamlit_url_resolves_to_local_or_deployed_origin(self) -> None:
+        self.assertEqual(
+            app_origin_from_url("http://localhost:8501/?view=account"),
+            "http://localhost:8501",
+        )
+        self.assertEqual(
+            app_origin_from_url("https://tripsync.streamlit.app/Account"),
+            "https://tripsync.streamlit.app",
+        )
+        self.assertIsNone(app_origin_from_url("javascript:alert(1)"))
+
+    def test_update_password_reauthenticates_before_updating_user(self) -> None:
+        set_session_mock = Mock(return_value=_auth_response())
+        update_user_mock = Mock()
+        auth_client = SimpleNamespace(
+            auth=SimpleNamespace(
+                set_session=set_session_mock,
+                update_user=update_user_mock,
+            )
+        )
+        session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "access-token",
+            "refresh-token",
+            4_000_000_000,
+        )
+        with (
+            patch("src.auth.auth_is_configured", return_value=True),
+            patch("src.auth.public_client", return_value=auth_client),
+        ):
+            refreshed = update_password(session, "new-password123")
+
+        set_session_mock.assert_called_once_with("access-token", "refresh-token")
+        update_user_mock.assert_called_once_with({"password": "new-password123"})
+        self.assertEqual(refreshed.user_id, "user-123")
+
+    def test_update_password_validates_length_before_network_call(self) -> None:
+        session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "access-token",
+            "refresh-token",
+            4_000_000_000,
+        )
+        with self.assertRaisesRegex(AccountError, "at least 8"):
+            update_password(session, "short")
 
     def test_unexpired_session_does_not_refresh(self) -> None:
         session = AccountSession(

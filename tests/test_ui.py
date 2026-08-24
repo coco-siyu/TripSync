@@ -220,6 +220,58 @@ class StreamlitInteractionTests(unittest.TestCase):
             any("Account access is not enabled" in item.value for item in app.info)
         )
 
+    def test_create_account_uses_the_active_app_origin_for_confirmation(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch(
+                "src.auth_ui.current_app_origin",
+                return_value="http://localhost:8501",
+            ),
+            patch(
+                "src.auth_ui.sign_up",
+                return_value=SimpleNamespace(
+                    session=None,
+                    confirmation_required=True,
+                ),
+            ) as sign_up_mock,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.run(timeout=10)
+            account_action = next(
+                group
+                for group in app.get("button_group")
+                if group.label == "Account action"
+            )
+            account_action.select("Create account").run(timeout=10)
+            next(item for item in app.text_input if item.label == "Email").set_value(
+                "coco@example.com"
+            )
+            next(item for item in app.text_input if item.label == "Password").set_value(
+                "password123"
+            )
+            next(
+                button for button in app.button if button.label == "Create account"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        sign_up_mock.assert_called_once_with(
+            "coco@example.com",
+            "password123",
+            email_redirect_to="http://localhost:8501",
+        )
+        self.assertTrue(
+            any("Check your email" in notice.value for notice in app.success)
+        )
+
     def test_sign_in_moves_session_trips_before_switching_identity(self) -> None:
         session = AccountSession(
             user_id="12345678-1234-1234-1234-123456789012",
@@ -263,6 +315,48 @@ class StreamlitInteractionTests(unittest.TestCase):
                 "Moved 1 plan saved in this session" in notice.value
                 for notice in app.success
             )
+        )
+
+    def test_signed_in_traveler_can_change_their_password(self) -> None:
+        session = AccountSession(
+            user_id="12345678-1234-1234-1234-123456789012",
+            email="coco@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        refreshed_session = AccountSession(
+            user_id=session.user_id,
+            email=session.email,
+            access_token="refreshed-access-token",
+            refresh_token="refreshed-refresh-token",
+            expires_at=4_100_000_000,
+        )
+        with patch("src.auth_ui.update_password", return_value=refreshed_session) as update_mock:
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+            next(
+                item for item in app.text_input if item.label == "New password"
+            ).set_value("new-password123")
+            next(
+                item
+                for item in app.text_input
+                if item.label == "Confirm new password"
+            ).set_value("new-password123")
+            next(
+                button for button in app.button if button.label == "Update password"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        update_mock.assert_called_once_with(session, "new-password123")
+        self.assertEqual(
+            app.session_state["account_session"]["access_token"],
+            "refreshed-access-token",
+        )
+        self.assertTrue(
+            any("password has been updated" in notice.value for notice in app.success)
         )
 
     def test_anonymous_save_remains_visible_through_sign_in_transfer(self) -> None:

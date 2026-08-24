@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from time import time
 from typing import Any, Mapping
+from urllib.parse import urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
@@ -108,7 +109,26 @@ def sign_in(email: str, password: str) -> AccountSession:
     return session
 
 
-def sign_up(email: str, password: str) -> SignUpResult:
+def _validated_redirect_origin(value: str) -> str:
+    """Return one safe HTTP(S) origin for a Supabase confirmation email."""
+
+    parsed = urlsplit(value.strip())
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise AccountError("The account confirmation address is not valid.")
+    return urlunsplit((parsed.scheme.casefold(), parsed.netloc, "", "", ""))
+
+
+def sign_up(
+    email: str,
+    password: str,
+    *,
+    email_redirect_to: str | None = None,
+) -> SignUpResult:
     """Create an account, respecting the project's email-confirmation setting."""
 
     normalized_email = email.strip().casefold()
@@ -118,10 +138,16 @@ def sign_up(email: str, password: str) -> SignUpResult:
         raise AccountError("Choose a password with at least 8 characters.")
     if not auth_is_configured():
         raise AccountError("Supabase Auth is not configured for this deployment.")
+    credentials: dict[str, Any] = {
+        "email": normalized_email,
+        "password": password,
+    }
+    if email_redirect_to:
+        credentials["options"] = {
+            "email_redirect_to": _validated_redirect_origin(email_redirect_to),
+        }
     try:
-        response = public_client().auth.sign_up(
-            {"email": normalized_email, "password": password}
-        )
+        response = public_client().auth.sign_up(credentials)
         session = _session_from_response(response)
     except AccountError:
         raise
@@ -131,6 +157,35 @@ def sign_up(email: str, password: str) -> SignUpResult:
         session=session,
         confirmation_required=session is None,
     )
+
+
+def update_password(
+    session: AccountSession,
+    new_password: str,
+) -> AccountSession:
+    """Update the password for one verified account session."""
+
+    if len(new_password) < 8:
+        raise AccountError("Choose a password with at least 8 characters.")
+    if not auth_is_configured():
+        raise AccountError("Supabase Auth is not configured for this deployment.")
+    try:
+        active_client = public_client()
+        response = active_client.auth.set_session(
+            session.access_token,
+            session.refresh_token,
+        )
+        refreshed_session = _session_from_response(response)
+        if refreshed_session is None:
+            raise AccountError("Sign in again before changing your password.")
+        active_client.auth.update_user({"password": new_password})
+    except AccountError:
+        raise
+    except Exception as error:
+        raise AccountError(
+            "TripSync could not update your password. Sign in again and retry."
+        ) from error
+    return refreshed_session
 
 
 def refresh_account_session(
@@ -164,4 +219,3 @@ def sign_out(session: AccountSession) -> None:
         active_client.auth.sign_out()
     except Exception as error:
         raise AccountError("TripSync could not sign out cleanly. Try again.") from error
-

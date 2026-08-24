@@ -80,18 +80,22 @@ browser-safe publishable key enables account sessions and RLS-protected trip
 access. The password protects the Feedback insights and Curate catalog pages.
 Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 
-With all three Supabase values configured, travelers can create accounts and
-keep private plans across devices. Signing in atomically moves plans saved in
-that browser into the account. Apply `supabase/schema.sql` again when upgrading
-an existing deployment; it installs the private-trip policies and the guarded
-browser-plan transfer function. Without account configuration, saved plans
-continue to use the anonymous browser-session fallback.
+With all three Supabase values configured, travelers can create accounts, change
+their password while signed in, and keep private plans across devices. Signing
+in atomically moves plans saved in that browser into the account. Apply
+`supabase/schema.sql` again when upgrading an existing deployment; it installs
+the private-trip policies and the guarded browser-plan transfer function.
+Without account configuration, saved plans continue to use the anonymous
+browser-session fallback.
 
-In Supabase Authentication settings, enable the Email provider. If email
-confirmation is enabled, set the Auth Site URL to the deployed TripSync URL so
-confirmation messages return travelers to the correct app. Phase 1 deliberately
-does not enable invitation links or shared editing; those require a separate
-collaboration schema and two-user row-level-security testing.
+In Supabase Authentication settings, enable the Email provider and set the Auth
+Site URL to `https://tripsync.streamlit.app`. Add both
+`http://localhost:8501/**` and `https://tripsync.streamlit.app/**` to Redirect
+URLs. TripSync passes its current validated origin during signup, so local
+confirmation returns to localhost while deployed confirmation returns to the
+live app. Phase 1 deliberately does not enable invitation links or shared
+editing; those require a separate collaboration schema and two-user
+row-level-security testing.
 
 ## Run with Docker Compose
 
