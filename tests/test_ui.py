@@ -9,6 +9,7 @@ from unittest.mock import patch
 from pydantic import ValidationError
 from streamlit.testing.v1 import AppTest
 
+from src.auth import AccountSession
 from src.models import ItineraryPlan, ItinerarySource
 from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay
 from src.llm import NarrationGenerationError
@@ -173,6 +174,182 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertTrue(
             any(button.label == "Continue to travelers" for button in app.button)
         )
+
+    def test_account_workspace_shows_native_sign_in_fields_when_configured(
+        self,
+    ) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "SUPABASE_URL": "https://example.supabase.co",
+                "SUPABASE_SECRET_KEY": "server-secret",
+                "SUPABASE_PUBLISHABLE_KEY": "public-key",
+            },
+            clear=False,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.title[0].value, "Keep your trips with you")
+        self.assertTrue(any(item.label == "Email" for item in app.text_input))
+        self.assertTrue(any(item.label == "Password" for item in app.text_input))
+        self.assertFalse(any("invitation" in item.value.lower() for item in app.caption))
+
+    def test_account_workspace_explains_missing_public_auth_configuration(
+        self,
+    ) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "SUPABASE_URL": "https://example.supabase.co",
+                "SUPABASE_SECRET_KEY": "server-secret",
+                "SUPABASE_PUBLISHABLE_KEY": "",
+                "SUPABASE_ANON_KEY": "",
+            },
+            clear=False,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertFalse(any(item.label == "Email" for item in app.text_input))
+        self.assertTrue(
+            any("Account access is not enabled" in item.value for item in app.info)
+        )
+
+    def test_sign_in_moves_session_trips_before_switching_identity(self) -> None:
+        session = AccountSession(
+            user_id="12345678-1234-1234-1234-123456789012",
+            email="coco@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch("src.auth_ui.sign_in", return_value=session),
+            patch("src.auth_ui.claim_anonymous_trips", return_value=1) as claim_mock,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.run(timeout=10)
+            anonymous_session_id = app.session_state["anonymous_session_id"]
+            next(item for item in app.text_input if item.label == "Email").set_value(
+                "coco@example.com"
+            )
+            next(item for item in app.text_input if item.label == "Password").set_value(
+                "password123"
+            )
+            next(button for button in app.button if button.label == "Sign in").click().run(
+                timeout=10
+            )
+
+        self.assertFalse(app.exception)
+        claim_mock.assert_called_once_with(anonymous_session_id, "access-token")
+        self.assertEqual(app.session_state["feedback_session_id"], session.user_id)
+        self.assertTrue(
+            any(
+                "Moved 1 plan saved in this session" in notice.value
+                for notice in app.success
+            )
+        )
+
+    def test_anonymous_save_remains_visible_through_sign_in_transfer(self) -> None:
+        trip = build_sample_trip()
+        account_session = AccountSession(
+            user_id="12345678-1234-1234-1234-123456789012",
+            email="coco@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        anonymous_record = SavedTrip(
+            trip_id="session-trip",
+            title="Rome · 3 days",
+            trip=trip,
+            state={},
+            updated_at="2026-08-24T10:00:00+00:00",
+        )
+        account_record = SavedTrip(
+            trip_id="session-trip",
+            title="Rome · 3 days",
+            trip=trip,
+            state={},
+            updated_at="2026-08-24T10:00:00+00:00",
+            owner_id=account_session.user_id,
+        )
+
+        def visible_records(
+            _session_id: str,
+            *,
+            auth_access_token: str | None = None,
+        ) -> list[SavedTrip]:
+            return [account_record if auth_access_token else anonymous_record]
+
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch("src.ui.save_trip", return_value=anonymous_record),
+            patch("src.trips_ui.list_saved_trips", side_effect=visible_records),
+            patch("src.auth_ui.sign_in", return_value=account_session),
+            patch("src.auth_ui.claim_anonymous_trips", return_value=1) as claim_mock,
+        ):
+            app = self._sample_results_app()
+            app.button(key="save-trip").click().run(timeout=10)
+
+            self.assertTrue(
+                any("saved for this active session" in item.value for item in app.success)
+            )
+            app.button(key="view-recently-saved-trip").click().run(timeout=10)
+            self.assertEqual(app.session_state["app_workspace"], "My trips")
+            self.assertIn("Rome · 3 days", [item.value for item in app.subheader])
+
+            next(button for button in app.button if button.label == "Account").click().run(
+                timeout=10
+            )
+            next(item for item in app.text_input if item.label == "Email").set_value(
+                "coco@example.com"
+            )
+            next(item for item in app.text_input if item.label == "Password").set_value(
+                "password123"
+            )
+            next(button for button in app.button if button.label == "Sign in").click().run(
+                timeout=10
+            )
+            next(button for button in app.button if button.label == "My trips").click().run(
+                timeout=10
+            )
+
+        self.assertFalse(app.exception)
+        self.assertIn("Rome · 3 days", [item.value for item in app.subheader])
+        self.assertTrue(
+            any(
+                "Moved 1 plan saved in this session" in item.value
+                for item in app.success
+            )
+        )
+        self.assertTrue(
+            any("saved to your account" in item.value for item in app.success)
+        )
+        claim_mock.assert_called_once()
 
     def test_destination_panel_starts_local_then_refreshes_remote_index(
         self,

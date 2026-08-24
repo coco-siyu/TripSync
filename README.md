@@ -71,16 +71,27 @@ these values to your local `.env` file and to Streamlit Cloud secrets:
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SECRET_KEY=your-server-side-secret
+SUPABASE_PUBLISHABLE_KEY=your-browser-safe-publishable-key
 TRIPSYNC_ADMIN_PASSWORD=choose-a-dashboard-password
 ```
 
-The first two values store saved trips, feedback, and the shared activity catalog.
-The password protects the Feedback insights and Curate catalog pages. Without
-Supabase credentials, TripSync uses local SQLite data in `data/`.
+The server-side key stores feedback and manages the shared activity catalog; the
+browser-safe publishable key enables account sessions and RLS-protected trip
+access. The password protects the Feedback insights and Curate catalog pages.
+Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 
-Saved plans belong to the current anonymous browser session. This keeps one
-visitor from seeing another visitor's plans. Keeping a person's history across
-devices would need authentication.
+With all three Supabase values configured, travelers can create accounts and
+keep private plans across devices. Signing in atomically moves plans saved in
+that browser into the account. Apply `supabase/schema.sql` again when upgrading
+an existing deployment; it installs the private-trip policies and the guarded
+browser-plan transfer function. Without account configuration, saved plans
+continue to use the anonymous browser-session fallback.
+
+In Supabase Authentication settings, enable the Email provider. If email
+confirmation is enabled, set the Auth Site URL to the deployed TripSync URL so
+confirmation messages return travelers to the correct app. Phase 1 deliberately
+does not enable invitation links or shared editing; those require a separate
+collaboration schema and two-user row-level-security testing.
 
 ## Run with Docker Compose
 
@@ -264,10 +275,10 @@ supabase/schema.sql    Shared persistence schema
 
 TripSync is a planning prototype, not a booking tool. It does not provide live
 opening hours, ticket availability, prices, routes, hotel or flight search, or
-payments. Duration and pace are curated estimates. SQLite is for local use. The
-shared Supabase setup has no accounts, so saved-trip history stays tied to one
-browser session. A production version would need authentication, live visitor
-information, and user-controlled data deletion.
+payments. Duration and pace are curated estimates. SQLite is for local use.
+Account-backed trips use Supabase row-level security and are private to their
+owner. Invitation links, shared editing, password recovery, account deletion,
+and live visitor information remain future production work.
 
 ## License
 

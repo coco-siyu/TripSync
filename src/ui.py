@@ -120,6 +120,7 @@ CATEGORY_ICONS = {
     "outdoor": "🚲",
     "park": "🌿",
 }
+SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
 
 
 def parse_tag_text(value: str) -> list[str]:
@@ -311,6 +312,7 @@ def _initialize_state() -> None:
         "activity_detail_id": None,
         "feedback_session_id": uuid4().hex,
         "saved_trip_id": None,
+        "saved_trip_owner_id": None,
         "saved_trip_read_mode": False,
         "saved_itinerary_version_id": None,
     }
@@ -355,6 +357,7 @@ def _start_new_trip() -> None:
     st.session_state.trip_request = None
     _reset_activity_selections()
     st.session_state.saved_trip_id = None
+    st.session_state.saved_trip_owner_id = None
     st.session_state.saved_trip_read_mode = False
     st.session_state.saved_itinerary_version_id = None
     st.session_state.pop("results_view", None)
@@ -2376,6 +2379,7 @@ def _save_current_trip(
 ) -> Any:
     """Persist the current planning state, including an itinerary snapshot."""
 
+    account = st.session_state.get("account_session") or {}
     saved = save_trip(
         trip,
         {
@@ -2389,9 +2393,63 @@ def _save_current_trip(
         trip_id=st.session_state.saved_trip_id,
         session_id=st.session_state.feedback_session_id,
         save_itinerary_version=save_itinerary_version,
+        auth_access_token=account.get("access_token"),
+        owner_id=st.session_state.get("saved_trip_owner_id"),
     )
     st.session_state.saved_trip_id = saved.trip_id
+    st.session_state.saved_trip_owner_id = getattr(
+        saved,
+        "owner_id",
+        st.session_state.feedback_session_id,
+    )
+    st.session_state[SAVED_TRIP_CONFIRMATION_KEY] = {
+        "trip_id": saved.trip_id,
+        "title": saved.title,
+        "account_backed": bool(account.get("access_token")),
+    }
     return saved
+
+
+def _open_my_trips() -> None:
+    st.session_state.app_workspace = "My trips"
+
+
+def _dismiss_saved_trip_confirmation() -> None:
+    st.session_state.pop(SAVED_TRIP_CONFIRMATION_KEY, None)
+
+
+def _render_saved_trip_confirmation() -> None:
+    """Keep a successful save visible until the traveler acknowledges it."""
+
+    confirmation = st.session_state.get(SAVED_TRIP_CONFIRMATION_KEY)
+    if not isinstance(confirmation, dict):
+        return
+    title = str(confirmation.get("title") or "Trip")
+    if confirmation.get("account_backed"):
+        st.success(
+            f"{title} is saved to your account.",
+            icon=":material/cloud_done:",
+        )
+    else:
+        st.success(
+            f"{title} is saved for this active session.",
+            icon=":material/bookmark_added:",
+        )
+        st.caption("Sign in to keep it available across devices and new sessions.")
+    with st.container(horizontal=True):
+        st.button(
+            "View in My trips",
+            icon=":material/folder_open:",
+            type="primary",
+            key="view-recently-saved-trip",
+            on_click=_open_my_trips,
+        )
+        st.button(
+            "Dismiss",
+            icon=":material/close:",
+            key="dismiss-recently-saved-trip",
+            on_click=_dismiss_saved_trip_confirmation,
+        )
 
 
 def _render_itinerary(
@@ -2451,6 +2509,7 @@ def _render_itinerary(
                     save_itinerary_version=True,
                 )
                 st.toast(f"Saved {saved.title}")
+            _render_saved_trip_confirmation()
         summary_labels = [
             f"{len(scheduled)} activities",
             f"{format_duration(total_activity_hours)} of activities",
@@ -2874,6 +2933,8 @@ def _render_results_step() -> None:
             save_itinerary_version=False,
         )
         st.toast("Saved trip preferences")
+    if not has_itinerary:
+        _render_saved_trip_confirmation()
     retrieval_response = _retrieve_for_current_trip(trip, activities)
     retrieval_by_activity_id = {
         result.activity_id: result

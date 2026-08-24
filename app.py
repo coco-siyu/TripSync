@@ -2,6 +2,7 @@
 
 import streamlit as st
 
+from src.auth_ui import initialize_account_state, render_account_workspace
 from src.catalog_ui import render_catalog_workspace
 from src.feedback_ui import render_feedback_insights
 from src.trips_ui import render_saved_trips
@@ -21,11 +22,18 @@ if "app_workspace" not in st.session_state:
 # Every workspace needs the shared browser-session state, even when the user
 # opens a secondary page before visiting the planner.
 _initialize_state()
+initialize_account_state()
 
 # Shared layout and workspace-specific colors must load before every page.
 _apply_styles(st.session_state.app_workspace)
 
-workspaces = ["Plan a trip", "My trips", "Feedback insights", "Curate catalog"]
+workspaces = [
+    "Plan a trip",
+    "My trips",
+    "Account",
+    "Feedback insights",
+    "Curate catalog",
+]
 with st.container(key="workspace-nav"):
     brand_col, links_col = st.columns([1.2, 4], vertical_alignment="center")
     brand_col.markdown(
@@ -60,6 +68,8 @@ with st.container(key="workspace-page"):
         render_catalog_workspace()
     elif view == "My trips":
         render_saved_trips()
+    elif view == "Account":
+        render_account_workspace()
     elif view == "Feedback insights":
         render_feedback_insights()
     else:

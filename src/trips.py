@@ -1,8 +1,9 @@
-"""Local SQLite persistence for saved TripSync plans."""
+"""Private saved-trip persistence for Supabase and local SQLite fallback."""
 
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Iterable, Mapping
 from contextlib import closing
@@ -13,7 +14,15 @@ from uuid import uuid4
 from src.feedback import DEFAULT_FEEDBACK_DATABASE_PATH
 from src.models import ItineraryDay, ItineraryPlan, TripRequest
 from src.planner import PACE_RULES, TRANSITION_HOURS
-from src.supabase_store import is_configured, select_for_session, upsert
+from src.supabase_store import (
+    is_configured,
+    insert_authenticated,
+    rpc_authenticated,
+    select_authenticated,
+    select_for_session,
+    update_authenticated,
+    upsert,
+)
 
 
 _ITINERARY_STATE_KEYS = (
@@ -24,6 +33,7 @@ _ITINERARY_STATE_KEYS = (
     "rejected_activities",
     "itinerary_narrative",
 )
+_ANONYMOUS_SESSION_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 
 
 @dataclass(frozen=True)
@@ -33,6 +43,7 @@ class SavedTrip:
     trip: TripRequest
     state: dict
     updated_at: str
+    owner_id: str | None = None
 
 
 def itinerary_versions(
@@ -190,17 +201,62 @@ def _snapshot_itinerary(
     }
 
 
-def _existing_trip_state(trip_id: str, session_id: str) -> tuple[dict, str | None]:
-    for record in list_saved_trips(session_id):
+def _existing_trip_state(
+    trip_id: str,
+    session_id: str,
+    *,
+    auth_access_token: str | None = None,
+) -> tuple[dict, str | None, str | None]:
+    for record in list_saved_trips(
+        session_id,
+        auth_access_token=auth_access_token,
+    ):
         if record.trip_id == trip_id:
-            return record.state, record.updated_at
-    return {}, None
+            return record.state, record.updated_at, record.owner_id
+    return {}, None, None
 
 
-def _ensure_schema(connection: sqlite3.Connection) -> None:
+def claim_anonymous_trips(
+    anonymous_session_id: str,
+    access_token: str,
+) -> int:
+    """Atomically move anonymous remote trips to the authenticated user."""
+
+    normalized_session_id = anonymous_session_id.strip()
+    if not _ANONYMOUS_SESSION_PATTERN.fullmatch(normalized_session_id):
+        raise ValueError("The anonymous browser session is not valid")
+    result = rpc_authenticated(
+        "claim_anonymous_trips",
+        {"anonymous_session_id": normalized_session_id},
+        access_token,
+    )
+    try:
+        claimed_count = int(result)
+    except (TypeError, ValueError) as error:
+        raise RuntimeError("Supabase returned an invalid trip transfer result") from error
+    if claimed_count < 0:
+        raise RuntimeError("Supabase returned an invalid trip transfer result")
+    return claimed_count
+
+
+def _ensure_schema(
+    connection: sqlite3.Connection,
+    migration_session_id: str,
+) -> None:
     connection.execute("""CREATE TABLE IF NOT EXISTS saved_trips (
-        trip_id TEXT PRIMARY KEY, title TEXT NOT NULL, trip_json TEXT NOT NULL,
+        trip_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, title TEXT NOT NULL, trip_json TEXT NOT NULL,
         state_json TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+    columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(saved_trips)").fetchall()
+    }
+    if "session_id" not in columns:
+        connection.execute("ALTER TABLE saved_trips ADD COLUMN session_id TEXT")
+    connection.execute(
+        """UPDATE saved_trips SET session_id = ?
+        WHERE session_id IS NULL OR trim(session_id) IN ('', 'legacy')""",
+        (migration_session_id,),
+    )
 
 
 def save_trip(
@@ -213,12 +269,21 @@ def save_trip(
     save_itinerary_version: bool = False,
     itinerary_label: str | None = None,
     force_new_itinerary_version: bool = False,
+    auth_access_token: str | None = None,
+    owner_id: str | None = None,
 ) -> SavedTrip:
     """Save a validated trip and its serializable planner state."""
 
     resolved_trip_id = trip_id or uuid4().hex
-    previous_state, previous_updated_at = _existing_trip_state(
-        resolved_trip_id, session_id
+    previous_state, previous_updated_at, existing_owner_id = _existing_trip_state(
+        resolved_trip_id,
+        session_id,
+        auth_access_token=auth_access_token,
+    )
+    resolved_owner_id = (
+        existing_owner_id
+        or (session_id if auth_access_token else owner_id)
+        or session_id
     )
     stored_state = dict(state)
     if save_itinerary_version and state.get("itinerary_plan"):
@@ -257,27 +322,99 @@ def save_trip(
         trip,
         stored_state,
         datetime.now(UTC).isoformat(),
+        resolved_owner_id,
     )
     if is_configured():
-        upsert("saved_trips", {"session_id": session_id, "trip_id": record.trip_id, "title": record.title, "trip_json": trip.model_dump(mode="json"), "state_json": stored_state, "updated_at": record.updated_at}, conflict="session_id,trip_id")
+        row = {
+            "session_id": resolved_owner_id,
+            "trip_id": record.trip_id,
+            "title": record.title,
+            "trip_json": trip.model_dump(mode="json"),
+            "state_json": stored_state,
+            "updated_at": record.updated_at,
+        }
+        if auth_access_token:
+            if existing_owner_id:
+                update_authenticated(
+                    "saved_trips",
+                    {
+                        key: value
+                        for key, value in row.items()
+                        if key not in {"session_id", "trip_id"}
+                    },
+                    auth_access_token,
+                    filters={"trip_id": record.trip_id},
+                )
+            else:
+                insert_authenticated(
+                    "saved_trips",
+                    row,
+                    auth_access_token,
+                )
+        else:
+            upsert(
+                "saved_trips",
+                row,
+                conflict="session_id,trip_id",
+            )
         return record
     with closing(sqlite3.connect(DEFAULT_FEEDBACK_DATABASE_PATH)) as connection:
         with connection:
-            _ensure_schema(connection)
-            connection.execute("""INSERT INTO saved_trips VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(trip_id) DO UPDATE SET title=excluded.title, trip_json=excluded.trip_json,
+            _ensure_schema(connection, session_id)
+            connection.execute("""INSERT INTO saved_trips (
+                    trip_id, session_id, title, trip_json, state_json, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(trip_id) DO UPDATE SET session_id=excluded.session_id,
+                title=excluded.title, trip_json=excluded.trip_json,
                 state_json=excluded.state_json, updated_at=excluded.updated_at""",
-                (record.trip_id, record.title, json.dumps(trip.model_dump(mode="json")), json.dumps(stored_state), record.updated_at))
+                (record.trip_id, session_id, record.title, json.dumps(trip.model_dump(mode="json")), json.dumps(stored_state), record.updated_at))
     return record
 
 
-def list_saved_trips(session_id: str = "local") -> list[SavedTrip]:
+def list_saved_trips(
+    session_id: str = "local",
+    *,
+    auth_access_token: str | None = None,
+) -> list[SavedTrip]:
     if is_configured():
-        rows = select_for_session("saved_trips", session_id)
-        return [SavedTrip(row["trip_id"], row["title"], TripRequest.model_validate(row["trip_json"]), row["state_json"], row["updated_at"]) for row in rows]
+        rows = (
+            select_authenticated(
+                "saved_trips",
+                auth_access_token,
+                order="updated_at",
+            )
+            if auth_access_token
+            else select_for_session("saved_trips", session_id)
+        )
+        return [
+            SavedTrip(
+                row["trip_id"],
+                row["title"],
+                TripRequest.model_validate(row["trip_json"]),
+                row["state_json"],
+                row["updated_at"],
+                row.get("session_id"),
+            )
+            for row in rows
+        ]
     if not DEFAULT_FEEDBACK_DATABASE_PATH.exists():
         return []
     with closing(sqlite3.connect(DEFAULT_FEEDBACK_DATABASE_PATH)) as connection:
-        _ensure_schema(connection)
-        rows = connection.execute("SELECT trip_id, title, trip_json, state_json, updated_at FROM saved_trips ORDER BY updated_at DESC").fetchall()
-    return [SavedTrip(row[0], row[1], TripRequest.model_validate_json(row[2]), json.loads(row[3]), row[4]) for row in rows]
+        with connection:
+            _ensure_schema(connection, session_id)
+            rows = connection.execute(
+                """SELECT trip_id, title, trip_json, state_json, updated_at
+                FROM saved_trips WHERE session_id = ? ORDER BY updated_at DESC""",
+                (session_id,),
+            ).fetchall()
+    return [
+        SavedTrip(
+            row[0],
+            row[1],
+            TripRequest.model_validate_json(row[2]),
+            json.loads(row[3]),
+            row[4],
+            session_id,
+        )
+        for row in rows
+    ]

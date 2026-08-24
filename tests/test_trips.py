@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import json
+import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
 from src.models import ItineraryPlan, TripRequest
 from src.trips import (
     SavedTrip,
+    claim_anonymous_trips,
     itinerary_versions,
     list_saved_trips,
     revise_itinerary_plan,
@@ -20,6 +24,109 @@ from src.trips_ui import itinerary_comparison_for_versions, itinerary_plan_for_v
 
 
 class SavedTripsTests(unittest.TestCase):
+    def test_lists_rls_visible_owned_trips(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        row = {
+            "session_id": "owner-user",
+            "trip_id": "owned-trip",
+            "title": "Rome plan",
+            "trip_json": trip.model_dump(mode="json"),
+            "state_json": {},
+            "updated_at": "2026-08-23T12:00:00+00:00",
+        }
+        with (
+            patch("src.trips.is_configured", return_value=True),
+            patch("src.trips.select_authenticated", return_value=[row]) as select_mock,
+        ):
+            records = list_saved_trips(
+                "owner-user",
+                auth_access_token="access-token",
+            )
+
+        self.assertEqual(records[0].owner_id, "owner-user")
+        select_mock.assert_called_once_with(
+            "saved_trips",
+            "access-token",
+            order="updated_at",
+        )
+
+    def test_claims_a_valid_anonymous_browser_namespace_via_authenticated_rpc(self) -> None:
+        anonymous_session_id = "a" * 32
+        with patch("src.trips.rpc_authenticated", return_value=2) as rpc_mock:
+            claimed_count = claim_anonymous_trips(
+                anonymous_session_id,
+                "access-token",
+            )
+
+        self.assertEqual(claimed_count, 2)
+        rpc_mock.assert_called_once_with(
+            "claim_anonymous_trips",
+            {"anonymous_session_id": anonymous_session_id},
+            "access-token",
+        )
+
+    def test_rejects_account_style_or_malformed_transfer_namespaces(self) -> None:
+        with (
+            patch("src.trips.rpc_authenticated") as rpc_mock,
+            self.assertRaisesRegex(ValueError, "not valid"),
+        ):
+            claim_anonymous_trips(
+                "12345678-1234-1234-1234-123456789012",
+                "access-token",
+            )
+
+        rpc_mock.assert_not_called()
+
+    def test_signed_in_user_creates_an_rls_owned_trip(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        with (
+            patch("src.trips.is_configured", return_value=True),
+            patch("src.trips.select_authenticated", return_value=[]),
+            patch("src.trips.insert_authenticated") as insert_mock,
+            patch("src.trips.upsert") as service_upsert_mock,
+        ):
+            saved = save_trip(
+                trip,
+                {},
+                session_id="user-123",
+                auth_access_token="access-token",
+                owner_id="a" * 32,
+            )
+
+        self.assertEqual(saved.owner_id, "user-123")
+        self.assertEqual(insert_mock.call_args.args[1]["session_id"], "user-123")
+        service_upsert_mock.assert_not_called()
+
+    def test_signed_in_update_keeps_database_ownership_over_stale_ui_state(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        shared = SavedTrip(
+            "owned-trip",
+            "Rome plan",
+            trip,
+            {},
+            "2026-08-23T12:00:00+00:00",
+            "owner-user",
+        )
+        with (
+            patch("src.trips.is_configured", return_value=True),
+            patch("src.trips.list_saved_trips", return_value=[shared]),
+            patch("src.trips.update_authenticated") as update_mock,
+        ):
+            saved = save_trip(
+                trip,
+                {"selected_activity_ids": ["rome_pantheon"]},
+                trip_id="owned-trip",
+                session_id="owner-user",
+                auth_access_token="access-token",
+                owner_id="a" * 32,
+            )
+
+        self.assertEqual(saved.owner_id, "owner-user")
+        update_row = update_mock.call_args.args[1]
+        self.assertNotIn("session_id", update_row)
+        self.assertNotIn("trip_id", update_row)
+        self.assertEqual(update_mock.call_args.kwargs["filters"], {"trip_id": "owned-trip"})
+
     def test_saves_and_lists_validated_trip(self) -> None:
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
         with tempfile.TemporaryDirectory() as directory:
@@ -51,6 +158,54 @@ class SavedTripsTests(unittest.TestCase):
         self.assertEqual(updated.trip_id, saved.trip_id)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].state["selected_activity_ids"], ["rome_pantheon", "rome_forum"])
+
+    def test_local_saved_trips_are_isolated_by_browser_session(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "trips.db"
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
+                save_trip(trip, {}, session_id="browser-one")
+                first_records = list_saved_trips("browser-one")
+                second_records = list_saved_trips("browser-two")
+
+        self.assertEqual(len(first_records), 1)
+        self.assertEqual(second_records, [])
+
+    def test_legacy_local_rows_move_to_the_first_current_browser_session(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "trips.db"
+            with closing(sqlite3.connect(database)) as connection:
+                with connection:
+                    connection.execute("""CREATE TABLE saved_trips (
+                        trip_id TEXT PRIMARY KEY, title TEXT NOT NULL,
+                        trip_json TEXT NOT NULL, state_json TEXT NOT NULL,
+                        updated_at TEXT NOT NULL)""")
+                    connection.execute(
+                        """INSERT INTO saved_trips (
+                            trip_id, title, trip_json, state_json, updated_at
+                        ) VALUES (?, ?, ?, ?, ?)""",
+                        (
+                            "legacy-trip",
+                            "Legacy Rome",
+                            json.dumps(trip.model_dump(mode="json")),
+                            json.dumps({"selected_activity_ids": ["rome_pantheon"]}),
+                            "2026-08-23T12:00:00+00:00",
+                        ),
+                    )
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
+                records = list_saved_trips("browser-one")
+                other_records = list_saved_trips("browser-two")
+
+        self.assertEqual([record.trip_id for record in records], ["legacy-trip"])
+        self.assertEqual(records[0].owner_id, "browser-one")
+        self.assertEqual(other_records, [])
 
     def test_saving_new_itineraries_keeps_prior_versions(self) -> None:
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})

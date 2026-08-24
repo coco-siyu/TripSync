@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from src.auth_ui import TRIP_TRANSFER_NOTICE_KEY, current_account_session
 from src.models import ItineraryPlan
 from src.trips import (
     SavedTrip,
@@ -25,6 +26,50 @@ _RESTORED_STATE_DEFAULTS = {
 }
 _OPEN_SAVED_ITINERARY_KEY = "open_saved_itinerary"
 _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
+_SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
+
+
+def _dismiss_trip_notice(key: str) -> None:
+    st.session_state.pop(key, None)
+
+
+def _render_persistent_trip_notices() -> None:
+    """Show save and transfer outcomes until the traveler acknowledges them."""
+
+    if transfer_notice := st.session_state.get(TRIP_TRANSFER_NOTICE_KEY):
+        st.success(transfer_notice, icon=":material/cloud_done:")
+        st.button(
+            "Got it",
+            icon=":material/check:",
+            key="dismiss-transfer-notice-my-trips",
+            on_click=_dismiss_trip_notice,
+            args=(TRIP_TRANSFER_NOTICE_KEY,),
+        )
+
+    confirmation = st.session_state.get(_SAVED_TRIP_CONFIRMATION_KEY)
+    if not isinstance(confirmation, dict):
+        return
+    title = str(confirmation.get("title") or "Trip")
+    destination = (
+        "your account"
+        if confirmation.get("account_backed")
+        else "this active session"
+    )
+    st.success(
+        f"{title} is saved to {destination}.",
+        icon=(
+            ":material/cloud_done:"
+            if confirmation.get("account_backed")
+            else ":material/bookmark_added:"
+        ),
+    )
+    st.button(
+        "Dismiss save confirmation",
+        icon=":material/close:",
+        key="dismiss-save-confirmation-my-trips",
+        on_click=_dismiss_trip_notice,
+        args=(_SAVED_TRIP_CONFIRMATION_KEY,),
+    )
 
 
 def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> None:
@@ -42,6 +87,7 @@ def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> Non
     for key, value in restored_state.items():
         st.session_state[key] = value
     st.session_state.saved_trip_id = record.trip_id
+    st.session_state.saved_trip_owner_id = record.owner_id
     st.session_state.saved_itinerary_version_id = restored_state.get(
         "active_itinerary_version_id"
     )
@@ -73,6 +119,7 @@ def _start_new_itinerary(record: SavedTrip) -> None:
     st.session_state.retrieval_cache = None
     st.session_state.activity_detail_id = None
     st.session_state.saved_trip_id = record.trip_id
+    st.session_state.saved_trip_owner_id = record.owner_id
     st.session_state.saved_itinerary_version_id = None
     st.session_state.saved_trip_read_mode = False
     st.session_state.planner_step = "results"
@@ -369,6 +416,10 @@ def _render_itinerary_alternative_editor(
             save_itinerary_version=True,
             itinerary_label=label,
             force_new_itinerary_version=True,
+            auth_access_token=(
+                (st.session_state.get("account_session") or {}).get("access_token")
+            ),
+            owner_id=record.owner_id,
         )
         saved_version_id = str(
             saved_record.state.get("active_itinerary_version_id", version_id)
@@ -467,15 +518,29 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
 def render_saved_trips() -> None:
     st.markdown('<div class="ts-section-label">Your saved plans</div>', unsafe_allow_html=True)
     st.title("Pick up where you left off")
+    account = current_account_session()
     st.caption(
-        "Saved trips include the itinerary you had at the time of saving. This "
-        "demo shows plans saved in this browser session; other visitors' plans stay private."
+        "Signed-in plans are private and follow your account across devices."
+        if account
+        else "Plans in this active session stay private. Sign in to keep them across sessions and devices."
     )
+    _render_persistent_trip_notices()
     if notice := st.session_state.pop(_SAVED_ITINERARY_FLASH_KEY, None):
         st.toast(notice, icon=":material/check_circle:")
-    records = list_saved_trips(st.session_state.feedback_session_id)
+    records = list_saved_trips(
+        st.session_state.feedback_session_id,
+        auth_access_token=(account.access_token if account else None),
+    )
     if not records:
-        st.info("Save a plan from the results screen and it will appear here.", icon=":material/bookmark:")
+        st.info(
+            "Save a plan from the results screen and it will appear here. "
+            + (
+                "Plans saved in another tab or expired session appear after you sign in."
+                if account is None
+                else "No plans are currently saved to this account."
+            ),
+            icon=":material/bookmark:",
+        )
         return
 
     records_by_id = {record.trip_id: record for record in records}
