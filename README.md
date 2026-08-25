@@ -81,8 +81,9 @@ access. The password protects the Feedback insights and Curate catalog pages.
 Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 
 With all three Supabase values configured, travelers can create accounts, change
-their password while signed in, and keep private plans across devices. Signing
-in atomically moves plans saved in that browser into the account. Apply
+their password while signed in, keep private plans across devices, and
+permanently delete their account and account-linked data. Signing in atomically
+moves plans saved in that browser into the account. Apply
 `supabase/schema.sql` again when upgrading an existing deployment; it installs
 the private-trip policies and the guarded browser-plan transfer function.
 Without account configuration, saved plans continue to use the anonymous
@@ -96,6 +97,34 @@ confirmation returns to localhost while deployed confirmation returns to the
 live app. Phase 1 deliberately does not enable invitation links or shared
 editing; those require a separate collaboration schema and two-user
 row-level-security testing.
+
+Account deletion requires a fresh password verification. Its zero-argument
+database function derives the deletion target from the authenticated JWT,
+atomically removes saved trips (including itinerary versions) and feedback,
+then the server-only Supabase client removes that same Auth user. Reapply
+`supabase/schema.sql` to an existing project before using this control.
+
+Password recovery is temporarily hidden because Supabase requires custom SMTP
+before its hosted email templates can be edited. Signed-in travelers can still
+change their password from the Account page. Once TripSync has a verified email
+domain, configure custom SMTP, set `PASSWORD_RECOVERY_ENABLED = True` in
+`src/auth_ui.py`, then open **Authentication → Email Templates → Reset
+Password** in Supabase and make the reset button use the one-time token hash:
+
+```html
+<h2>Reset your TripSync password</h2>
+<p>Follow the link below to choose a new password.</p>
+<p>
+  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=recovery">
+    Reset password
+  </a>
+</p>
+<p>If you did not request this, you can safely ignore this email.</p>
+```
+
+This template lets Streamlit verify the recovery token server-side and remove
+it from the address bar before showing the new-password form. Keep the two
+localhost/live Redirect URLs above; no database schema change is required.
 
 ## Run with Docker Compose
 
@@ -281,8 +310,8 @@ TripSync is a planning prototype, not a booking tool. It does not provide live
 opening hours, ticket availability, prices, routes, hotel or flight search, or
 payments. Duration and pace are curated estimates. SQLite is for local use.
 Account-backed trips use Supabase row-level security and are private to their
-owner. Invitation links, shared editing, password recovery, account deletion,
-and live visitor information remain future production work.
+owner. Invitation links, shared editing, and live visitor information remain
+future production work.
 
 ## License
 

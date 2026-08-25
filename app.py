@@ -27,6 +27,9 @@ initialize_account_state()
 # Shared layout and workspace-specific colors must load before every page.
 _apply_styles(st.session_state.app_workspace)
 
+if app_notice := st.session_state.pop("app_notice", None):
+    st.toast(app_notice, icon=":material/check_circle:")
+
 workspaces = [
     "Plan a trip",
     "My trips",

@@ -251,6 +251,60 @@ $$;
 revoke all on function public.claim_anonymous_trips(text) from public;
 grant execute on function public.claim_anonymous_trips(text) to authenticated;
 
+-- Account deletion never accepts a target ID. The fresh authenticated JWT is
+-- the sole source of identity, and all account-linked records are removed in
+-- the same database transaction before the server deletes the Auth user.
+create or replace function private.delete_my_account_data()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  deleted_trips integer := 0;
+  deleted_llm_feedback integer := 0;
+  deleted_overall_feedback integer := 0;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in before deleting account data.' using errcode = '42501';
+  end if;
+
+  delete from public.saved_trips
+  where session_id = account_user_id::text;
+  get diagnostics deleted_trips = row_count;
+
+  delete from public.llm_feedback
+  where session_id = account_user_id::text;
+  get diagnostics deleted_llm_feedback = row_count;
+
+  delete from public.overall_experience_feedback
+  where session_id = account_user_id::text;
+  get diagnostics deleted_overall_feedback = row_count;
+
+  return pg_catalog.jsonb_build_object(
+    'saved_trips', deleted_trips,
+    'llm_feedback', deleted_llm_feedback,
+    'overall_experience_feedback', deleted_overall_feedback
+  );
+end;
+$$;
+
+revoke all on function private.delete_my_account_data() from public;
+grant execute on function private.delete_my_account_data() to authenticated;
+
+create or replace function public.delete_my_account_data()
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.delete_my_account_data();
+$$;
+
+revoke all on function public.delete_my_account_data() from public;
+grant execute on function public.delete_my_account_data() to authenticated;
+
 -- If a collaboration preview schema was applied earlier, make it inert without
 -- deleting its data. Phase 2 can replace these objects after it has a globally
 -- unique trip identity and a two-user RLS integration test.

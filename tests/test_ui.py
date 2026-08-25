@@ -272,6 +272,99 @@ class StreamlitInteractionTests(unittest.TestCase):
             any("Check your email" in notice.value for notice in app.success)
         )
 
+    def test_forgot_password_is_hidden_until_custom_email_is_configured(
+        self,
+    ) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch("src.auth_ui.request_password_recovery") as request_mock,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertFalse(
+            any(button.label == "Forgot password?" for button in app.button)
+        )
+        request_mock.assert_not_called()
+
+    def test_recovery_link_is_consumed_before_password_reset(self) -> None:
+        recovery_session = AccountSession(
+            user_id="12345678-1234-1234-1234-123456789012",
+            email="coco@example.com",
+            access_token="recovery-access-token",
+            refresh_token="recovery-refresh-token",
+            expires_at=4_000_000_000,
+        )
+        refreshed_session = AccountSession(
+            user_id=recovery_session.user_id,
+            email=recovery_session.email,
+            access_token="new-access-token",
+            refresh_token="new-refresh-token",
+            expires_at=4_100_000_000,
+        )
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch(
+                "src.auth_ui.verify_password_recovery_token",
+                return_value=recovery_session,
+            ) as verify_mock,
+            patch(
+                "src.auth_ui.update_password",
+                return_value=refreshed_session,
+            ) as update_mock,
+            patch("src.auth_ui.claim_anonymous_trips", return_value=0),
+        ):
+            app = AppTest.from_file("app.py")
+            app.query_params["token_hash"] = "one-time-token-hash"
+            app.query_params["type"] = "recovery"
+            app.run(timeout=10)
+            self.assertEqual(app.session_state["app_workspace"], "Account")
+            self.assertNotIn("token_hash", app.query_params)
+            self.assertNotIn("type", app.query_params)
+            next(
+                item for item in app.text_input if item.label == "New password"
+            ).set_value("recovered-password123")
+            next(
+                item
+                for item in app.text_input
+                if item.label == "Confirm new password"
+            ).set_value("recovered-password123")
+            next(
+                button for button in app.button if button.label == "Reset password"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        verify_mock.assert_called_once_with("one-time-token-hash")
+        update_mock.assert_called_once_with(
+            recovery_session,
+            "recovered-password123",
+        )
+        self.assertEqual(
+            app.session_state["account_session"]["access_token"],
+            "new-access-token",
+        )
+        self.assertTrue(
+            any("password was reset" in notice.value for notice in app.info)
+        )
+
     def test_sign_in_moves_session_trips_before_switching_identity(self) -> None:
         session = AccountSession(
             user_id="12345678-1234-1234-1234-123456789012",
@@ -357,6 +450,90 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         self.assertTrue(
             any("password has been updated" in notice.value for notice in app.success)
+        )
+
+    def test_account_deletion_requires_matching_email_and_clears_private_state(
+        self,
+    ) -> None:
+        session = AccountSession(
+            user_id="12345678-1234-1234-1234-123456789012",
+            email="coco@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        with patch("src.auth_ui.delete_account") as delete_mock:
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.session_state["account_session"] = session.as_dict()
+            app.session_state["account-settings-tab"] = "Privacy & deletion"
+            app.session_state["saved_trip_id"] = "private-trip"
+            app.session_state["trip_request"] = {"private": "plan"}
+            app.run(timeout=10)
+            original_anonymous_id = app.session_state["anonymous_session_id"]
+            next(
+                item for item in app.text_input if item.label == "Current password"
+            ).set_value("password123")
+            next(
+                item
+                for item in app.text_input
+                if item.label == "Type your account email to confirm"
+            ).set_value("coco@example.com")
+            next(
+                button
+                for button in app.button
+                if button.label == "Permanently delete account"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        delete_mock.assert_called_once_with(session, "password123")
+        self.assertIsNone(app.session_state["account_session"])
+        self.assertIsNone(app.session_state["saved_trip_id"])
+        self.assertIsNone(app.session_state["trip_request"])
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertNotEqual(
+            app.session_state["anonymous_session_id"],
+            original_anonymous_id,
+        )
+
+    def test_account_deletion_rejects_a_mismatched_confirmation_email(
+        self,
+    ) -> None:
+        session = AccountSession(
+            user_id="12345678-1234-1234-1234-123456789012",
+            email="coco@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        with patch("src.auth_ui.delete_account") as delete_mock:
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.session_state["account_session"] = session.as_dict()
+            app.session_state["account-settings-tab"] = "Privacy & deletion"
+            app.run(timeout=10)
+            next(
+                item for item in app.text_input if item.label == "Current password"
+            ).set_value("password123")
+            next(
+                item
+                for item in app.text_input
+                if item.label == "Type your account email to confirm"
+            ).set_value("someone-else@example.com")
+            next(
+                button
+                for button in app.button
+                if button.label == "Permanently delete account"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        delete_mock.assert_not_called()
+        self.assertEqual(
+            app.session_state["account_session"]["user_id"],
+            session.user_id,
+        )
+        self.assertTrue(
+            any("signed-in account email" in notice.value for notice in app.error)
         )
 
     def test_anonymous_save_remains_visible_through_sign_in_transfer(self) -> None:

@@ -3,16 +3,26 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import logging
 from time import time
 from typing import Any, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
-from src.supabase_store import auth_is_configured, public_client
+from src.supabase_store import (
+    account_feature_is_configured,
+    auth_is_configured,
+    client,
+    public_client,
+    rpc_authenticated,
+)
 
 
 load_dotenv()
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AccountError(RuntimeError):
@@ -159,6 +169,61 @@ def sign_up(
     )
 
 
+def request_password_recovery(
+    email: str,
+    *,
+    redirect_to: str | None = None,
+) -> None:
+    """Ask Supabase to send a non-enumerating password recovery email."""
+
+    normalized_email = email.strip().casefold()
+    if not normalized_email:
+        raise AccountError("Enter the email address for your account.")
+    if not auth_is_configured():
+        raise AccountError("Supabase Auth is not configured for this deployment.")
+    options: dict[str, str] = {}
+    if redirect_to:
+        options["redirect_to"] = _validated_redirect_origin(redirect_to)
+    try:
+        public_client().auth.reset_password_for_email(
+            normalized_email,
+            options or None,
+        )
+    except AccountError:
+        raise
+    except Exception as error:
+        raise AccountError(
+            "TripSync could not send a reset email. Try again shortly."
+        ) from error
+
+
+def verify_password_recovery_token(token_hash: str) -> AccountSession:
+    """Exchange one Supabase recovery token hash for a short-lived session."""
+
+    normalized_token = token_hash.strip()
+    if not normalized_token or len(normalized_token) > 1024:
+        raise AccountError("That password reset link is not valid.")
+    if not auth_is_configured():
+        raise AccountError("Supabase Auth is not configured for this deployment.")
+    try:
+        response = public_client().auth.verify_otp(
+            {
+                "token_hash": normalized_token,
+                "type": "recovery",
+            }
+        )
+        session = _session_from_response(response)
+    except Exception as error:
+        raise AccountError(
+            "That password reset link is invalid or expired. Request a new one."
+        ) from error
+    if session is None:
+        raise AccountError(
+            "That password reset link is invalid or expired. Request a new one."
+        )
+    return session
+
+
 def update_password(
     session: AccountSession,
     new_password: str,
@@ -186,6 +251,59 @@ def update_password(
             "TripSync could not update your password. Sign in again and retry."
         ) from error
     return refreshed_session
+
+
+def delete_account(session: AccountSession, current_password: str) -> None:
+    """Permanently delete one freshly reauthenticated account and its data."""
+
+    if not current_password:
+        raise AccountError("Enter your current password to delete this account.")
+    if not account_feature_is_configured():
+        raise AccountError("Account deletion is not configured for this deployment.")
+
+    verified_session = sign_in(session.email, current_password)
+    if verified_session.user_id != session.user_id:
+        raise AccountError("Sign in again before deleting this account.")
+
+    try:
+        rpc_authenticated(
+            "delete_my_account_data",
+            {},
+            verified_session.access_token,
+        )
+    except Exception as error:
+        LOGGER.exception("Supabase account-data cleanup failed")
+        error_code = str(getattr(error, "code", "") or "").casefold()
+        error_detail = str(error).casefold()
+        if error_code == "pgrst202" or "could not find the function" in error_detail:
+            message = (
+                "Account deletion is not installed in Supabase yet. Reapply the "
+                "current supabase/schema.sql file, then retry."
+            )
+        elif error_code == "42501" or "permission denied for function" in error_detail:
+            message = (
+                "Supabase has not granted account deletion to signed-in users. "
+                "Reapply the current supabase/schema.sql file, then sign in again."
+            )
+        else:
+            message = (
+                "TripSync could not delete your account data. Your account remains "
+                "active; retry shortly."
+            )
+        raise AccountError(
+            message
+        ) from error
+
+    try:
+        client().auth.admin.delete_user(
+            verified_session.user_id,
+            should_soft_delete=False,
+        )
+    except Exception as error:
+        raise AccountError(
+            "Your TripSync data was deleted, but the account itself could not be "
+            "removed. Retry account deletion."
+        ) from error
 
 
 def refresh_account_session(

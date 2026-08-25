@@ -11,10 +11,13 @@ from src.auth import (
     AccountError,
     AccountSession,
     account_session_from_mapping,
+    delete_account,
     refresh_account_session,
+    request_password_recovery,
     sign_in,
     sign_up,
     update_password,
+    verify_password_recovery_token,
 )
 from src.auth_ui import app_origin_from_url
 from src.invitations import (
@@ -147,6 +150,45 @@ class AccountTests(unittest.TestCase):
         update_user_mock.assert_called_once_with({"password": "new-password123"})
         self.assertEqual(refreshed.user_id, "user-123")
 
+    def test_password_recovery_request_uses_normalized_email_and_origin(self) -> None:
+        reset_mock = Mock()
+        auth_client = SimpleNamespace(
+            auth=SimpleNamespace(reset_password_for_email=reset_mock)
+        )
+        with (
+            patch("src.auth.auth_is_configured", return_value=True),
+            patch("src.auth.public_client", return_value=auth_client),
+        ):
+            request_password_recovery(
+                " Traveler@Example.com ",
+                redirect_to="http://localhost:8501/Account?ignored=yes",
+            )
+
+        reset_mock.assert_called_once_with(
+            "traveler@example.com",
+            {"redirect_to": "http://localhost:8501"},
+        )
+
+    def test_password_recovery_token_is_verified_as_recovery(self) -> None:
+        verify_mock = Mock(return_value=_auth_response())
+        auth_client = SimpleNamespace(auth=SimpleNamespace(verify_otp=verify_mock))
+        with (
+            patch("src.auth.auth_is_configured", return_value=True),
+            patch("src.auth.public_client", return_value=auth_client),
+        ):
+            session = verify_password_recovery_token(" token-hash ")
+
+        verify_mock.assert_called_once_with(
+            {"token_hash": "token-hash", "type": "recovery"}
+        )
+        self.assertEqual(session.user_id, "user-123")
+
+    def test_blank_password_recovery_token_is_rejected_before_network_call(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(AccountError, "not valid"):
+            verify_password_recovery_token("  ")
+
     def test_update_password_validates_length_before_network_call(self) -> None:
         session = AccountSession(
             "user-123",
@@ -157,6 +199,120 @@ class AccountTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(AccountError, "at least 8"):
             update_password(session, "short")
+
+    def test_delete_account_reauthenticates_and_targets_only_verified_user(
+        self,
+    ) -> None:
+        session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "old-access-token",
+            "old-refresh-token",
+            4_000_000_000,
+        )
+        verified_session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "verified-access-token",
+            "verified-refresh-token",
+            4_100_000_000,
+        )
+        delete_user_mock = Mock()
+        server_client = SimpleNamespace(
+            auth=SimpleNamespace(
+                admin=SimpleNamespace(delete_user=delete_user_mock)
+            )
+        )
+        with (
+            patch("src.auth.account_feature_is_configured", return_value=True),
+            patch("src.auth.sign_in", return_value=verified_session) as sign_in_mock,
+            patch("src.auth.rpc_authenticated") as rpc_mock,
+            patch("src.auth.client", return_value=server_client),
+        ):
+            delete_account(session, "password123")
+
+        sign_in_mock.assert_called_once_with(
+            "traveler@example.com",
+            "password123",
+        )
+        rpc_mock.assert_called_once_with(
+            "delete_my_account_data",
+            {},
+            "verified-access-token",
+        )
+        delete_user_mock.assert_called_once_with(
+            "user-123",
+            should_soft_delete=False,
+        )
+
+    def test_delete_account_rejects_a_changed_identity(self) -> None:
+        session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "old-access-token",
+            "old-refresh-token",
+            4_000_000_000,
+        )
+        other_session = AccountSession(
+            "other-user",
+            "traveler@example.com",
+            "other-access-token",
+            "other-refresh-token",
+            4_100_000_000,
+        )
+        with (
+            patch("src.auth.account_feature_is_configured", return_value=True),
+            patch("src.auth.sign_in", return_value=other_session),
+            patch("src.auth.rpc_authenticated") as rpc_mock,
+            patch("src.auth.client") as client_mock,
+            self.assertRaisesRegex(AccountError, "Sign in again"),
+        ):
+            delete_account(session, "password123")
+
+        rpc_mock.assert_not_called()
+        client_mock.assert_not_called()
+
+    def test_delete_account_keeps_auth_user_when_data_cleanup_fails(self) -> None:
+        session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "access-token",
+            "refresh-token",
+            4_000_000_000,
+        )
+        with (
+            patch("src.auth.account_feature_is_configured", return_value=True),
+            patch("src.auth.sign_in", return_value=session),
+            patch(
+                "src.auth.rpc_authenticated",
+                side_effect=RuntimeError("database unavailable"),
+            ),
+            patch("src.auth.client") as client_mock,
+            self.assertRaisesRegex(AccountError, "account remains active"),
+        ):
+            delete_account(session, "password123")
+
+        client_mock.assert_not_called()
+
+    def test_delete_account_explains_when_schema_function_is_missing(self) -> None:
+        session = AccountSession(
+            "user-123",
+            "traveler@example.com",
+            "access-token",
+            "refresh-token",
+            4_000_000_000,
+        )
+        missing_function = RuntimeError(
+            "Could not find the function public.delete_my_account_data "
+            "in the schema cache"
+        )
+        with (
+            patch("src.auth.account_feature_is_configured", return_value=True),
+            patch("src.auth.sign_in", return_value=session),
+            patch("src.auth.rpc_authenticated", side_effect=missing_function),
+            self.assertRaisesRegex(AccountError, "Reapply the current"),
+        ):
+            delete_account(session, "password123")
 
     def test_unexpired_session_does_not_refresh(self) -> None:
         session = AccountSession(
