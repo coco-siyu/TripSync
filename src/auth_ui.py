@@ -109,6 +109,7 @@ def _clear_account_session() -> None:
     st.session_state.feedback_session_id = st.session_state.anonymous_session_id
     st.session_state.saved_trip_id = None
     st.session_state.saved_trip_owner_id = None
+    st.session_state.saved_trip_access_role = "owner"
     st.session_state.saved_itinerary_version_id = None
     st.session_state.pop("open_saved_itinerary", None)
     st.session_state.pop("saved_trip_confirmation", None)
@@ -167,6 +168,7 @@ def initialize_account_state() -> None:
     )
     st.session_state.setdefault(AUTH_SESSION_KEY, None)
     st.session_state.setdefault("saved_trip_owner_id", None)
+    st.session_state.setdefault("saved_trip_access_role", "owner")
     st.session_state.setdefault(AUTH_VIEW_KEY, "sign_in")
     if _consume_password_recovery_callback():
         st.session_state.feedback_session_id = st.session_state.anonymous_session_id
@@ -216,9 +218,15 @@ def handle_trip_invitation() -> None:
             ),
         }
     else:
+        collaborator = identity.access_role == "collaborator"
         st.session_state[TRIP_INVITATION_NOTICE_KEY] = {
             "level": "success",
-            "message": "The shared trip is now available here in read-only mode.",
+            "message": (
+                "The shared trip is ready. You can create itinerary versions "
+                "without changing the owner's trip brief."
+                if collaborator
+                else "The shared trip is now available here in read-only mode."
+            ),
             "record_key": f"{identity.owner_id}:{identity.trip_id}",
         }
 

@@ -1,4 +1,4 @@
-"""Tests for account sessions and Phase 2a read-only sharing helpers."""
+"""Tests for account sessions and role-scoped trip-sharing helpers."""
 
 from __future__ import annotations
 
@@ -393,6 +393,7 @@ class InvitationTests(unittest.TestCase):
                 "trip-123",
                 "owner-123",
                 "access-token",
+                access_role="collaborator",
                 now=now,
             )
 
@@ -400,14 +401,37 @@ class InvitationTests(unittest.TestCase):
         self.assertNotIn(invitation.token, row.values())
         self.assertEqual(row["token_hash"], invitation_token_hash(invitation.token))
         self.assertEqual(row["trip_id"], "trip-123")
+        self.assertEqual(row["role"], "collaborator")
+        self.assertEqual(invitation.access_role, "collaborator")
+
+    def test_create_invitation_rejects_an_unknown_access_role(self) -> None:
+        with (
+            patch("src.invitations.insert_authenticated") as insert_mock,
+            self.assertRaisesRegex(ValueError, "viewer or collaborator"),
+        ):
+            create_trip_invitation(
+                "trip-123",
+                "owner-123",
+                "access-token",
+                access_role="owner",
+            )
+
+        insert_mock.assert_not_called()
 
     def test_claim_revoke_and_leave_use_authenticated_database_operations(self) -> None:
         with patch(
             "src.invitations.rpc_authenticated",
-            return_value={"owner_id": "owner-123", "trip_id": "trip-123"},
+            return_value={
+                "owner_id": "owner-123",
+                "trip_id": "trip-123",
+                "role": "collaborator",
+            },
         ) as rpc_mock:
             identity = claim_trip_invitation("x" * 43, "access-token")
-        self.assertEqual(identity, SharedTripIdentity("owner-123", "trip-123"))
+        self.assertEqual(
+            identity,
+            SharedTripIdentity("owner-123", "trip-123", "collaborator"),
+        )
         rpc_mock.assert_called_once_with(
             "claim_trip_invitation",
             {"invite_token": "x" * 43},

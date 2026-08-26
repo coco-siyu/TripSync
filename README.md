@@ -83,14 +83,15 @@ Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 With all three Supabase values configured, travelers can create accounts, change
 their password while signed in, keep private plans across devices, and
 permanently delete their account and account-linked data. A signed-in owner can
-also create a seven-day viewer link from **My trips → Share trip**. A signed-in
-recipient who opens it receives read-only access to that trip and its saved
-itinerary versions; they cannot edit, resave, or delete the owner's data.
+also create a seven-day link from **My trips → Share trip**, choosing **Can
+view** or **Can create itineraries**. Viewers receive read-only access.
+Collaborators may build and append new itinerary versions, but cannot change the
+trip brief, sharing settings, ownership, or delete the owner's data.
 Signing in atomically moves plans saved in that browser into the account. Apply
 `supabase/schema.sql` again when upgrading an existing deployment; it installs
-the private-trip policies, guarded browser-plan transfer, and Phase 2a sharing
-tables and functions. The Phase 2a migration is idempotent, so later schema
-reruns preserve real sharing records.
+the private-trip policies, guarded browser-plan transfer, and Phase 2 sharing
+tables and functions. The migration is idempotent, so later schema reruns
+preserve existing sharing records and add collaborator roles to Phase 2a data.
 Without account configuration, saved plans continue to use the anonymous
 browser-session fallback.
 
@@ -100,11 +101,12 @@ Site URL to `https://tripsync.streamlit.app`. Add both
 URLs. TripSync passes its current validated origin during signup, so local
 confirmation returns to localhost while deployed confirmation returns to the
 live app. Sharing uses the same local or deployed origin that is currently open,
-so no additional Supabase redirect URL is required. Viewer links are capability
+so no additional Supabase redirect URL is required. Sharing links are capability
 secrets: TripSync stores only a one-way token hash, expires links after seven
 days, and removes the token from the browser URL immediately after it is
 accepted. **Revoke sharing** invalidates outstanding links and removes existing
-viewers. Shared editing is intentionally outside Phase 2a.
+viewers and collaborators. Collaborator saves use a guarded database function
+that can only append itinerary snapshots; general updates remain owner-only.
 
 Account deletion requires a fresh password verification. Its zero-argument
 database function derives the deletion target from the authenticated JWT,

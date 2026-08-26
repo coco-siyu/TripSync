@@ -56,6 +56,10 @@ class SavedTrip:
     def is_owner(self) -> bool:
         return self.access_role == "owner"
 
+    @property
+    def can_create_itineraries(self) -> bool:
+        return self.access_role in {"owner", "collaborator"}
+
 
 def itinerary_versions(
     state: dict,
@@ -382,6 +386,74 @@ def save_trip(
     return record
 
 
+def save_shared_itinerary_version(
+    record: SavedTrip,
+    state: dict,
+    access_token: str,
+    *,
+    itinerary_label: str | None = None,
+) -> SavedTrip:
+    """Append one collaborator-created version without changing its trip brief."""
+
+    if record.access_role != "collaborator" or not record.owner_id:
+        raise ValueError("Collaborator access is required to save this itinerary")
+    if not access_token.strip():
+        raise ValueError("A signed-in collaborator is required")
+    raw_plan = state.get("itinerary_plan")
+    if not raw_plan:
+        raise ValueError("Create an itinerary before saving it")
+    ItineraryPlan.model_validate(raw_plan)
+    label = (itinerary_label or "").strip()
+    if len(label) > 80:
+        raise ValueError("Itinerary names must be 80 characters or fewer")
+
+    versions = itinerary_versions(
+        record.state,
+        fallback_updated_at=record.updated_at,
+    )
+    snapshot = _snapshot_itinerary(
+        state,
+        len(versions) + 1,
+        label=label,
+    )
+    result = rpc_authenticated(
+        "append_shared_itinerary_version",
+        {
+            "target_owner_id": record.owner_id,
+            "target_trip_id": record.trip_id,
+            "itinerary_version": snapshot,
+        },
+        access_token,
+    )
+    if not isinstance(result, dict):
+        raise RuntimeError("Supabase returned an invalid itinerary version")
+    version_id = str(result.get("version_id") or "").strip()
+    if not version_id or not result.get("itinerary_plan"):
+        raise RuntimeError("Supabase returned an invalid itinerary version")
+    ItineraryPlan.model_validate(result["itinerary_plan"])
+
+    updated_state = dict(record.state)
+    updated_versions = [*versions, result]
+    updated_state.update(
+        {
+            key: result.get(key)
+            for key in _ITINERARY_STATE_KEYS
+            if key in result
+        }
+    )
+    updated_state["itinerary_versions"] = updated_versions
+    updated_state["active_itinerary_version_id"] = version_id
+    return SavedTrip(
+        trip_id=record.trip_id,
+        title=record.title,
+        trip=record.trip,
+        state=updated_state,
+        updated_at=str(result.get("saved_at") or record.updated_at),
+        owner_id=record.owner_id,
+        access_role="collaborator",
+    )
+
+
 def list_saved_trips(
     session_id: str = "local",
     *,
@@ -397,6 +469,27 @@ def list_saved_trips(
             if auth_access_token
             else select_for_session("saved_trips", session_id)
         )
+        shared_rows = [
+            row
+            for row in rows
+            if str(row.get("session_id") or "") != session_id
+        ]
+        role_by_identity: dict[tuple[str, str], str] = {}
+        if auth_access_token and shared_rows:
+            membership_rows = select_authenticated(
+                "trip_members",
+                auth_access_token,
+                order="joined_at",
+            )
+            role_by_identity = {
+                (
+                    str(row.get("owner_id") or ""),
+                    str(row.get("trip_id") or ""),
+                ): str(row.get("role") or "viewer")
+                for row in membership_rows
+                if str(row.get("member_id") or "") == session_id
+            }
+
         records = []
         for row in rows:
             row_owner_id = str(row.get("session_id") or "")
@@ -408,7 +501,14 @@ def list_saved_trips(
                     row["state_json"],
                     row["updated_at"],
                     row_owner_id,
-                    "owner" if row_owner_id == session_id else "viewer",
+                    (
+                        "owner"
+                        if row_owner_id == session_id
+                        else role_by_identity.get(
+                            (row_owner_id, str(row.get("trip_id") or "")),
+                            "viewer",
+                        )
+                    ),
                 )
             )
         return records

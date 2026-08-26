@@ -17,6 +17,7 @@ from src.trips import (
     itinerary_versions,
     list_saved_trips,
     revise_itinerary_plan,
+    save_shared_itinerary_version,
     save_trip,
     state_for_itinerary_version,
 )
@@ -64,9 +65,20 @@ class SavedTripsTests(unittest.TestCase):
             patch("src.trips.is_configured", return_value=True),
             patch(
                 "src.trips.select_authenticated",
-                return_value=[
-                    {**base_row, "session_id": "viewer-user"},
-                    {**base_row, "session_id": "owner-user"},
+                side_effect=[
+                    [
+                        {**base_row, "session_id": "viewer-user"},
+                        {**base_row, "session_id": "owner-user"},
+                    ],
+                    [
+                        {
+                            "owner_id": "owner-user",
+                            "trip_id": "same-trip",
+                            "member_id": "viewer-user",
+                            "role": "collaborator",
+                            "joined_at": "2026-08-25T12:00:00+00:00",
+                        }
+                    ],
                 ],
             ),
         ):
@@ -79,9 +91,76 @@ class SavedTripsTests(unittest.TestCase):
             [(record.record_key, record.access_role) for record in records],
             [
                 ("viewer-user:same-trip", "owner"),
-                ("owner-user:same-trip", "viewer"),
+                ("owner-user:same-trip", "collaborator"),
             ],
         )
+
+    def test_collaborator_appends_an_itinerary_version_through_guarded_rpc(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        plan = {
+            "destination": "Rome",
+            "country": "Italy",
+            "pace": "balanced",
+            "auto_fill": False,
+            "days": [
+                {
+                    "day_number": 1,
+                    "activities": [],
+                    "activity_hours": 0.0,
+                    "transition_hours": 0.0,
+                    "planned_hours": 0.0,
+                    "capacity_hours": 6.0,
+                    "pace_override_approved": False,
+                },
+                {
+                    "day_number": 2,
+                    "activities": [],
+                    "activity_hours": 0.0,
+                    "transition_hours": 0.0,
+                    "planned_hours": 0.0,
+                    "capacity_hours": 6.0,
+                    "pace_override_approved": False,
+                },
+            ],
+            "unscheduled": [],
+        }
+        record = SavedTrip(
+            "shared-trip",
+            "Rome with friends",
+            trip,
+            {},
+            "2026-08-25T12:00:00+00:00",
+            "owner-user",
+            "collaborator",
+        )
+        returned_version = {
+            "version_id": "a" * 32,
+            "label": "Itinerary 1",
+            "saved_at": "2026-08-25T13:00:00+00:00",
+            "created_by": "collaborator-user",
+            "itinerary_plan": plan,
+            "selected_activity_ids": [],
+        }
+        with patch(
+            "src.trips.rpc_authenticated",
+            return_value=returned_version,
+        ) as rpc_mock:
+            saved = save_shared_itinerary_version(
+                record,
+                {"itinerary_plan": plan, "selected_activity_ids": []},
+                "access-token",
+            )
+
+        self.assertEqual(saved.access_role, "collaborator")
+        self.assertEqual(saved.state["active_itinerary_version_id"], "a" * 32)
+        self.assertEqual(len(itinerary_versions(saved.state)), 1)
+        rpc_mock.assert_called_once()
+        function_name, params, token = rpc_mock.call_args.args
+        self.assertEqual(function_name, "append_shared_itinerary_version")
+        self.assertEqual(params["target_owner_id"], "owner-user")
+        self.assertEqual(params["target_trip_id"], "shared-trip")
+        self.assertEqual(params["itinerary_version"]["itinerary_plan"], plan)
+        self.assertEqual(token, "access-token")
 
     def test_claims_a_valid_anonymous_browser_namespace_via_authenticated_rpc(self) -> None:
         anonymous_session_id = "a" * 32

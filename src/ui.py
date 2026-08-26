@@ -65,7 +65,7 @@ from src.search import (
     RetrievedActivity,
     retrieve_activities,
 )
-from src.trips import save_trip
+from src.trips import list_saved_trips, save_shared_itinerary_version, save_trip
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -313,6 +313,7 @@ def _initialize_state() -> None:
         "feedback_session_id": uuid4().hex,
         "saved_trip_id": None,
         "saved_trip_owner_id": None,
+        "saved_trip_access_role": "owner",
         "saved_trip_read_mode": False,
         "saved_itinerary_version_id": None,
     }
@@ -338,6 +339,7 @@ def _reset_activity_selections() -> None:
     st.session_state.retrieval_cache = None
     st.session_state.activity_detail_id = None
     st.session_state.saved_trip_read_mode = False
+    st.session_state.saved_trip_access_role = "owner"
     st.session_state.saved_itinerary_version_id = None
 
 
@@ -358,6 +360,7 @@ def _start_new_trip() -> None:
     _reset_activity_selections()
     st.session_state.saved_trip_id = None
     st.session_state.saved_trip_owner_id = None
+    st.session_state.saved_trip_access_role = "owner"
     st.session_state.saved_trip_read_mode = False
     st.session_state.saved_itinerary_version_id = None
     st.session_state.pop("results_view", None)
@@ -2380,32 +2383,67 @@ def _save_current_trip(
     """Persist the current planning state, including an itinerary snapshot."""
 
     account = st.session_state.get("account_session") or {}
-    saved = save_trip(
-        trip,
-        {
-            "selected_activity_ids": st.session_state.selected_activity_ids,
-            "dismissed_must_do_ids": st.session_state.dismissed_must_do_ids,
-            "auto_select_must_dos": st.session_state.auto_select_must_dos,
-            "itinerary_plan": st.session_state.itinerary_plan,
-            "rejected_activities": st.session_state.rejected_activities,
-            "itinerary_narrative": st.session_state.itinerary_narrative,
-        },
-        trip_id=st.session_state.saved_trip_id,
-        session_id=st.session_state.feedback_session_id,
-        save_itinerary_version=save_itinerary_version,
-        auth_access_token=account.get("access_token"),
-        owner_id=st.session_state.get("saved_trip_owner_id"),
-    )
+    planning_state = {
+        "selected_activity_ids": st.session_state.selected_activity_ids,
+        "dismissed_must_do_ids": st.session_state.dismissed_must_do_ids,
+        "auto_select_must_dos": st.session_state.auto_select_must_dos,
+        "itinerary_plan": st.session_state.itinerary_plan,
+        "rejected_activities": st.session_state.rejected_activities,
+        "itinerary_narrative": st.session_state.itinerary_narrative,
+    }
+    access_role = str(st.session_state.get("saved_trip_access_role") or "owner")
+    if access_role == "collaborator":
+        if not save_itinerary_version:
+            raise ValueError("Collaborators can save itinerary versions only")
+        access_token = str(account.get("access_token") or "")
+        owner_id = str(st.session_state.get("saved_trip_owner_id") or "")
+        trip_id = str(st.session_state.get("saved_trip_id") or "")
+        shared_record = next(
+            (
+                record
+                for record in list_saved_trips(
+                    st.session_state.feedback_session_id,
+                    auth_access_token=access_token,
+                )
+                if record.owner_id == owner_id
+                and record.trip_id == trip_id
+                and record.access_role == "collaborator"
+            ),
+            None,
+        )
+        if shared_record is None:
+            raise RuntimeError("This collaborator trip is no longer available")
+        saved = save_shared_itinerary_version(
+            shared_record,
+            planning_state,
+            access_token,
+        )
+    else:
+        saved = save_trip(
+            trip,
+            planning_state,
+            trip_id=st.session_state.saved_trip_id,
+            session_id=st.session_state.feedback_session_id,
+            save_itinerary_version=save_itinerary_version,
+            auth_access_token=account.get("access_token"),
+            owner_id=st.session_state.get("saved_trip_owner_id"),
+        )
     st.session_state.saved_trip_id = saved.trip_id
     st.session_state.saved_trip_owner_id = getattr(
         saved,
         "owner_id",
         st.session_state.feedback_session_id,
     )
+    st.session_state.saved_trip_access_role = getattr(
+        saved,
+        "access_role",
+        access_role,
+    )
     st.session_state[SAVED_TRIP_CONFIRMATION_KEY] = {
         "trip_id": saved.trip_id,
         "title": saved.title,
         "account_backed": bool(account.get("access_token")),
+        "collaborator": access_role == "collaborator",
     }
     return saved
 
@@ -2427,7 +2465,11 @@ def _render_saved_trip_confirmation() -> None:
     title = str(confirmation.get("title") or "Trip")
     if confirmation.get("account_backed"):
         st.success(
-            f"{title} is saved to your account.",
+            (
+                f"A new itinerary version is saved to {title}."
+                if confirmation.get("collaborator")
+                else f"{title} is saved to your account."
+            ),
             icon=":material/cloud_done:",
         )
     else:
@@ -2504,11 +2546,20 @@ def _render_itinerary(
                 key="save-itinerary",
                 type="primary",
             ):
-                saved = _save_current_trip(
-                    trip,
-                    save_itinerary_version=True,
-                )
-                st.toast(f"Saved {saved.title}")
+                try:
+                    saved = _save_current_trip(
+                        trip,
+                        save_itinerary_version=True,
+                    )
+                except (RuntimeError, ValueError):
+                    st.error(
+                        "TripSync could not save this itinerary version. Your "
+                        "collaboration access may have changed; return to My trips "
+                        "and try again.",
+                        icon=":material/error:",
+                    )
+                else:
+                    st.toast(f"Saved {saved.title}")
             _render_saved_trip_confirmation()
         summary_labels = [
             f"{len(scheduled)} activities",
@@ -2923,7 +2974,10 @@ def _render_results_step() -> None:
         _render_saved_trip_reader(trip, activity_by_id)
         return
     has_itinerary = bool(st.session_state.itinerary_plan)
-    if not has_itinerary and st.button(
+    can_save_trip_brief = (
+        st.session_state.get("saved_trip_access_role") != "collaborator"
+    )
+    if not has_itinerary and can_save_trip_brief and st.button(
         "Save this trip",
         icon=":material/bookmark_add:",
         key="save-trip",
@@ -2933,6 +2987,11 @@ def _render_results_step() -> None:
             save_itinerary_version=False,
         )
         st.toast("Saved trip preferences")
+    elif not has_itinerary and not can_save_trip_brief:
+        st.caption(
+            "Build an itinerary to add a new version to this shared trip. Only "
+            "the owner can change or resave the trip brief."
+        )
     if not has_itinerary:
         _render_saved_trip_confirmation()
     retrieval_response = _retrieve_for_current_trip(trip, activities)

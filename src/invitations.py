@@ -1,4 +1,4 @@
-"""Secure, read-only trip-sharing invitation helpers."""
+"""Secure trip-sharing invitation helpers with explicit access roles."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from src.supabase_store import (
 class TripInvitation:
     token: str
     expires_at: str
+    access_role: str = "viewer"
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,10 @@ class SharedTripIdentity:
 
     owner_id: str
     trip_id: str
+    access_role: str = "viewer"
+
+
+_SHARED_ACCESS_ROLES = {"viewer", "collaborator"}
 
 
 def invitation_token_hash(token: str) -> str:
@@ -64,6 +69,7 @@ def create_trip_invitation(
     owner_id: str,
     access_token: str,
     *,
+    access_role: str = "viewer",
     valid_days: int = 7,
     now: datetime | None = None,
 ) -> TripInvitation:
@@ -71,6 +77,9 @@ def create_trip_invitation(
 
     if not trip_id.strip() or not owner_id.strip() or not access_token.strip():
         raise ValueError("A trip owner and authenticated session are required")
+    normalized_role = access_role.strip().casefold()
+    if normalized_role not in _SHARED_ACCESS_ROLES:
+        raise ValueError("Choose viewer or collaborator access")
     if not 1 <= valid_days <= 30:
         raise ValueError("Invitation validity must be between 1 and 30 days")
     token = secrets.token_urlsafe(32)
@@ -81,11 +90,16 @@ def create_trip_invitation(
             "token_hash": invitation_token_hash(token),
             "trip_id": trip_id,
             "owner_id": owner_id,
+            "role": normalized_role,
             "expires_at": expires_at.isoformat(),
         },
         access_token,
     )
-    return TripInvitation(token=token, expires_at=expires_at.isoformat())
+    return TripInvitation(
+        token=token,
+        expires_at=expires_at.isoformat(),
+        access_role=normalized_role,
+    )
 
 
 def claim_trip_invitation(
@@ -110,9 +124,14 @@ def claim_trip_invitation(
         raise RuntimeError("The invitation could not be claimed")
     owner_id = str(result.get("owner_id") or "").strip()
     trip_id = str(result.get("trip_id") or "").strip()
-    if not owner_id or not trip_id:
+    access_role = str(result.get("role") or "viewer").strip().casefold()
+    if not owner_id or not trip_id or access_role not in _SHARED_ACCESS_ROLES:
         raise RuntimeError("The invitation could not be claimed")
-    return SharedTripIdentity(owner_id=owner_id, trip_id=trip_id)
+    return SharedTripIdentity(
+        owner_id=owner_id,
+        trip_id=trip_id,
+        access_role=access_role,
+    )
 
 
 def revoke_trip_sharing(trip_id: str, access_token: str) -> dict[str, int]:
