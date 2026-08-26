@@ -44,10 +44,43 @@ class SavedTripsTests(unittest.TestCase):
             )
 
         self.assertEqual(records[0].owner_id, "owner-user")
+        self.assertEqual(records[0].access_role, "owner")
         select_mock.assert_called_once_with(
             "saved_trips",
             "access-token",
             order="updated_at",
+        )
+
+    def test_distinguishes_owned_and_shared_trips_with_the_same_trip_id(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        base_row = {
+            "trip_id": "same-trip",
+            "title": "Rome plan",
+            "trip_json": trip.model_dump(mode="json"),
+            "state_json": {},
+            "updated_at": "2026-08-23T12:00:00+00:00",
+        }
+        with (
+            patch("src.trips.is_configured", return_value=True),
+            patch(
+                "src.trips.select_authenticated",
+                return_value=[
+                    {**base_row, "session_id": "viewer-user"},
+                    {**base_row, "session_id": "owner-user"},
+                ],
+            ),
+        ):
+            records = list_saved_trips(
+                "viewer-user",
+                auth_access_token="access-token",
+            )
+
+        self.assertEqual(
+            [(record.record_key, record.access_role) for record in records],
+            [
+                ("viewer-user:same-trip", "owner"),
+                ("owner-user:same-trip", "viewer"),
+            ],
         )
 
     def test_claims_a_valid_anonymous_browser_namespace_via_authenticated_rpc(self) -> None:

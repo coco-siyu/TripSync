@@ -2,7 +2,11 @@
 
 import streamlit as st
 
-from src.auth_ui import initialize_account_state, render_account_workspace
+from src.auth_ui import (
+    handle_trip_invitation,
+    initialize_account_state,
+    render_account_workspace,
+)
 from src.catalog_ui import render_catalog_workspace
 from src.feedback_ui import render_feedback_insights
 from src.trips_ui import render_saved_trips
@@ -23,6 +27,7 @@ if "app_workspace" not in st.session_state:
 # opens a secondary page before visiting the planner.
 _initialize_state()
 initialize_account_state()
+handle_trip_invitation()
 
 # Shared layout and workspace-specific colors must load before every page.
 _apply_styles(st.session_state.app_workspace)

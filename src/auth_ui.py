@@ -21,6 +21,7 @@ from src.auth import (
     verify_password_recovery_token,
 )
 from src.supabase_store import account_feature_is_configured
+from src.invitations import claim_trip_invitation
 from src.trips import claim_anonymous_trips
 
 
@@ -33,6 +34,7 @@ PASSWORD_RECOVERY_SESSION_KEY = "account_password_recovery_session"
 PASSWORD_RECOVERY_ERROR_KEY = "account_password_recovery_error"
 PASSWORD_RECOVERY_EMAIL_SENT_KEY = "account_password_recovery_email_sent"
 PASSWORD_RECOVERY_ENABLED = False
+TRIP_INVITATION_NOTICE_KEY = "trip_invitation_notice"
 
 
 def app_origin_from_url(value: str) -> str | None:
@@ -186,6 +188,39 @@ def initialize_account_state() -> None:
         st.session_state.app_workspace = "Account"
         return
     _use_account_session(refreshed)
+
+
+def handle_trip_invitation() -> None:
+    """Route or claim an invite after account state has been reconciled."""
+
+    token = _query_param_value("invite")
+    if not token:
+        return
+    session = current_account_session()
+    if session is None:
+        st.session_state.app_workspace = "Account"
+        st.session_state[ACCOUNT_NOTICE_KEY] = (
+            "Sign in or create an account to add this shared trip to My trips."
+        )
+        return
+
+    del st.query_params["invite"]
+    st.session_state.app_workspace = "My trips"
+    try:
+        identity = claim_trip_invitation(token, session.access_token)
+    except Exception:
+        st.session_state[TRIP_INVITATION_NOTICE_KEY] = {
+            "level": "error",
+            "message": (
+                "This trip invitation is invalid, expired, or has been revoked."
+            ),
+        }
+    else:
+        st.session_state[TRIP_INVITATION_NOTICE_KEY] = {
+            "level": "success",
+            "message": "The shared trip is now available here in read-only mode.",
+            "record_key": f"{identity.owner_id}:{identity.trip_id}",
+        }
 
 
 def _render_password_security(session: AccountSession) -> None:
@@ -349,6 +384,14 @@ def _render_auth_forms() -> None:
                 "current-password" if mode == "Sign in" else "new-password"
             ),
         )
+        confirmed_password = None
+        if mode == "Create account":
+            confirmed_password = st.text_input(
+                "Confirm password",
+                type="password",
+                autocomplete="new-password",
+            )
+            st.caption("Use at least 8 characters.")
         submitted = st.form_submit_button(
             mode or "Sign in",
             type="primary",
@@ -369,6 +412,9 @@ def _render_auth_forms() -> None:
         st.session_state.pop(PASSWORD_RECOVERY_EMAIL_SENT_KEY, None)
         st.rerun()
     if not submitted:
+        return
+    if mode == "Create account" and password != confirmed_password:
+        st.error("The passwords do not match.", icon=":material/error:")
         return
     try:
         if mode == "Create account":

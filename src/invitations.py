@@ -1,4 +1,4 @@
-"""Dormant Phase 2 invitation helpers; not wired into the Phase 1 app."""
+"""Secure, read-only trip-sharing invitation helpers."""
 
 from __future__ import annotations
 
@@ -21,6 +21,14 @@ class TripInvitation:
     expires_at: str
 
 
+@dataclass(frozen=True)
+class SharedTripIdentity:
+    """Globally identify a trip inside its owner's namespace."""
+
+    owner_id: str
+    trip_id: str
+
+
 def invitation_token_hash(token: str) -> str:
     """Return the one-way representation stored in the database."""
 
@@ -34,10 +42,18 @@ def build_invitation_url(base_url: str, token: str) -> str:
     if not normalized_base:
         raise ValueError("A public TripSync URL is required")
     parts = urlsplit(normalized_base)
-    if parts.scheme not in {"http", "https"} or not parts.netloc:
+    if (
+        parts.scheme not in {"http", "https"}
+        or not parts.netloc
+        or parts.username
+        or parts.password
+    ):
         raise ValueError("The public TripSync URL must use http or https")
+    normalized_token = token.strip()
+    if len(normalized_token) < 32 or len(normalized_token) > 256:
+        raise ValueError("This invitation link is not valid")
     query = dict(parse_qsl(parts.query, keep_blank_values=True))
-    query["invite"] = token
+    query["invite"] = normalized_token
     return urlunsplit(
         (parts.scheme, parts.netloc, parts.path or "/", urlencode(query), "")
     )
@@ -51,7 +67,7 @@ def create_trip_invitation(
     valid_days: int = 7,
     now: datetime | None = None,
 ) -> TripInvitation:
-    """Create a reusable editor invitation while storing only its hash."""
+    """Create a reusable viewer invitation while storing only its hash."""
 
     if not trip_id.strip() or not owner_id.strip() or not access_token.strip():
         raise ValueError("A trip owner and authenticated session are required")
@@ -72,27 +88,69 @@ def create_trip_invitation(
     return TripInvitation(token=token, expires_at=expires_at.isoformat())
 
 
-def claim_trip_invitation(token: str, access_token: str) -> str:
-    """Join the invited trip through the database's checked claim function."""
+def claim_trip_invitation(
+    token: str,
+    access_token: str,
+) -> SharedTripIdentity:
+    """Claim viewer access through the database's checked invitation function."""
 
     normalized_token = token.strip()
-    if len(normalized_token) < 32 or not access_token.strip():
+    if (
+        len(normalized_token) < 32
+        or len(normalized_token) > 256
+        or not access_token.strip()
+    ):
         raise ValueError("This invitation link is not valid")
-    trip_id = rpc_authenticated(
+    result = rpc_authenticated(
         "claim_trip_invitation",
         {"invite_token": normalized_token},
         access_token,
     )
-    if not isinstance(trip_id, str) or not trip_id:
+    if not isinstance(result, dict):
         raise RuntimeError("The invitation could not be claimed")
-    return trip_id
+    owner_id = str(result.get("owner_id") or "").strip()
+    trip_id = str(result.get("trip_id") or "").strip()
+    if not owner_id or not trip_id:
+        raise RuntimeError("The invitation could not be claimed")
+    return SharedTripIdentity(owner_id=owner_id, trip_id=trip_id)
 
 
-def revoke_trip_invitations(trip_id: str, access_token: str) -> None:
-    """Disable every outstanding link for an owned trip."""
+def revoke_trip_sharing(trip_id: str, access_token: str) -> dict[str, int]:
+    """Revoke every viewer and outstanding invitation for an owned trip."""
 
-    delete_authenticated(
-        "trip_invitations",
+    if not trip_id.strip() or not access_token.strip():
+        raise ValueError("An owned trip and authenticated session are required")
+    result = rpc_authenticated(
+        "revoke_trip_sharing",
+        {"target_trip_id": trip_id},
         access_token,
-        filters={"trip_id": trip_id},
+    )
+    if not isinstance(result, dict):
+        raise RuntimeError("Trip sharing could not be revoked")
+    try:
+        return {
+            "revoked_links": max(0, int(result.get("revoked_links", 0))),
+            "removed_viewers": max(0, int(result.get("removed_viewers", 0))),
+        }
+    except (TypeError, ValueError) as error:
+        raise RuntimeError("Supabase returned an invalid sharing result") from error
+
+
+def leave_shared_trip(
+    identity: SharedTripIdentity,
+    member_id: str,
+    access_token: str,
+) -> None:
+    """Remove the current viewer's membership; RLS rejects any other target."""
+
+    if not identity.owner_id or not identity.trip_id or not member_id.strip():
+        raise ValueError("A shared trip and signed-in viewer are required")
+    delete_authenticated(
+        "trip_members",
+        access_token,
+        filters={
+            "owner_id": identity.owner_id,
+            "trip_id": identity.trip_id,
+            "member_id": member_id,
+        },
     )

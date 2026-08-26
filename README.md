@@ -82,10 +82,15 @@ Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 
 With all three Supabase values configured, travelers can create accounts, change
 their password while signed in, keep private plans across devices, and
-permanently delete their account and account-linked data. Signing in atomically
-moves plans saved in that browser into the account. Apply
+permanently delete their account and account-linked data. A signed-in owner can
+also create a seven-day viewer link from **My trips → Share trip**. A signed-in
+recipient who opens it receives read-only access to that trip and its saved
+itinerary versions; they cannot edit, resave, or delete the owner's data.
+Signing in atomically moves plans saved in that browser into the account. Apply
 `supabase/schema.sql` again when upgrading an existing deployment; it installs
-the private-trip policies and the guarded browser-plan transfer function.
+the private-trip policies, guarded browser-plan transfer, and Phase 2a sharing
+tables and functions. The Phase 2a migration is idempotent, so later schema
+reruns preserve real sharing records.
 Without account configuration, saved plans continue to use the anonymous
 browser-session fallback.
 
@@ -94,13 +99,17 @@ Site URL to `https://tripsync.streamlit.app`. Add both
 `http://localhost:8501/**` and `https://tripsync.streamlit.app/**` to Redirect
 URLs. TripSync passes its current validated origin during signup, so local
 confirmation returns to localhost while deployed confirmation returns to the
-live app. Phase 1 deliberately does not enable invitation links or shared
-editing; those require a separate collaboration schema and two-user
-row-level-security testing.
+live app. Sharing uses the same local or deployed origin that is currently open,
+so no additional Supabase redirect URL is required. Viewer links are capability
+secrets: TripSync stores only a one-way token hash, expires links after seven
+days, and removes the token from the browser URL immediately after it is
+accepted. **Revoke sharing** invalidates outstanding links and removes existing
+viewers. Shared editing is intentionally outside Phase 2a.
 
 Account deletion requires a fresh password verification. Its zero-argument
 database function derives the deletion target from the authenticated JWT,
-atomically removes saved trips (including itinerary versions) and feedback,
+atomically removes saved trips (including itinerary versions), shared-trip
+memberships, and feedback,
 then the server-only Supabase client removes that same Auth user. Reapply
 `supabase/schema.sql` to an existing project before using this control.
 

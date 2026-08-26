@@ -44,6 +44,17 @@ class SavedTrip:
     state: dict
     updated_at: str
     owner_id: str | None = None
+    access_role: str = "owner"
+
+    @property
+    def record_key(self) -> str:
+        """Return a stable key across different owners' trip namespaces."""
+
+        return f"{self.owner_id or ''}:{self.trip_id}"
+
+    @property
+    def is_owner(self) -> bool:
+        return self.access_role == "owner"
 
 
 def itinerary_versions(
@@ -211,7 +222,7 @@ def _existing_trip_state(
         session_id,
         auth_access_token=auth_access_token,
     ):
-        if record.trip_id == trip_id:
+        if record.trip_id == trip_id and record.owner_id == session_id:
             return record.state, record.updated_at, record.owner_id
     return {}, None, None
 
@@ -386,17 +397,21 @@ def list_saved_trips(
             if auth_access_token
             else select_for_session("saved_trips", session_id)
         )
-        return [
-            SavedTrip(
-                row["trip_id"],
-                row["title"],
-                TripRequest.model_validate(row["trip_json"]),
-                row["state_json"],
-                row["updated_at"],
-                row.get("session_id"),
+        records = []
+        for row in rows:
+            row_owner_id = str(row.get("session_id") or "")
+            records.append(
+                SavedTrip(
+                    row["trip_id"],
+                    row["title"],
+                    TripRequest.model_validate(row["trip_json"]),
+                    row["state_json"],
+                    row["updated_at"],
+                    row_owner_id,
+                    "owner" if row_owner_id == session_id else "viewer",
+                )
             )
-            for row in rows
-        ]
+        return records
     if not DEFAULT_FEEDBACK_DATABASE_PATH.exists():
         return []
     with closing(sqlite3.connect(DEFAULT_FEEDBACK_DATABASE_PATH)) as connection:

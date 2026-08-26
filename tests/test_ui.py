@@ -17,6 +17,7 @@ from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
 from src.catalog import load_curated_activities
 from src.search import retrieve_activities as real_retrieve_activities
 from src.trips import SavedTrip
+from src.invitations import SharedTripIdentity, TripInvitation
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -259,6 +260,10 @@ class StreamlitInteractionTests(unittest.TestCase):
                 "password123"
             )
             next(
+                item for item in app.text_input
+                if item.label == "Confirm password"
+            ).set_value("password123")
+            next(
                 button for button in app.button if button.label == "Create account"
             ).click().run(timeout=10)
 
@@ -270,6 +275,46 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         self.assertTrue(
             any("Check your email" in notice.value for notice in app.success)
+        )
+
+    def test_create_account_rejects_mismatched_passwords_before_signup(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch("src.auth_ui.sign_up") as sign_up_mock,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "Account"
+            app.run(timeout=10)
+            next(
+                group for group in app.get("button_group")
+                if group.label == "Account action"
+            ).select("Create account").run(timeout=10)
+            next(item for item in app.text_input if item.label == "Email").set_value(
+                "coco@example.com"
+            )
+            next(item for item in app.text_input if item.label == "Password").set_value(
+                "password123"
+            )
+            next(
+                item for item in app.text_input
+                if item.label == "Confirm password"
+            ).set_value("different-password")
+            next(
+                button for button in app.button if button.label == "Create account"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        sign_up_mock.assert_not_called()
+        self.assertTrue(
+            any("passwords do not match" in item.value for item in app.error)
         )
 
     def test_forgot_password_is_hidden_until_custom_email_is_configured(
@@ -790,7 +835,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 ["Rome · 3 days"],
             )
 
-            trip_selector.select("paris-trip").run(timeout=10)
+            trip_selector.select(":paris-trip").run(timeout=10)
             self.assertEqual(
                 [heading.value for heading in app.subheader],
                 ["Paris · 3 days"],
@@ -798,7 +843,7 @@ class StreamlitInteractionTests(unittest.TestCase):
 
             next(
                 box for box in app.selectbox if box.label == "Choose a trip"
-            ).select("rome-trip").run(timeout=10)
+            ).select(":rome-trip").run(timeout=10)
             next(
                 button
                 for button in app.button
@@ -811,6 +856,140 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertEqual(app.session_state["selected_activity_ids"], [])
         self.assertFalse(app.session_state["auto_select_must_dos"])
         self.assertIsNone(app.session_state["itinerary_plan"])
+
+    def test_signed_in_invitee_claims_a_read_only_trip(self) -> None:
+        trip = build_sample_trip()
+        session = AccountSession(
+            user_id="viewer-user",
+            email="viewer@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        shared_record = SavedTrip(
+            trip_id="shared-trip",
+            title="Rome with friends",
+            trip=trip,
+            state={},
+            updated_at="2026-08-25T12:00:00+00:00",
+            owner_id="owner-user",
+            access_role="viewer",
+        )
+        with (
+            patch(
+                "src.auth_ui.claim_trip_invitation",
+                return_value=SharedTripIdentity("owner-user", "shared-trip"),
+            ) as claim_mock,
+            patch("src.trips_ui.list_saved_trips", return_value=[shared_record]),
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["account_session"] = session.as_dict()
+            app.query_params["invite"] = "x" * 43
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "My trips")
+        self.assertNotIn("invite", app.query_params)
+        claim_mock.assert_called_once_with("x" * 43, "access-token")
+        self.assertTrue(
+            any("read-only" in item.value for item in app.info)
+        )
+        self.assertTrue(
+            any(button.label == "Remove from My trips" for button in app.button)
+        )
+        self.assertFalse(
+            any(
+                button.label in {"Create new itinerary", "Edit recommendations"}
+                for button in app.button
+            )
+        )
+
+    def test_trip_owner_can_create_and_revoke_a_viewer_link(self) -> None:
+        trip = build_sample_trip()
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        owned_record = SavedTrip(
+            trip_id="owned-trip",
+            title="Rome with friends",
+            trip=trip,
+            state={},
+            updated_at="2026-08-25T12:00:00+00:00",
+            owner_id="owner-user",
+        )
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[owned_record]),
+            patch(
+                "src.trips_ui.current_app_origin",
+                return_value="http://localhost:8501",
+            ),
+            patch(
+                "src.trips_ui.create_trip_invitation",
+                return_value=TripInvitation(
+                    token="x" * 43,
+                    expires_at="2026-09-01T12:00:00+00:00",
+                ),
+            ) as create_mock,
+            patch(
+                "src.trips_ui.revoke_trip_sharing",
+                return_value={"revoked_links": 1, "removed_viewers": 1},
+            ) as revoke_mock,
+        ):
+            app = AppTest.from_file("app.py")
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+            next(
+                button for button in app.button
+                if button.label == "Create viewer link"
+            ).click().run(timeout=10)
+            self.assertTrue(
+                any(
+                    "http://localhost:8501/?invite=" in item.value
+                    for item in app.code
+                )
+            )
+            next(
+                button for button in app.button
+                if button.label == "Revoke sharing"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        create_mock.assert_called_once_with(
+            "owned-trip",
+            "owner-user",
+            "access-token",
+        )
+        revoke_mock.assert_called_once_with("owned-trip", "access-token")
+
+    def test_signed_out_invitee_is_routed_to_account_without_claiming(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch("src.auth_ui.claim_trip_invitation") as claim_mock,
+        ):
+            app = AppTest.from_file("app.py")
+            app.query_params["invite"] = "x" * 43
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Account")
+        self.assertIn("invite", app.query_params)
+        claim_mock.assert_not_called()
+        self.assertTrue(
+            any("shared trip" in item.value for item in app.info)
+        )
 
     def test_results_views_are_ordered_and_must_dos_initialize_shortlist(
         self,

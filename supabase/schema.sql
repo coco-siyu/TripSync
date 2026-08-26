@@ -262,6 +262,7 @@ set search_path = ''
 as $$
 declare
   account_user_id uuid := auth.uid();
+  deleted_shared_trips integer := 0;
   deleted_trips integer := 0;
   deleted_llm_feedback integer := 0;
   deleted_overall_feedback integer := 0;
@@ -269,6 +270,10 @@ begin
   if account_user_id is null then
     raise exception 'Sign in before deleting account data.' using errcode = '42501';
   end if;
+
+  delete from public.trip_members
+  where member_id = account_user_id;
+  get diagnostics deleted_shared_trips = row_count;
 
   delete from public.saved_trips
   where session_id = account_user_id::text;
@@ -283,6 +288,7 @@ begin
   get diagnostics deleted_overall_feedback = row_count;
 
   return pg_catalog.jsonb_build_object(
+    'shared_trips', deleted_shared_trips,
     'saved_trips', deleted_trips,
     'llm_feedback', deleted_llm_feedback,
     'overall_experience_feedback', deleted_overall_feedback
@@ -305,26 +311,276 @@ $$;
 revoke all on function public.delete_my_account_data() from public;
 grant execute on function public.delete_my_account_data() to authenticated;
 
--- If a collaboration preview schema was applied earlier, make it inert without
--- deleting its data. Phase 2 can replace these objects after it has a globally
--- unique trip identity and a two-user RLS integration test.
+-- Phase 2a: read-only trip sharing. The earlier collaboration preview was never
+-- exposed in the app, so replace it with a composite owner + trip identity.
+-- Invitation records contain only a one-way token hash; the link capability is
+-- shown to its creator once and is never recoverable from the database.
 drop function if exists public.claim_trip_invitation(text);
 drop function if exists private.claim_trip_invitation(text);
 drop function if exists private.is_trip_member(text);
 drop function if exists private.is_trip_member(text, uuid);
+drop function if exists public.revoke_trip_sharing(text);
+drop function if exists private.revoke_trip_sharing(text);
 
 do $$
 begin
-  if pg_catalog.to_regclass('public.trip_members') is not null then
-    execute 'revoke all on table public.trip_members from anon, authenticated';
-    execute 'drop policy if exists "Travelers can read their memberships" on public.trip_members';
-    execute 'drop policy if exists "Travelers can leave shared trips" on public.trip_members';
+  if pg_catalog.to_regclass('public.trip_members') is not null
+    and 5 <> (
+      select pg_catalog.count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'trip_members'
+        and (column_name, data_type) in (
+          ('owner_id', 'text'),
+          ('trip_id', 'text'),
+          ('member_id', 'uuid'),
+          ('role', 'text'),
+          ('joined_at', 'timestamp with time zone')
+        )
+    ) then
+    execute 'drop table public.trip_members cascade';
   end if;
-  if pg_catalog.to_regclass('public.trip_invitations') is not null then
-    execute 'revoke all on table public.trip_invitations from anon, authenticated';
-    execute 'drop policy if exists "Owners can read their invitations" on public.trip_invitations';
-    execute 'drop policy if exists "Owners can create invitations" on public.trip_invitations';
-    execute 'drop policy if exists "Owners can revoke invitations" on public.trip_invitations';
+  if pg_catalog.to_regclass('public.trip_invitations') is not null
+    and 5 <> (
+      select pg_catalog.count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'trip_invitations'
+        and (column_name, data_type) in (
+          ('token_hash', 'text'),
+          ('owner_id', 'text'),
+          ('trip_id', 'text'),
+          ('expires_at', 'timestamp with time zone'),
+          ('created_at', 'timestamp with time zone')
+        )
+    ) then
+    execute 'drop table public.trip_invitations cascade';
   end if;
 end;
 $$;
+
+create table if not exists public.trip_members (
+  owner_id text not null,
+  trip_id text not null,
+  member_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'viewer' check (role = 'viewer'),
+  joined_at timestamptz not null default now(),
+  primary key (owner_id, trip_id, member_id),
+  foreign key (owner_id, trip_id)
+    references public.saved_trips(session_id, trip_id) on delete cascade,
+  check (owner_id <> member_id::text)
+);
+
+create table if not exists public.trip_invitations (
+  token_hash text primary key check (token_hash ~ '^[a-f0-9]{64}$'),
+  owner_id text not null,
+  trip_id text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  foreign key (owner_id, trip_id)
+    references public.saved_trips(session_id, trip_id) on delete cascade
+);
+
+create index if not exists trip_members_member_idx
+  on public.trip_members (member_id, joined_at desc);
+create index if not exists trip_invitations_owner_trip_idx
+  on public.trip_invitations (owner_id, trip_id);
+create index if not exists trip_invitations_expires_idx
+  on public.trip_invitations (expires_at);
+
+alter table public.trip_members enable row level security;
+alter table public.trip_invitations enable row level security;
+
+revoke all on table public.trip_members from anon, authenticated;
+grant select, delete on table public.trip_members to authenticated;
+
+drop policy if exists "Owners and viewers can read memberships"
+  on public.trip_members;
+create policy "Owners and viewers can read memberships"
+on public.trip_members for select
+to authenticated
+using (
+  member_id = (select auth.uid())
+  or owner_id = (select auth.uid())::text
+);
+
+drop policy if exists "Owners can revoke and viewers can leave"
+  on public.trip_members;
+create policy "Owners can revoke and viewers can leave"
+on public.trip_members for delete
+to authenticated
+using (
+  member_id = (select auth.uid())
+  or owner_id = (select auth.uid())::text
+);
+
+revoke all on table public.trip_invitations from anon, authenticated;
+grant select, insert, delete on table public.trip_invitations to authenticated;
+
+drop policy if exists "Owners can read their invitations"
+  on public.trip_invitations;
+create policy "Owners can read their invitations"
+on public.trip_invitations for select
+to authenticated
+using (owner_id = (select auth.uid())::text);
+
+drop policy if exists "Owners can create invitations"
+  on public.trip_invitations;
+create policy "Owners can create invitations"
+on public.trip_invitations for insert
+to authenticated
+with check (
+  owner_id = (select auth.uid())::text
+  and exists (
+    select 1
+    from public.saved_trips
+    where saved_trips.session_id = owner_id
+      and saved_trips.trip_id = trip_invitations.trip_id
+  )
+);
+
+drop policy if exists "Owners can revoke invitations"
+  on public.trip_invitations;
+create policy "Owners can revoke invitations"
+on public.trip_invitations for delete
+to authenticated
+using (owner_id = (select auth.uid())::text);
+
+-- Viewers may read the saved snapshot, while every mutation policy above stays
+-- owner-only. This makes read-only sharing a database guarantee, not a UI hint.
+drop policy if exists "Signed-in users can read their trips"
+  on public.saved_trips;
+drop policy if exists "Signed-in users can read accessible trips"
+  on public.saved_trips;
+create policy "Signed-in users can read accessible trips"
+on public.saved_trips for select
+to authenticated
+using (
+  session_id = (select auth.uid())::text
+  or exists (
+    select 1
+    from public.trip_members
+    where trip_members.owner_id = saved_trips.session_id
+      and trip_members.trip_id = saved_trips.trip_id
+      and trip_members.member_id = (select auth.uid())
+      and trip_members.role = 'viewer'
+  )
+);
+
+create extension if not exists pgcrypto with schema extensions;
+
+create or replace function private.claim_trip_invitation(
+  invite_token text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  invitation public.trip_invitations%rowtype;
+  invite_hash text;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in before accepting a trip invitation.' using errcode = '42501';
+  end if;
+  if invite_token is null or pg_catalog.length(invite_token) < 32
+    or pg_catalog.length(invite_token) > 256 then
+    raise exception 'Invitation link is invalid.' using errcode = '22023';
+  end if;
+
+  invite_hash := pg_catalog.encode(
+    extensions.digest(invite_token, 'sha256'),
+    'hex'
+  );
+  select * into invitation
+  from public.trip_invitations
+  where token_hash = invite_hash
+  for update;
+
+  if not found or invitation.expires_at <= pg_catalog.now() then
+    raise exception 'Invitation link is invalid or expired.' using errcode = '22023';
+  end if;
+
+  if invitation.owner_id <> account_user_id::text then
+    insert into public.trip_members (owner_id, trip_id, member_id, role)
+    values (invitation.owner_id, invitation.trip_id, account_user_id, 'viewer')
+    on conflict (owner_id, trip_id, member_id) do nothing;
+  end if;
+
+  return pg_catalog.jsonb_build_object(
+    'owner_id', invitation.owner_id,
+    'trip_id', invitation.trip_id
+  );
+end;
+$$;
+
+revoke all on function private.claim_trip_invitation(text) from public;
+grant execute on function private.claim_trip_invitation(text) to authenticated;
+
+create or replace function public.claim_trip_invitation(
+  invite_token text
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.claim_trip_invitation(invite_token);
+$$;
+
+revoke all on function public.claim_trip_invitation(text) from public;
+grant execute on function public.claim_trip_invitation(text) to authenticated;
+
+create or replace function private.revoke_trip_sharing(
+  target_trip_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  revoked_links integer := 0;
+  removed_viewers integer := 0;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in before changing trip sharing.' using errcode = '42501';
+  end if;
+  if target_trip_id is null or not exists (
+    select 1 from public.saved_trips
+    where session_id = account_user_id::text
+      and trip_id = target_trip_id
+  ) then
+    raise exception 'Owned trip was not found.' using errcode = '42501';
+  end if;
+
+  delete from public.trip_invitations
+  where owner_id = account_user_id::text and trip_id = target_trip_id;
+  get diagnostics revoked_links = row_count;
+
+  delete from public.trip_members
+  where owner_id = account_user_id::text and trip_id = target_trip_id;
+  get diagnostics removed_viewers = row_count;
+
+  return pg_catalog.jsonb_build_object(
+    'revoked_links', revoked_links,
+    'removed_viewers', removed_viewers
+  );
+end;
+$$;
+
+revoke all on function private.revoke_trip_sharing(text) from public;
+grant execute on function private.revoke_trip_sharing(text) to authenticated;
+
+create or replace function public.revoke_trip_sharing(
+  target_trip_id text
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.revoke_trip_sharing(target_trip_id);
+$$;
+
+revoke all on function public.revoke_trip_sharing(text) from public;
+grant execute on function public.revoke_trip_sharing(text) to authenticated;

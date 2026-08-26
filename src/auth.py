@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import logging
+import re
 from time import time
 from typing import Any, Mapping
 from urllib.parse import urlsplit, urlunsplit
@@ -23,6 +24,7 @@ load_dotenv()
 
 
 LOGGER = logging.getLogger(__name__)
+_ACCOUNT_EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 class AccountError(RuntimeError):
@@ -133,6 +135,52 @@ def _validated_redirect_origin(value: str) -> str:
     return urlunsplit((parsed.scheme.casefold(), parsed.netloc, "", "", ""))
 
 
+def _account_creation_error_message(error: Exception) -> str:
+    """Translate Supabase Auth failures without exposing sensitive details."""
+
+    code = str(getattr(error, "code", "") or "").strip().casefold()
+    try:
+        status = int(getattr(error, "status", 0) or 0)
+    except (TypeError, ValueError):
+        status = 0
+    detail = str(getattr(error, "message", "") or error).casefold()
+
+    if code == "over_email_send_rate_limit" or "email rate limit" in detail:
+        return (
+            "TripSync has reached its temporary confirmation-email limit. "
+            "Wait up to an hour, then try again."
+        )
+    if code == "email_address_not_authorized" or "email address not authorized" in detail:
+        return (
+            "TripSync's current testing email service cannot send to that address. "
+            "Use an approved testing address or configure custom SMTP in Supabase."
+        )
+    if code in {"email_exists", "user_already_exists", "identity_already_exists"} or (
+        "already registered" in detail or "already exists" in detail
+    ):
+        return "An account may already use that email. Try signing in instead."
+    if code in {
+        "signup_disabled",
+        "email_provider_disabled",
+        "provider_disabled",
+    }:
+        return "New email accounts are currently disabled for this deployment."
+    if code == "weak_password" or ("password" in detail and "weak" in detail):
+        return (
+            "That password does not meet the account security rules. "
+            "Choose a different, stronger password."
+        )
+    if code in {"email_address_invalid", "validation_failed"}:
+        return "Enter a valid email address that can receive confirmation messages."
+    if code == "captcha_failed":
+        return "Account verification failed. Refresh the page and try again."
+    if code == "over_request_rate_limit" or status == 429:
+        return "Too many account requests were made. Wait a few minutes and try again."
+    if code in {"unexpected_failure", "request_timeout"} or status >= 500:
+        return "The account service is temporarily unavailable. Try again shortly."
+    return "TripSync could not create that account. Try again shortly."
+
+
 def sign_up(
     email: str,
     password: str,
@@ -144,6 +192,13 @@ def sign_up(
     normalized_email = email.strip().casefold()
     if not normalized_email or not password:
         raise AccountError("Enter both your email and password.")
+    if (
+        len(normalized_email) > 254
+        or not _ACCOUNT_EMAIL_PATTERN.fullmatch(normalized_email)
+    ):
+        raise AccountError(
+            "Enter a valid email address that can receive confirmation messages."
+        )
     if len(password) < 8:
         raise AccountError("Choose a password with at least 8 characters.")
     if not auth_is_configured():
@@ -162,7 +217,12 @@ def sign_up(
     except AccountError:
         raise
     except Exception as error:
-        raise AccountError("TripSync could not create that account.") from error
+        LOGGER.warning(
+            "Supabase account creation failed (code=%s, status=%s)",
+            getattr(error, "code", None),
+            getattr(error, "status", None),
+        )
+        raise AccountError(_account_creation_error_message(error)) from error
     return SignUpResult(
         session=session,
         confirmation_required=session is None,

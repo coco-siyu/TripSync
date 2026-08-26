@@ -4,7 +4,19 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.auth_ui import TRIP_TRANSFER_NOTICE_KEY, current_account_session
+from src.auth_ui import (
+    TRIP_INVITATION_NOTICE_KEY,
+    TRIP_TRANSFER_NOTICE_KEY,
+    current_account_session,
+    current_app_origin,
+)
+from src.invitations import (
+    SharedTripIdentity,
+    build_invitation_url,
+    create_trip_invitation,
+    leave_shared_trip,
+    revoke_trip_sharing,
+)
 from src.models import ItineraryPlan
 from src.trips import (
     SavedTrip,
@@ -27,6 +39,7 @@ _RESTORED_STATE_DEFAULTS = {
 _OPEN_SAVED_ITINERARY_KEY = "open_saved_itinerary"
 _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 _SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
+_SHARE_LINKS_KEY = "trip_share_links"
 
 
 def _dismiss_trip_notice(key: str) -> None:
@@ -72,9 +85,25 @@ def _render_persistent_trip_notices() -> None:
     )
 
 
+def _render_invitation_notice() -> str | None:
+    """Render one invite outcome and return the trip it should select."""
+
+    notice = st.session_state.pop(TRIP_INVITATION_NOTICE_KEY, None)
+    if not isinstance(notice, dict):
+        return None
+    message = str(notice.get("message") or "Trip sharing was updated.")
+    if notice.get("level") == "error":
+        st.error(message, icon=":material/link_off:")
+    else:
+        st.success(message, icon=":material/group:")
+    return str(notice.get("record_key") or "") or None
+
+
 def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> None:
     """Restore a saved version in the normal planning workspace for editing."""
 
+    if not record.is_owner:
+        return
     st.session_state.trip_request = record.trip.model_dump(mode="json")
     st.session_state.trip_basics = record.trip.model_dump(mode="json", exclude={"travelers"})
     restored_state = state_for_itinerary_version(
@@ -99,6 +128,8 @@ def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> Non
 def _start_new_itinerary(record: SavedTrip) -> None:
     """Open this saved trip's recommendations with no inherited selections."""
 
+    if not record.is_owner:
+        return
     st.session_state.trip_request = record.trip.model_dump(mode="json")
     st.session_state.trip_basics = record.trip.model_dump(
         mode="json",
@@ -133,7 +164,7 @@ def _open_saved_itinerary(record: SavedTrip, version_id: str) -> None:
     """Keep a selected saved itinerary open in the My trips workspace."""
 
     st.session_state[_OPEN_SAVED_ITINERARY_KEY] = {
-        "trip_id": record.trip_id,
+        "record_key": record.record_key,
         "version_id": version_id,
     }
 
@@ -188,6 +219,113 @@ def _render_trip_brief(record: SavedTrip) -> None:
     ]
     if must_do_briefs:
         st.caption(f"Must-dos · {' · '.join(must_do_briefs)}")
+
+
+def _render_owner_sharing(record: SavedTrip) -> None:
+    """Let an owner create a capability link or revoke all viewer access."""
+
+    account = current_account_session()
+    if account is None or not record.is_owner:
+        return
+    share_links = st.session_state.setdefault(_SHARE_LINKS_KEY, {})
+    if not isinstance(share_links, dict):
+        share_links = {}
+        st.session_state[_SHARE_LINKS_KEY] = share_links
+    origin = current_app_origin()
+    with st.popover("Share trip", icon=":material/group_add:"):
+        st.markdown("**Invite someone to view this trip**")
+        st.caption(
+            "The link expires in 7 days. A recipient must sign in, and can read "
+            "the trip and saved itineraries without editing them."
+        )
+        if st.button(
+            "Create viewer link",
+            type="primary",
+            icon=":material/link:",
+            key=f"create-share-link-{record.record_key}",
+            disabled=origin is None,
+        ):
+            try:
+                invitation = create_trip_invitation(
+                    record.trip_id,
+                    account.user_id,
+                    account.access_token,
+                )
+                assert origin is not None
+                share_links[record.record_key] = {
+                    "url": build_invitation_url(origin, invitation.token),
+                    "expires_at": invitation.expires_at,
+                }
+            except Exception:
+                st.error(
+                    "TripSync could not create a sharing link. Apply the Phase 2a "
+                    "schema, then try again.",
+                    icon=":material/error:",
+                )
+        if origin is None:
+            st.caption("Open TripSync from its normal local or deployed URL to share.")
+
+        link_details = share_links.get(record.record_key)
+        if isinstance(link_details, dict) and link_details.get("url"):
+            st.code(str(link_details["url"]), language=None)
+            expires_at = str(link_details.get("expires_at") or "")
+            if expires_at:
+                st.caption(
+                    f"Expires {expires_at[:16].replace('T', ' ')} UTC. "
+                    "Use the copy button in the link box."
+                )
+
+        st.divider()
+        st.caption(
+            "Revoke every active link and remove everyone who previously accepted one."
+        )
+        if st.button(
+            "Revoke sharing",
+            icon=":material/link_off:",
+            key=f"revoke-sharing-{record.record_key}",
+        ):
+            try:
+                result = revoke_trip_sharing(record.trip_id, account.access_token)
+            except Exception:
+                st.error(
+                    "TripSync could not revoke sharing. Try again shortly.",
+                    icon=":material/error:",
+                )
+            else:
+                share_links.pop(record.record_key, None)
+                removed_viewers = result["removed_viewers"]
+                st.success(
+                    (
+                        f"Sharing revoked and {removed_viewers} viewer"
+                        f"{'s were' if removed_viewers != 1 else ' was'} removed."
+                    ),
+                    icon=":material/check_circle:",
+                )
+
+
+def _leave_viewer_trip(record: SavedTrip) -> None:
+    """Let a viewer remove a shared trip from their own account."""
+
+    account = current_account_session()
+    if account is None or record.is_owner or not record.owner_id:
+        return
+    try:
+        leave_shared_trip(
+            SharedTripIdentity(record.owner_id, record.trip_id),
+            account.user_id,
+            account.access_token,
+        )
+    except Exception:
+        st.session_state[TRIP_INVITATION_NOTICE_KEY] = {
+            "level": "error",
+            "message": "TripSync could not remove this shared trip. Try again shortly.",
+        }
+    else:
+        _close_saved_itinerary()
+        st.session_state[TRIP_INVITATION_NOTICE_KEY] = {
+            "level": "success",
+            "message": "The shared trip was removed from My trips.",
+        }
 
 
 def itinerary_comparison_for_versions(
@@ -256,14 +394,14 @@ def _render_itinerary_comparison(
             version_ids,
             index=max(0, len(version_ids) - 2),
             format_func=labels.__getitem__,
-            key=f"compare-first-{record.trip_id}",
+            key=f"compare-first-{record.record_key}",
         )
         second_version_id = second_column.selectbox(
             "Second version",
             version_ids,
             index=len(version_ids) - 1,
             format_func=labels.__getitem__,
-            key=f"compare-second-{record.trip_id}",
+            key=f"compare-second-{record.record_key}",
         )
         if first_version_id == second_version_id:
             st.info("Choose two different itinerary versions to compare them.", icon=":material/info:")
@@ -313,6 +451,8 @@ def _render_itinerary_alternative_editor(
     plan: ItineraryPlan,
 ) -> None:
     """Save a named variant without altering the source itinerary snapshot."""
+    if not record.is_owner:
+        return
     version_id = str(version["version_id"])
     activity_locations = [
         (day.day_number, activity)
@@ -335,7 +475,7 @@ def _render_itinerary_alternative_editor(
             "The itinerary above stays unchanged. Remove or move stops, then save a new "
             "version to compare with it."
         )
-        with st.form(f"itinerary-alternative-form-{record.trip_id}-{version_id}"):
+        with st.form(f"itinerary-alternative-form-{record.record_key}-{version_id}"):
             label = st.text_input(
                 "Alternative name", value=default_label, max_chars=80
             )
@@ -363,7 +503,7 @@ def _render_itinerary_alternative_editor(
                     index=day_numbers.index(original_day),
                     format_func=lambda day_number: f"Day {day_number}",
                     key=(
-                        f"alternative-day-{record.trip_id}-{version_id}-"
+                        f"alternative-day-{record.record_key}-{version_id}-"
                         f"{activity.activity_id}"
                     ),
                 )
@@ -440,16 +580,21 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
     except ValueError:
         st.error(
             "This saved itinerary uses an older format and cannot be displayed yet. "
-            "Open it in the planner to update it.",
+            + (
+                "Open it in the planner to update it."
+                if record.is_owner
+                else "The owner must resave it before it can be displayed."
+            ),
             icon=":material/error:",
         )
-        st.button(
-            "Open in planner",
-            icon=":material/edit:",
-            key=f"edit-legacy-itinerary-{record.trip_id}-{version_id}",
-            on_click=_open_trip_for_edit,
-            args=(record, version_id),
-        )
+        if record.is_owner:
+            st.button(
+                "Open in planner",
+                icon=":material/edit:",
+                key=f"edit-legacy-itinerary-{record.record_key}-{version_id}",
+                on_click=_open_trip_for_edit,
+                args=(record, version_id),
+            )
         return
 
     if plan is None:
@@ -466,7 +611,12 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
             f"{plan.pace.value} pace"
         )
         st.caption(
-            "This is a saved snapshot. Create an alternative here, or edit matched attractions in the planner."
+            "This is a shared read-only snapshot."
+            if not record.is_owner
+            else (
+                "This is a saved snapshot. Create an alternative here, or edit "
+                "matched attractions in the planner."
+            )
         )
 
         for day in plan.days:
@@ -497,20 +647,22 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
                 for activity in plan.unscheduled:
                     st.markdown(f"**{activity.activity_name}** — {activity.reason}")
 
-        _render_itinerary_alternative_editor(record, version, position, plan)
+        if record.is_owner:
+            _render_itinerary_alternative_editor(record, version, position, plan)
 
         with st.container(horizontal=True):
-            st.button(
-                "Edit recommendations",
-                icon=":material/edit:",
-                key=f"edit-saved-itinerary-{record.trip_id}-{version_id}",
-                on_click=_open_trip_for_edit,
-                args=(record, version_id),
-            )
+            if record.is_owner:
+                st.button(
+                    "Edit recommendations",
+                    icon=":material/edit:",
+                    key=f"edit-saved-itinerary-{record.record_key}-{version_id}",
+                    on_click=_open_trip_for_edit,
+                    args=(record, version_id),
+                )
             st.button(
                 "Close itinerary",
                 icon=":material/close:",
-                key=f"close-saved-itinerary-{record.trip_id}-{version_id}",
+                key=f"close-saved-itinerary-{record.record_key}-{version_id}",
                 on_click=_close_saved_itinerary,
             )
 
@@ -525,6 +677,7 @@ def render_saved_trips() -> None:
         else "Plans in this active session stay private. Sign in to keep them across sessions and devices."
     )
     _render_persistent_trip_notices()
+    invited_record_key = _render_invitation_notice()
     if notice := st.session_state.pop(_SAVED_ITINERARY_FLASH_KEY, None):
         st.toast(notice, icon=":material/check_circle:")
     records = list_saved_trips(
@@ -543,31 +696,34 @@ def render_saved_trips() -> None:
         )
         return
 
-    records_by_id = {record.trip_id: record for record in records}
-    versions_by_trip_id = {
-        record.trip_id: itinerary_versions(
+    records_by_key = {record.record_key: record for record in records}
+    versions_by_record_key = {
+        record.record_key: itinerary_versions(
             record.state,
             fallback_updated_at=record.updated_at,
         )
         for record in records
     }
     trip_labels = {
-        record.trip_id: (
-            f"{record.title} · {len(versions_by_trip_id[record.trip_id])} saved "
-            f"{'itinerary' if len(versions_by_trip_id[record.trip_id]) == 1 else 'itineraries'}"
+        record.record_key: (
+            f"{record.title} · {len(versions_by_record_key[record.record_key])} saved "
+            f"{'itinerary' if len(versions_by_record_key[record.record_key]) == 1 else 'itineraries'}"
+            + (" · shared with you" if not record.is_owner else "")
         )
         for record in records
     }
-    selected_trip_id = st.selectbox(
+    if invited_record_key in records_by_key:
+        st.session_state["saved-trip-selector"] = invited_record_key
+    selected_record_key = st.selectbox(
         "Choose a trip",
-        options=list(records_by_id),
+        options=list(records_by_key),
         format_func=trip_labels.__getitem__,
         key="saved-trip-selector",
         persist_state="session",
     )
-    record = records_by_id[selected_trip_id]
+    record = records_by_key[selected_record_key]
     open_itinerary = st.session_state.get(_OPEN_SAVED_ITINERARY_KEY, {})
-    versions = versions_by_trip_id[record.trip_id]
+    versions = versions_by_record_key[record.record_key]
     version_ids = [version["version_id"] for version in versions]
     version_labels = {
         version["version_id"]: _version_label(version, position)
@@ -577,18 +733,36 @@ def render_saved_trips() -> None:
     with st.container(border=True):
         st.subheader(record.title)
         st.caption(f"Last saved {record.updated_at[:16].replace('T', ' ')} UTC")
+        if not record.is_owner:
+            st.info(
+                "Shared with you · read-only. You can view and compare saved "
+                "itineraries, while only the owner can change this trip.",
+                icon=":material/visibility:",
+            )
         _render_trip_brief(record)
-        st.button(
-            "Create new itinerary",
-            icon=":material/add_circle:",
-            type="primary",
-            key=f"new-itinerary-{record.trip_id}",
-            on_click=_start_new_itinerary,
-            args=(record,),
-        )
-        st.caption(
-            "Start from this trip's curated activities with an empty shortlist."
-        )
+        if record.is_owner:
+            with st.container(horizontal=True):
+                st.button(
+                    "Create new itinerary",
+                    icon=":material/add_circle:",
+                    type="primary",
+                    key=f"new-itinerary-{record.record_key}",
+                    on_click=_start_new_itinerary,
+                    args=(record,),
+                )
+                _render_owner_sharing(record)
+            st.caption(
+                "Start from this trip's curated activities with an empty shortlist."
+            )
+        else:
+            if st.button(
+                "Remove from My trips",
+                icon=":material/person_remove:",
+                key=f"leave-shared-trip-{record.record_key}",
+                on_click=_leave_viewer_trip,
+                args=(record,),
+            ):
+                st.rerun()
 
         if versions:
             st.markdown("#### Saved itineraries")
@@ -602,7 +776,7 @@ def render_saved_trips() -> None:
                 index=len(version_ids) - 1,
                 format_func=version_labels.__getitem__,
                 key=(
-                    f"saved-version-{record.trip_id}-"
+                    f"saved-version-{record.record_key}-"
                     f"{versions[-1]['version_id']}"
                 ),
                 persist_state="session",
@@ -611,22 +785,23 @@ def render_saved_trips() -> None:
                 st.button(
                     "Open itinerary",
                     icon=":material/folder_open:",
-                    key=f"open-{record.trip_id}",
+                    key=f"open-{record.record_key}",
                     on_click=_open_saved_itinerary,
                     args=(record, selected_version_id),
                 )
-                st.button(
-                    "Edit recommendations",
-                    icon=":material/edit:",
-                    key=f"edit-recommendations-{record.trip_id}",
-                    on_click=_open_trip_for_edit,
-                    args=(record, selected_version_id),
-                )
+                if record.is_owner:
+                    st.button(
+                        "Edit recommendations",
+                        icon=":material/edit:",
+                        key=f"edit-recommendations-{record.record_key}",
+                        on_click=_open_trip_for_edit,
+                        args=(record, selected_version_id),
+                    )
             _render_itinerary_comparison(record, versions)
         else:
             st.caption("No itineraries have been saved for this trip yet.")
 
-    if open_itinerary.get("trip_id") != record.trip_id:
+    if open_itinerary.get("record_key") != record.record_key:
         return
 
     active_version_id = str(open_itinerary.get("version_id") or "")

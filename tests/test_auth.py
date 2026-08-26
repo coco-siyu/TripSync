@@ -1,4 +1,4 @@
-"""Tests for account sessions and dormant Phase 2 invitation helpers."""
+"""Tests for account sessions and Phase 2a read-only sharing helpers."""
 
 from __future__ import annotations
 
@@ -21,11 +21,13 @@ from src.auth import (
 )
 from src.auth_ui import app_origin_from_url
 from src.invitations import (
+    SharedTripIdentity,
     build_invitation_url,
     claim_trip_invitation,
     create_trip_invitation,
     invitation_token_hash,
-    revoke_trip_invitations,
+    leave_shared_trip,
+    revoke_trip_sharing,
 )
 
 
@@ -77,6 +79,42 @@ class AccountTests(unittest.TestCase):
     def test_sign_up_requires_a_reasonable_password_before_network_call(self) -> None:
         with self.assertRaisesRegex(AccountError, "at least 8"):
             sign_up("traveler@example.com", "short")
+
+    def test_sign_up_rejects_a_malformed_email_before_network_call(self) -> None:
+        with (
+            patch("src.auth.public_client") as client_mock,
+            self.assertRaisesRegex(AccountError, "valid email address"),
+        ):
+            sign_up("not-an-email", "password123")
+
+        client_mock.assert_not_called()
+
+    def test_sign_up_translates_safe_supabase_error_codes(self) -> None:
+        cases = {
+            "over_email_send_rate_limit": "confirmation-email limit",
+            "email_address_not_authorized": "testing email service",
+            "user_already_exists": "may already use that email",
+            "signup_disabled": "currently disabled",
+            "weak_password": "security rules",
+            "email_address_invalid": "valid email address",
+            "captcha_failed": "verification failed",
+            "over_request_rate_limit": "Too many account requests",
+            "unexpected_failure": "temporarily unavailable",
+        }
+        for code, expected_message in cases.items():
+            error = RuntimeError("Supabase rejected signup")
+            error.code = code
+            error.status = 429 if code.startswith("over_") else 400
+            auth_client = SimpleNamespace(
+                auth=SimpleNamespace(sign_up=Mock(side_effect=error))
+            )
+            with (
+                self.subTest(code=code),
+                patch("src.auth.auth_is_configured", return_value=True),
+                patch("src.auth.public_client", return_value=auth_client),
+                self.assertRaisesRegex(AccountError, expected_message),
+            ):
+                sign_up("traveler@example.com", "password123")
 
     def test_sign_up_sends_the_validated_current_app_origin(self) -> None:
         sign_up_mock = Mock(return_value=_auth_response(session=False))
@@ -333,12 +371,12 @@ class InvitationTests(unittest.TestCase):
     def test_builds_invitation_url_without_leaking_hash_details(self) -> None:
         url = build_invitation_url(
             "https://tripsync.example/app?source=group",
-            "secret-capability",
+            "secret-capability-that-is-long-enough-123",
         )
 
         self.assertEqual(
             url,
-            "https://tripsync.example/app?source=group&invite=secret-capability",
+            "https://tripsync.example/app?source=group&invite=secret-capability-that-is-long-enough-123",
         )
         self.assertEqual(
             invitation_token_hash("secret-capability"),
@@ -363,25 +401,45 @@ class InvitationTests(unittest.TestCase):
         self.assertEqual(row["token_hash"], invitation_token_hash(invitation.token))
         self.assertEqual(row["trip_id"], "trip-123")
 
-    def test_claim_and_revoke_use_authenticated_database_operations(self) -> None:
+    def test_claim_revoke_and_leave_use_authenticated_database_operations(self) -> None:
         with patch(
             "src.invitations.rpc_authenticated",
-            return_value="trip-123",
+            return_value={"owner_id": "owner-123", "trip_id": "trip-123"},
         ) as rpc_mock:
-            trip_id = claim_trip_invitation("x" * 43, "access-token")
-        self.assertEqual(trip_id, "trip-123")
+            identity = claim_trip_invitation("x" * 43, "access-token")
+        self.assertEqual(identity, SharedTripIdentity("owner-123", "trip-123"))
         rpc_mock.assert_called_once_with(
             "claim_trip_invitation",
             {"invite_token": "x" * 43},
             "access-token",
         )
 
-        with patch("src.invitations.delete_authenticated") as delete_mock:
-            revoke_trip_invitations("trip-123", "access-token")
-        delete_mock.assert_called_once_with(
-            "trip_invitations",
+        with patch(
+            "src.invitations.rpc_authenticated",
+            return_value={"revoked_links": 2, "removed_viewers": 1},
+        ) as revoke_mock:
+            result = revoke_trip_sharing("trip-123", "access-token")
+        self.assertEqual(result, {"revoked_links": 2, "removed_viewers": 1})
+        revoke_mock.assert_called_once_with(
+            "revoke_trip_sharing",
+            {"target_trip_id": "trip-123"},
             "access-token",
-            filters={"trip_id": "trip-123"},
+        )
+
+        with patch("src.invitations.delete_authenticated") as delete_mock:
+            leave_shared_trip(
+                identity,
+                "viewer-123",
+                "access-token",
+            )
+        delete_mock.assert_called_once_with(
+            "trip_members",
+            "access-token",
+            filters={
+                "owner_id": "owner-123",
+                "trip_id": "trip-123",
+                "member_id": "viewer-123",
+            },
         )
 
 
