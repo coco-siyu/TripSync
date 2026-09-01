@@ -16,10 +16,9 @@ RUN mkdir -p /app/state && chown tripsync:tripsync /app/state
 
 USER tripsync
 
-# The application intentionally loads its semantic retrieval model from local
-# files. Download it at image-build time so first user request is not delayed.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
-
 EXPOSE 8501
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "from urllib.request import urlopen; urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3).read()" || exit 1
 
 CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]

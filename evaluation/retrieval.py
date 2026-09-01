@@ -57,6 +57,7 @@ class RetrievalCaseResult:
 class RetrievalEvaluationReport:
     """Aggregate retrieval metrics plus auditable per-case results."""
 
+    mode: RetrievalMode
     k: int
     case_count: int
     hit_rate: float
@@ -185,6 +186,7 @@ def evaluate_retrieval(
 
     case_count = len(results)
     return RetrievalEvaluationReport(
+        mode=mode,
         k=k,
         case_count=case_count,
         hit_rate=sum(result.metrics.hit for result in results) / case_count,
@@ -247,12 +249,16 @@ def format_report(report: RetrievalEvaluationReport) -> str:
         f"MRR@{report.k}: {report.mean_reciprocal_rank:.3f}",
         f"Mean Recall@{report.k}: {report.mean_recall:.3f}",
         (
-            "Semantic retrieval: active"
-            if report.semantic_fallback_count == 0
+            "Mode: text (semantic retrieval not requested)"
+            if report.mode == "text"
             else (
-                "Semantic retrieval: unavailable for "
-                f"{report.semantic_fallback_count}/{report.case_count} case(s); "
-                "those results used text fallback."
+                "Semantic retrieval: active"
+                if report.semantic_fallback_count == 0
+                else (
+                    "Semantic retrieval: unavailable for "
+                    f"{report.semantic_fallback_count}/{report.case_count} case(s); "
+                    "those results used text fallback."
+                )
             )
         ),
         "",

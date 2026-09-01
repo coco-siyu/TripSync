@@ -66,7 +66,7 @@ At `K=5`, the current catalog and deterministic text retriever produce:
 Run the benchmark with:
 
 ```bash
-.venv/bin/python -m evaluation.retrieval
+.venv/bin/python -m evaluation.retrieval --mode text
 ```
 
 See [evaluation/README.md](../evaluation/README.md) for definitions, case-level

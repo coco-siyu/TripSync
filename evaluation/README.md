@@ -61,7 +61,7 @@ labels change. See [`docs/curation-standard.md`](../docs/curation-standard.md).
 Run the text-retrieval baseline from the repository root:
 
 ```bash
-.venv/bin/python -m evaluation.retrieval
+.venv/bin/python -m evaluation.retrieval --mode text
 ```
 
 Use `--k` to change the cutoff or `--json` for machine-readable output:
@@ -117,7 +117,7 @@ a claim about real-world retrieval quality. Future vector and hybrid
 approaches should run against the same labels, followed by a larger independently
 reviewed dataset.
 
-The current local-model comparison at `K=5` is:
+The recorded semantic comparison at `K=5` is:
 
 | Mode | Hit Rate@5 | MRR@5 | Mean Recall@5 |
 |---|---:|---:|---:|

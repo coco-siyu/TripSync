@@ -9,6 +9,7 @@ from evaluation.retrieval import (
     compare_retrieval_modes,
     evaluate_retrieval,
     format_comparison_report,
+    format_report,
     load_activities,
     load_retrieval_cases,
     score_ranked_ids,
@@ -70,11 +71,16 @@ class RetrievalBenchmarkTests(unittest.TestCase):
         second_report = evaluate_retrieval(activities, cases, k=5)
 
         self.assertEqual(first_report, second_report)
+        self.assertEqual(first_report.mode, "text")
         self.assertEqual(first_report.case_count, 12)
         self.assertGreaterEqual(first_report.hit_rate, 0.9)
         self.assertGreaterEqual(first_report.mean_reciprocal_rank, 0.8)
         self.assertGreaterEqual(first_report.mean_recall, 0.8)
         self.assertEqual(first_report.semantic_fallback_count, 0)
+        self.assertIn(
+            "semantic retrieval not requested",
+            format_report(first_report),
+        )
 
     def test_unknown_ground_truth_id_is_rejected(self) -> None:
         activities = load_activities()

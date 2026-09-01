@@ -151,7 +151,7 @@ docker compose down --volumes
 
 ## Run with Docker
 
-Build the image (the semantic retrieval model is downloaded during the build):
+Build the image:
 
 ```bash
 docker build -t tripsync .
@@ -177,7 +177,10 @@ in the repository.
 From an activated virtual environment:
 
 ```bash
-# Retrieval: text, vector, and hybrid on the same labeled cases
+# Free deterministic retrieval baseline
+python -m evaluation.retrieval --mode text
+
+# Optional hosted vector/hybrid comparison; uses configured services
 python -m evaluation.retrieval --compare
 
 # Deterministic itinerary constraints, grounding, coverage, and fairness
@@ -190,7 +193,10 @@ python -m evaluation.llm
 python -m evaluation.llm --cases evaluation/llm_holdout_cases.json --live
 
 # Full test suite
-python -m unittest discover -s tests -q
+python -m unittest -q
+
+# Zero-network readiness check
+python -m src.health
 ```
 
 The retrieval and itinerary baseline results are in

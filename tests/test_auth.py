@@ -7,6 +7,10 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from tests import configure_test_output
+
+configure_test_output()
+
 from src.auth import (
     AccountError,
     AccountSession,

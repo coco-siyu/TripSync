@@ -10,6 +10,10 @@ from unittest.mock import patch
 from pydantic import ValidationError
 from streamlit.testing.v1 import AppTest
 
+from tests import configure_test_output
+
+configure_test_output()
+
 from src.auth import AccountSession
 from src.models import ItineraryPlan, ItinerarySource
 from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay

@@ -10,7 +10,8 @@ from src.auth_ui import (
 from src.catalog_ui import render_catalog_workspace
 from src.feedback_ui import render_feedback_insights
 from src.trips_ui import render_saved_trips
-from src.ui import _apply_styles, _initialize_state, _start_new_trip, render_app
+from src.styles import apply_styles
+from src.ui import _initialize_state, _start_new_trip, render_app
 
 
 st.set_page_config(
@@ -30,7 +31,7 @@ initialize_account_state()
 handle_trip_invitation()
 
 # Shared layout and workspace-specific colors must load before every page.
-_apply_styles(st.session_state.app_workspace)
+apply_styles(st.session_state.app_workspace)
 
 if app_notice := st.session_state.pop("app_notice", None):
     st.toast(app_notice, icon=":material/check_circle:")
