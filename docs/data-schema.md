@@ -24,7 +24,7 @@ Each activity record should contain the following fields:
 
 ## Controlled values
 
-The first version will use controlled values where practical so retrieval results
+TripSync uses controlled values where practical so retrieval results
 and group-fit scoring can be evaluated consistently. Geographic coordinates are
 optional: when both are available, TripSync uses them to reduce itinerary
 backtracking and estimate walking between stops. A record must contain both

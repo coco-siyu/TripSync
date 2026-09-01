@@ -184,7 +184,7 @@ The current six-case deterministic baseline is:
 
 The fairness result is intentionally reported rather than hidden behind the perfect
 guardrail scores. For example, the relaxed nature case serves one traveler with
-four matching activities and the other with one, producing fairness `0.250`. This
+five matching activities and the other with one, producing fairness `0.200`. This
 baseline identifies group balancing as the next planner-quality improvement.
 
 ## LLM contract baseline

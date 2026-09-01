@@ -26,5 +26,6 @@ Run all tests from the repository root:
 .venv/bin/python -m unittest -v
 ```
 
-The next phase will add the grounded narration to Streamlit and compare multiple
-LLM prompt or model configurations.
+Grounded narration and organizer-approved adjustment proposals are covered in the
+Streamlit interaction suite. Model and prompt comparisons live in the reproducible
+LLM contract evaluations under `evaluation/`.

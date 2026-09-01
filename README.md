@@ -8,12 +8,6 @@ The current version of TripSync was built to meet the LLM Zoomcamp project requi
 
 **Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
 
-For the demo, the password for the Feedback insights and Curate catalog pages is:
-
-```bash
-admin
-```
-
 ## Why I built it
 
 The idea came from planning trips with family and friends. Getting everyone to
@@ -29,7 +23,7 @@ structured output, and the app checks it before showing anything to the user.
 ## What it does
 
 - Supports groups of 2 to 6 travelers and trips of 1 to 5 days.
-- Searches a curated catalog for Rome, Florence, Milan, and Naples with text,
+- Searches a curated catalog for Rome, Florence, Milan, and Venice with text,
   vector, or hybrid retrieval.
 - Ranks activities by shared interests, walking and budget fit, must-dos, and
   whether the plan treats the group fairly.

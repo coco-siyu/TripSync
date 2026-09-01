@@ -81,7 +81,7 @@ Run the benchmark with:
 ```
 
 All current scenarios pass the hard constraints, exclusions, grounding, coverage,
-and stability checks. Mean fairness is `0.666`, which reveals that direct-interest
+and stability checks. Mean fairness is `0.704`, which reveals that direct-interest
 coverage can still favor one traveler even when everybody receives at least one
 match. See [evaluation/README.md](../evaluation/README.md) for metric definitions
 and the complete baseline.

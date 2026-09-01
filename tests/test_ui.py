@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -28,6 +29,9 @@ from src.ui import (
     parse_tag_text,
     split_destination,
 )
+
+
+APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 
 
 class PreferenceFlowHelpersTests(unittest.TestCase):
@@ -146,7 +150,7 @@ class StreamlitInteractionTests(unittest.TestCase):
     @staticmethod
     def _sample_results_app() -> AppTest:
         sample_trip = build_sample_trip()
-        app = AppTest.from_file("app.py")
+        app = AppTest.from_file(str(APP_PATH))
         app.session_state["planner_step"] = "results"
         app.session_state["trip_basics"] = sample_trip.model_dump(
             mode="json",
@@ -164,7 +168,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 "trip basics must not load the full activity catalog"
             ),
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.run()
 
         self.assertFalse(app.exception)
@@ -188,7 +192,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             },
             clear=False,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.run(timeout=10)
 
@@ -211,7 +215,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             },
             clear=False,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.run(timeout=10)
 
@@ -244,7 +248,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 ),
             ) as sign_up_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.run(timeout=10)
             account_action = next(
@@ -290,7 +294,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             ),
             patch("src.auth_ui.sign_up") as sign_up_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.run(timeout=10)
             next(
@@ -332,7 +336,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             ),
             patch("src.auth_ui.request_password_recovery") as request_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.run(timeout=10)
 
@@ -377,7 +381,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             ) as update_mock,
             patch("src.auth_ui.claim_anonymous_trips", return_value=0),
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.query_params["token_hash"] = "one-time-token-hash"
             app.query_params["type"] = "recovery"
             app.run(timeout=10)
@@ -431,7 +435,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             patch("src.auth_ui.sign_in", return_value=session),
             patch("src.auth_ui.claim_anonymous_trips", return_value=1) as claim_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.run(timeout=10)
             anonymous_session_id = app.session_state["anonymous_session_id"]
@@ -471,7 +475,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             expires_at=4_100_000_000,
         )
         with patch("src.auth_ui.update_password", return_value=refreshed_session) as update_mock:
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
@@ -508,7 +512,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             expires_at=4_000_000_000,
         )
         with patch("src.auth_ui.delete_account") as delete_mock:
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.session_state["account_session"] = session.as_dict()
             app.session_state["account-settings-tab"] = "Privacy & deletion"
@@ -552,7 +556,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             expires_at=4_000_000_000,
         )
         with patch("src.auth_ui.delete_account") as delete_mock:
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "Account"
             app.session_state["account_session"] = session.as_dict()
             app.session_state["account-settings-tab"] = "Privacy & deletion"
@@ -683,7 +687,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 ],
             ) as remote_mock,
         ):
-            app = AppTest.from_file("app.py").run()
+            app = AppTest.from_file(str(APP_PATH)).run()
 
         self.assertFalse(app.exception)
         destination_search = next(
@@ -699,7 +703,7 @@ class StreamlitInteractionTests(unittest.TestCase):
     def test_destination_search_uses_prefix_suggestions_and_accepts_custom_city(
         self,
     ) -> None:
-        app = AppTest.from_file("app.py").run()
+        app = AppTest.from_file(str(APP_PATH)).run()
         destination_search = next(
             item
             for item in app.selectbox
@@ -764,7 +768,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
 
     def test_complete_preference_flow_reaches_ranked_results(self) -> None:
-        app = AppTest.from_file("app.py").run()
+        app = AppTest.from_file(str(APP_PATH)).run()
         next(
             button
             for button in app.button
@@ -790,7 +794,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertGreaterEqual(len(app.subheader), 6)
 
     def test_sample_preview_reaches_ranked_results(self) -> None:
-        app = AppTest.from_file("app.py").run()
+        app = AppTest.from_file(str(APP_PATH)).run()
         next(
             button for button in app.button if button.label == "Preview a sample group"
         ).click().run()
@@ -822,7 +826,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         ]
 
         with patch("src.trips_ui.list_saved_trips", return_value=records):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
             app.run(timeout=10)
 
@@ -882,7 +886,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             ) as claim_mock,
             patch("src.trips_ui.list_saved_trips", return_value=[shared_record]),
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["account_session"] = session.as_dict()
             app.query_params["invite"] = "x" * 43
             app.run(timeout=10)
@@ -923,7 +927,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             access_role="collaborator",
         )
         with patch("src.trips_ui.list_saved_trips", return_value=[shared_record]):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
@@ -982,7 +986,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 return_value={"revoked_links": 1, "removed_viewers": 1},
             ) as revoke_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
@@ -1042,7 +1046,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 ),
             ) as create_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
@@ -1081,7 +1085,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             ),
             patch("src.auth_ui.claim_trip_invitation") as claim_mock,
         ):
-            app = AppTest.from_file("app.py")
+            app = AppTest.from_file(str(APP_PATH))
             app.query_params["invite"] = "x" * 43
             app.run(timeout=10)
 
@@ -1154,7 +1158,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         trip = build_sample_trip().model_copy(
             update={"destination": "Tokyo", "country": "Japan"}
         )
-        app = AppTest.from_file("app.py")
+        app = AppTest.from_file(str(APP_PATH))
         app.session_state["planner_step"] = "results"
         app.session_state["trip_request"] = trip.model_dump(mode="json")
         app.session_state["selected_activity_ids"] = []
