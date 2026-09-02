@@ -60,3 +60,17 @@ Controlled values are:
 
 All models reject unknown fields. User-entered tag lists are trimmed, converted to
 lowercase, de-duplicated, and stripped of blank entries.
+
+## Group preference draft
+
+A named-invitation draft stores the trip-level fields above before a complete
+`TripRequest` exists. Each draft has two to six ordered traveler slots. The
+organizer's slot starts with a validated profile; invited slots remain empty
+until their assigned signed-in account submits a validated `TravelerProfile`.
+Recommendations stay locked until every slot is complete, at which point the
+draft is converted to the same `TripRequest` used by the direct-entry flow.
+
+Raw invitation tokens are never stored. Supabase stores a SHA-256 hash, binds a
+slot to the first authenticated account that claims its link, and restricts
+profile updates to that account. Preference invitations do not create viewer or
+collaborator access to saved itineraries.

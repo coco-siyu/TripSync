@@ -15,7 +15,7 @@ from tests import configure_test_output
 configure_test_output()
 
 from src.auth import AccountSession
-from src.models import ItineraryPlan, ItinerarySource
+from src.models import ItineraryPlan, ItinerarySource, TravelerProfile, TripBasics
 from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay
 from src.llm import NarrationGenerationError
 from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
@@ -23,6 +23,13 @@ from src.catalog import load_curated_activities
 from src.search import retrieve_activities as real_retrieve_activities
 from src.trips import SavedTrip
 from src.invitations import SharedTripIdentity, TripInvitation
+from src.preference_invitations import (
+    PreferenceAssignment,
+    PreferenceDraft,
+    PreferenceDraftCreation,
+    PreferenceInvitation,
+    PreferenceSlot,
+)
 from src.ui import (
     build_sample_trip,
     build_trip_request,
@@ -181,7 +188,10 @@ class StreamlitInteractionTests(unittest.TestCase):
             "Your next great trip starts together.",
         )
         self.assertTrue(
-            any(button.label == "Continue to travelers" for button in app.button)
+            any(
+                button.label == "Continue to group preferences"
+                for button in app.button
+            )
         )
 
     def test_account_workspace_shows_native_sign_in_fields_when_configured(
@@ -633,6 +643,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             ),
             patch("src.ui.save_trip", return_value=anonymous_record),
             patch("src.trips_ui.list_saved_trips", side_effect=visible_records),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
             patch("src.auth_ui.sign_in", return_value=account_session),
             patch("src.auth_ui.claim_anonymous_trips", return_value=1) as claim_mock,
         ):
@@ -776,7 +787,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         next(
             button
             for button in app.button
-            if button.label == "Continue to travelers"
+            if button.label == "Continue to group preferences"
         ).click().run()
 
         app.text_input(key="traveler_name_0").set_value("Coco")
@@ -788,6 +799,13 @@ class StreamlitInteractionTests(unittest.TestCase):
         ]
         interest_groups[0].select("history")
         interest_groups[1].select("art")
+        next(
+            button
+            for button in app.button
+            if button.label == "Review group preferences"
+        ).click().run()
+
+        self.assertEqual(app.session_state["planner_step"], "review")
         next(
             button for button in app.button if button.label == "Find our best fits"
         ).click().run()
@@ -889,6 +907,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 return_value=SharedTripIdentity("owner-user", "shared-trip"),
             ) as claim_mock,
             patch("src.trips_ui.list_saved_trips", return_value=[shared_record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
         ):
             app = AppTest.from_file(str(APP_PATH))
             app.session_state["account_session"] = session.as_dict()
@@ -930,7 +949,10 @@ class StreamlitInteractionTests(unittest.TestCase):
             owner_id="owner-user",
             access_role="collaborator",
         )
-        with patch("src.trips_ui.list_saved_trips", return_value=[shared_record]):
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[shared_record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
+        ):
             app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
             app.session_state["account_session"] = session.as_dict()
@@ -974,6 +996,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         with (
             patch("src.trips_ui.list_saved_trips", return_value=[owned_record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
             patch(
                 "src.trips_ui.current_app_origin",
                 return_value="http://localhost:8501",
@@ -1037,6 +1060,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         with (
             patch("src.trips_ui.list_saved_trips", return_value=[owned_record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
             patch(
                 "src.trips_ui.current_app_origin",
                 return_value="http://localhost:8501",
@@ -1099,6 +1123,183 @@ class StreamlitInteractionTests(unittest.TestCase):
         claim_mock.assert_not_called()
         self.assertTrue(
             any("shared trip" in item.value for item in app.info)
+        )
+
+    def test_signed_out_preference_invitee_is_routed_to_account(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "SUPABASE_URL": "https://example.supabase.co",
+                    "SUPABASE_SECRET_KEY": "server-secret",
+                    "SUPABASE_PUBLISHABLE_KEY": "public-key",
+                },
+                clear=False,
+            ),
+            patch("src.auth_ui.claim_preference_invitation") as claim_mock,
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.query_params["profile_invite"] = "x" * 43
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Account")
+        self.assertIn("profile_invite", app.query_params)
+        claim_mock.assert_not_called()
+        self.assertTrue(
+            any("preferences" in item.value for item in app.info)
+        )
+
+    def test_named_preference_invitee_can_submit_only_their_profile(self) -> None:
+        session = AccountSession(
+            user_id="member-user",
+            email="sam@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        assignment = PreferenceAssignment(
+            draft_id="d" * 32,
+            slot_id="s" * 32,
+            traveler_name="Sam",
+            trip=TripBasics(
+                destination="Rome",
+                country="Italy",
+                days=3,
+                budget_level="moderate",
+                pace="balanced",
+            ),
+        )
+        with (
+            patch(
+                "src.auth_ui.claim_preference_invitation",
+                return_value=assignment,
+            ) as claim_mock,
+            patch(
+                "src.ui.submit_preference_profile",
+                return_value=TravelerProfile(
+                    name="Sam",
+                    interests=["art"],
+                    walking_tolerance="moderate",
+                ),
+            ) as submit_mock,
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["account_session"] = session.as_dict()
+            app.query_params["profile_invite"] = "x" * 43
+            app.run(timeout=10)
+
+            self.assertEqual(app.session_state["planner_step"], "profile")
+            self.assertNotIn("profile_invite", app.query_params)
+            self.assertEqual(app.title[0].value, "Add Sam’s preferences")
+            interest_group = next(
+                group
+                for group in app.get("button_group")
+                if group.label == "Interests"
+            )
+            interest_group.select("art")
+            next(
+                button
+                for button in app.button
+                if button.label == "Share my preferences"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        claim_mock.assert_called_once_with("x" * 43, "access-token")
+        submitted_assignment, submitted_profile, access_token = (
+            submit_mock.call_args.args
+        )
+        self.assertEqual(submitted_assignment.traveler_name, "Sam")
+        self.assertEqual(submitted_profile.interests, ["art"])
+        self.assertEqual(access_token, "access-token")
+
+    def test_organizer_can_create_named_links_before_recommendations(self) -> None:
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        trip = TripBasics(
+            destination="Rome",
+            country="Italy",
+            days=3,
+            budget_level="moderate",
+            pace="balanced",
+        )
+        organizer = TravelerProfile(
+            name="Coco",
+            interests=["history"],
+            walking_tolerance="moderate",
+        )
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=trip,
+            slots=(
+                PreferenceSlot(
+                    "a" * 32, "Coco", 0, organizer, "owner-user"
+                ),
+                PreferenceSlot("b" * 32, "Sam", 1),
+            ),
+            updated_at="2026-09-01T12:00:00+00:00",
+        )
+        creation = PreferenceDraftCreation(
+            draft=draft,
+            invitations=(
+                PreferenceInvitation(
+                    "Sam",
+                    "b" * 32,
+                    "x" * 43,
+                    "2026-09-08T12:00:00+00:00",
+                ),
+            ),
+        )
+        with (
+            patch(
+                "src.ui.current_app_origin",
+                return_value="http://localhost:8501",
+            ),
+            patch(
+                "src.ui.create_preference_draft",
+                return_value=creation,
+            ) as create_mock,
+            patch("src.ui.get_preference_draft", return_value=draft),
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["account_session"] = session.as_dict()
+            app.session_state["planner_step"] = "travelers"
+            app.run(timeout=10)
+
+            next(
+                control
+                for control in app.segmented_control
+                if control.label == "How should preferences be collected?"
+            ).set_value("Invite separately").run(timeout=10)
+            app.text_input(key="traveler_name_0").set_value("Coco")
+            next(
+                group
+                for group in app.get("button_group")
+                if group.label == "Interests"
+            ).select("history")
+            app.text_input(key="invitee_name_1").set_value("Sam")
+            next(
+                button
+                for button in app.button
+                if button.label == "Create named invitation links"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["planner_step"], "review")
+        self.assertIsNone(app.session_state["trip_request"])
+        create_mock.assert_called_once()
+        self.assertTrue(
+            any("profile_invite=" in code.value for code in app.code)
+        )
+        self.assertFalse(
+            any(button.label == "Find our best fits" for button in app.button)
         )
 
     def test_results_views_are_ordered_and_must_dos_initialize_shortlist(

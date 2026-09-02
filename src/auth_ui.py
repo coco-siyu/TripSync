@@ -22,6 +22,7 @@ from src.auth import (
 )
 from src.supabase_store import account_feature_is_configured
 from src.invitations import claim_trip_invitation
+from src.preference_invitations import claim_preference_invitation
 from src.trips import claim_anonymous_trips
 
 
@@ -35,6 +36,8 @@ PASSWORD_RECOVERY_ERROR_KEY = "account_password_recovery_error"
 PASSWORD_RECOVERY_EMAIL_SENT_KEY = "account_password_recovery_email_sent"
 PASSWORD_RECOVERY_ENABLED = False
 TRIP_INVITATION_NOTICE_KEY = "trip_invitation_notice"
+PREFERENCE_ASSIGNMENT_KEY = "preference_assignment"
+PREFERENCE_INVITATION_NOTICE_KEY = "preference_invitation_notice"
 
 
 def app_origin_from_url(value: str) -> str | None:
@@ -115,6 +118,7 @@ def _clear_account_session() -> None:
     st.session_state.pop("saved_trip_confirmation", None)
     st.session_state.pop(TRIP_TRANSFER_NOTICE_KEY, None)
     st.session_state.pop(TRIP_TRANSFER_ERROR_KEY, None)
+    st.session_state.pop(PREFERENCE_ASSIGNMENT_KEY, None)
 
 
 def _claim_browser_trips(session: AccountSession) -> None:
@@ -231,6 +235,49 @@ def handle_trip_invitation() -> None:
         }
 
 
+def handle_preference_invitation() -> None:
+    """Route or claim one named traveler-profile invitation."""
+
+    token = _query_param_value("profile_invite")
+    if not token:
+        return
+    session = current_account_session()
+    if session is None:
+        st.session_state.app_workspace = "Account"
+        st.session_state[ACCOUNT_NOTICE_KEY] = (
+            "Sign in or create an account to add your preferences to this trip."
+        )
+        return
+
+    del st.query_params["profile_invite"]
+    try:
+        assignment = claim_preference_invitation(token, session.access_token)
+    except Exception:
+        st.session_state.app_workspace = "Account"
+        st.session_state[PREFERENCE_INVITATION_NOTICE_KEY] = {
+            "level": "error",
+            "message": (
+                "This preference invitation is invalid, expired, or already "
+                "belongs to another account."
+            ),
+        }
+    else:
+        st.session_state[PREFERENCE_ASSIGNMENT_KEY] = {
+            "draft_id": assignment.draft_id,
+            "slot_id": assignment.slot_id,
+            "traveler_name": assignment.traveler_name,
+            "trip": assignment.trip.model_dump(mode="json"),
+            "profile": (
+                assignment.profile.model_dump(mode="json")
+                if assignment.profile is not None
+                else None
+            ),
+        }
+        st.session_state.trip_basics = assignment.trip.model_dump(mode="json")
+        st.session_state.planner_step = "profile"
+        st.session_state.app_workspace = "Plan a trip"
+
+
 def _render_password_security(session: AccountSession) -> None:
     st.caption("Change the password used to sign in to this account.")
     with st.form("change-password-form", border=True, clear_on_submit=True):
@@ -267,8 +314,9 @@ def _render_password_security(session: AccountSession) -> None:
 def _render_privacy_controls(session: AccountSession) -> None:
     st.caption(
         "Deleting your account permanently removes its saved trips, every itinerary "
-        "version, and feedback connected to the account. The shared activity "
-        "catalog is not personal account data and is not affected."
+        "version, group preference drafts or submitted profiles, and feedback "
+        "connected to the account. The shared activity catalog is not personal "
+        "account data and is not affected."
     )
     st.warning(
         "This cannot be undone. Your current browser plan will also be cleared.",
@@ -553,6 +601,17 @@ def render_account_workspace() -> None:
     st.title("Keep your trips with you")
     if notice := st.session_state.pop(ACCOUNT_NOTICE_KEY, None):
         st.info(notice, icon=":material/info:")
+    preference_notice = st.session_state.pop(
+        PREFERENCE_INVITATION_NOTICE_KEY, None
+    )
+    if isinstance(preference_notice, dict):
+        st.error(
+            str(
+                preference_notice.get("message")
+                or "The invitation could not be opened."
+            ),
+            icon=":material/link_off:",
+        )
 
     recovery_session = account_session_from_mapping(
         st.session_state.get(PASSWORD_RECOVERY_SESSION_KEY)

@@ -23,6 +23,8 @@ structured output, and the app checks it before showing anything to the user.
 ## What it does
 
 - Supports groups of 2 to 6 travelers and trips of 1 to 5 days.
+- Lets a signed-in organizer create named preference links so each traveler can
+  submit only their own profile before recommendations are generated.
 - Searches a curated catalog for Rome, Florence, Milan, and Venice with text,
   vector, or hybrid retrieval.
 - Ranks activities by shared interests, walking and budget fit, must-dos, and
@@ -81,11 +83,16 @@ also create a seven-day link from **My trips → Share trip**, choosing **Can
 view** or **Can create itineraries**. Viewers receive read-only access.
 Collaborators may build and append new itinerary versions, but cannot change the
 trip brief, sharing settings, ownership, or delete the owner's data.
+During trip setup, an organizer can instead choose **Invite separately**. Each
+named link is tied to one traveler slot, requires sign-in, and can only edit that
+slot. The organizer sees which profiles are ready and starts recommendations
+after everyone has replied. These setup invitations do not grant access to a
+saved trip or its itinerary versions.
 Signing in atomically moves plans saved in that browser into the account. Apply
 `supabase/schema.sql` again when upgrading an existing deployment; it installs
-the private-trip policies, guarded browser-plan transfer, and Phase 2 sharing
-tables and functions. The migration is idempotent, so later schema reruns
-preserve existing sharing records and add collaborator roles to Phase 2a data.
+the private-trip policies, guarded browser-plan transfer, Phase 2 sharing, and
+named group-preference tables and functions. The migration is idempotent, so
+later schema reruns preserve existing sharing records and group drafts.
 Without account configuration, saved plans continue to use the anonymous
 browser-session fallback.
 
@@ -105,7 +112,7 @@ that can only append itinerary snapshots; general updates remain owner-only.
 Account deletion requires a fresh password verification. Its zero-argument
 database function derives the deletion target from the authenticated JWT,
 atomically removes saved trips (including itinerary versions), shared-trip
-memberships, and feedback,
+memberships, group preference drafts or submitted profiles, and feedback,
 then the server-only Supabase client removes that same Auth user. Reapply
 `supabase/schema.sql` to an existing project before using this control.
 
@@ -321,8 +328,8 @@ TripSync is a planning prototype, not a booking tool. It does not provide live
 opening hours, ticket availability, prices, routes, hotel or flight search, or
 payments. Duration and pace are curated estimates. SQLite is for local use.
 Account-backed trips use Supabase row-level security and are private to their
-owner. Invitation links, shared editing, and live visitor information remain
-future production work.
+owner. Named preference links and role-scoped saved-trip sharing are available;
+live co-editing and live visitor information remain future production work.
 
 ## License
 

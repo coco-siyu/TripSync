@@ -38,6 +38,7 @@ from src.models import (
     RejectedActivity,
     RejectionReason,
     TravelerProfile,
+    TripBasics,
     TripRequest,
 )
 from src.must_dos import UnmatchedMustDo, resolve_must_dos
@@ -66,6 +67,21 @@ from src.search import (
     retrieve_activities,
 )
 from src.trips import list_saved_trips, save_shared_itinerary_version, save_trip
+from src.auth_ui import (
+    PREFERENCE_ASSIGNMENT_KEY,
+    current_account_session,
+    current_app_origin,
+)
+from src.preference_invitations import (
+    PreferenceAssignment,
+    PreferenceDraft,
+    PreferenceInvitation,
+    build_preference_invitation_url,
+    create_preference_draft,
+    create_slot_invitation,
+    get_preference_draft,
+    submit_preference_profile,
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -105,9 +121,11 @@ FOOD_RESTRICTION_OPTIONS = [
 ]
 
 STEP_META = {
-    "trip": ("01", "Trip basics", 33),
-    "travelers": ("02", "Your group", 66),
-    "results": ("03", "Best fits", 100),
+    "trip": ("01", "Trip details", 25),
+    "travelers": ("02", "Preferences", 50),
+    "profile": ("02", "Your preferences", 50),
+    "review": ("03", "Review", 75),
+    "results": ("04", "Best fits", 100),
 }
 
 CATEGORY_ICONS = {
@@ -296,6 +314,9 @@ def _initialize_state() -> None:
             "pace": "balanced",
         },
         "traveler_count": 2,
+        "preference_collection_mode": "Together now",
+        "active_preference_draft_id": None,
+        "preference_invite_links": {},
         "trip_request": None,
         "selected_activity_ids": [],
         "dismissed_must_do_ids": [],
@@ -356,6 +377,10 @@ def _start_new_trip() -> None:
         "pace": "balanced",
     }
     st.session_state.traveler_count = 2
+    st.session_state.preference_collection_mode = "Together now"
+    st.session_state.active_preference_draft_id = None
+    st.session_state.preference_invite_links = {}
+    st.session_state.pop(PREFERENCE_ASSIGNMENT_KEY, None)
     st.session_state.trip_request = None
     _reset_activity_selections()
     st.session_state.saved_trip_id = None
@@ -379,9 +404,14 @@ def _start_new_trip() -> None:
         "traveler_walking_",
         "traveler_food_",
         "traveler_must_do_",
+        "invitee_name_",
+        "invited-profile-",
     )
     for key in tuple(st.session_state):
-        if key == "traveler_count_control" or (
+        if key in {
+            "traveler_count_control",
+            "preference_collection_mode_control",
+        } or (
             isinstance(key, str) and key.startswith(traveler_widget_prefixes)
         ):
             st.session_state.pop(key, None)
@@ -515,7 +545,7 @@ def _render_progress() -> None:
     step = st.session_state.planner_step
     number, label, progress = STEP_META[step]
     with st.container(key="progress-card"):
-        st.progress(progress, text=f"Step {number} of 03 · {label}")
+        st.progress(progress, text=f"Step {number} of 04 · {label}")
 
 
 def _render_trip_step() -> None:
@@ -597,7 +627,7 @@ def _render_trip_step() -> None:
             )
 
             submitted = st.form_submit_button(
-                "Continue to travelers",
+                "Continue to group preferences",
                 type="primary",
                 icon=":material/arrow_forward:",
                 width="stretch",
@@ -617,6 +647,8 @@ def _render_trip_step() -> None:
                     "budget_level": budget_level,
                     "pace": pace,
                 }
+                st.session_state.active_preference_draft_id = None
+                st.session_state.preference_invite_links = {}
                 st.session_state.planner_step = "travelers"
                 st.rerun()
 
@@ -648,10 +680,10 @@ def _render_trip_step() -> None:
             st.rerun()
 
 
-def _traveler_input(index: int) -> dict[str, Any]:
+def _traveler_input(index: int, *, heading: str | None = None) -> dict[str, Any]:
     traveler_number = index + 1
     with st.container(key=f"traveler-card-{traveler_number}"):
-        st.subheader(f"Traveler {traveler_number}")
+        st.subheader(heading or f"Traveler {traveler_number}")
         name = st.text_input(
             "Name",
             key=f"traveler_name_{index}",
@@ -714,6 +746,21 @@ def _validation_message(error: ValidationError) -> str:
     return f"{location}: {first_error['msg']}"
 
 
+def _traveler_profile_from_input(values: dict[str, Any]) -> TravelerProfile:
+    """Validate one traveler form without requiring a complete group yet."""
+
+    must_dos = values.get("must_do_activities", [])
+    return TravelerProfile(
+        name=values.get("name", ""),
+        interests=values.get("interests", []),
+        walking_tolerance=values.get("walking_tolerance", "moderate"),
+        food_restrictions=values.get("food_restrictions", []),
+        must_do_activities=(
+            parse_tag_text(must_dos) if isinstance(must_dos, str) else must_dos
+        ),
+    )
+
+
 def _render_travelers_step() -> None:
     if st.button(
         "Back to trip basics",
@@ -727,10 +774,20 @@ def _render_travelers_step() -> None:
         st.markdown('<div class="ts-section-label">Make room for everyone</div>', unsafe_allow_html=True)
         st.header("Who’s traveling?")
         st.markdown(
-            '<p class="ts-helper">Each profile helps TripSync distinguish a '
-            "genuine group fit from a generic popular attraction.</p>",
+            '<p class="ts-helper">Add everyone together, or send each person a '
+            "named link so they can answer for themselves.</p>",
             unsafe_allow_html=True,
         )
+
+        collection_mode = st.segmented_control(
+            "How should preferences be collected?",
+            ["Together now", "Invite separately"],
+            default=st.session_state.preference_collection_mode,
+            key="preference_collection_mode_control",
+            required=True,
+            width="stretch",
+        )
+        st.session_state.preference_collection_mode = collection_mode
 
         traveler_count = st.slider(
             "Group size",
@@ -741,33 +798,115 @@ def _render_travelers_step() -> None:
         )
         st.session_state.traveler_count = traveler_count
 
-        with st.form("traveler_profiles_form"):
-            traveler_inputs = [
-                _traveler_input(index) for index in range(traveler_count)
-            ]
-            submitted = st.form_submit_button(
-                "Find our best fits",
-                type="primary",
-                icon=":material/auto_awesome:",
-                width="stretch",
-            )
+        if collection_mode == "Invite separately":
+            _render_named_invitation_setup(traveler_count)
+        else:
+            _render_together_preference_form(traveler_count)
 
-        if submitted:
-            try:
-                trip_request = build_trip_request(
-                    st.session_state.trip_basics,
-                    traveler_inputs,
-                )
-            except ValidationError as error:
-                st.error(
-                    _validation_message(error),
-                    icon=":material/error:",
-                )
-            else:
-                st.session_state.trip_request = trip_request.model_dump(mode="json")
-                _reset_activity_selections()
-                st.session_state.planner_step = "results"
-                st.rerun()
+
+def _render_together_preference_form(traveler_count: int) -> None:
+    with st.form("traveler_profiles_form"):
+        traveler_inputs = [
+            _traveler_input(index) for index in range(traveler_count)
+        ]
+        submitted = st.form_submit_button(
+            "Review group preferences",
+            type="primary",
+            icon=":material/arrow_forward:",
+            width="stretch",
+        )
+
+    if submitted:
+        try:
+            trip_request = build_trip_request(
+                st.session_state.trip_basics,
+                traveler_inputs,
+            )
+        except ValidationError as error:
+            st.error(_validation_message(error), icon=":material/error:")
+        else:
+            st.session_state.trip_request = trip_request.model_dump(mode="json")
+            st.session_state.active_preference_draft_id = None
+            _reset_activity_selections()
+            st.session_state.planner_step = "review"
+            st.rerun()
+
+
+def _render_named_invitation_setup(traveler_count: int) -> None:
+    account = current_account_session()
+    origin = current_app_origin()
+    st.info(
+        "You fill in your own profile now. Each other traveler gets a private, "
+        "named link and must sign in before replying.",
+        icon=":material/group_add:",
+    )
+    with st.form("named_preference_invitation_form"):
+        st.markdown("**Your preferences**")
+        organizer_input = _traveler_input(0, heading="You")
+        st.markdown("**Who should receive a link?**")
+        invitee_names = [
+            st.text_input(
+                f"Traveler {index + 1} name",
+                key=f"invitee_name_{index}",
+                placeholder="Name on their invitation",
+            )
+            for index in range(1, traveler_count)
+        ]
+        submitted = st.form_submit_button(
+            "Create named invitation links",
+            type="primary",
+            icon=":material/link:",
+            width="stretch",
+            disabled=account is None or origin is None,
+        )
+
+    if account is None:
+        st.caption("Sign in first so responses can return to your private draft.")
+        if st.button(
+            "Sign in to invite travelers",
+            icon=":material/login:",
+            key="sign-in-for-preference-invites",
+        ):
+            st.session_state.app_workspace = "Account"
+            st.rerun()
+        return
+    if origin is None:
+        st.caption("Open TripSync from its normal local or deployed URL to create links.")
+        return
+    if not submitted:
+        return
+
+    try:
+        organizer = _traveler_profile_from_input(organizer_input)
+        creation = create_preference_draft(
+            TripBasics.model_validate(st.session_state.trip_basics),
+            organizer,
+            invitee_names,
+            account.user_id,
+            account.access_token,
+        )
+        links = {
+            invitation.slot_id: {
+                "traveler_name": invitation.traveler_name,
+                "url": build_preference_invitation_url(origin, invitation.token),
+                "expires_at": invitation.expires_at,
+            }
+            for invitation in creation.invitations
+        }
+    except (ValidationError, ValueError) as error:
+        st.error(str(error), icon=":material/error:")
+    except Exception:
+        st.error(
+            "TripSync could not create the invitations. Apply the group-preference "
+            "section of the Supabase schema, then try again.",
+            icon=":material/error:",
+        )
+    else:
+        st.session_state.active_preference_draft_id = creation.draft.draft_id
+        st.session_state.preference_invite_links = links
+        st.session_state.trip_request = None
+        st.session_state.planner_step = "review"
+        st.rerun()
 
 
 def _chip_row(labels: list[str]) -> str:
@@ -811,6 +950,295 @@ def _render_summary(trip: TripRequest, *, show_edit: bool = True) -> None:
                 for traveler in trip.travelers
             )
         )
+
+
+def _render_draft_readiness(draft: PreferenceDraft) -> TripRequest | None:
+    account = current_account_session()
+    if account is None:
+        st.warning(
+            "Sign back in to check this group’s responses.",
+            icon=":material/login:",
+        )
+        return None
+    origin = current_app_origin()
+    links = st.session_state.preference_invite_links
+    if not isinstance(links, dict):
+        links = {}
+        st.session_state.preference_invite_links = links
+
+    complete_count = sum(slot.is_complete for slot in draft.slots)
+    st.subheader(f"{complete_count} of {len(draft.slots)} profiles ready")
+    st.progress(
+        int(complete_count / len(draft.slots) * 100),
+        text=(
+            "Everyone has replied."
+            if draft.is_ready
+            else "Recommendations unlock when every named traveler has replied."
+        ),
+    )
+    for slot in draft.slots:
+        with st.container(border=True, key=f"preference-slot-{slot.slot_id}"):
+            status_col, action_col = st.columns(
+                [3, 2], vertical_alignment="center"
+            )
+            status_col.markdown(f"**{escape(slot.traveler_name)}**")
+            if slot.is_complete:
+                action_col.success("Ready", icon=":material/check_circle:")
+            elif slot.member_id:
+                action_col.info("Joined · waiting", icon=":material/edit_note:")
+            else:
+                action_col.warning("Not joined", icon=":material/schedule:")
+
+            link_details = links.get(slot.slot_id)
+            if (
+                not slot.is_complete
+                and isinstance(link_details, dict)
+                and link_details.get("url")
+            ):
+                st.code(str(link_details["url"]), language=None)
+                st.caption(
+                    "Send only to this traveler. The link expires in 7 days."
+                )
+            elif not slot.is_complete and slot.position > 0 and not slot.member_id:
+                if st.button(
+                    f"Create a new link for {slot.traveler_name}",
+                    key=f"refresh-profile-link-{slot.slot_id}",
+                    icon=":material/link:",
+                    disabled=origin is None,
+                ):
+                    try:
+                        invitation = create_slot_invitation(
+                            draft.draft_id,
+                            slot,
+                            account.user_id,
+                            account.access_token,
+                        )
+                        assert origin is not None
+                        links[slot.slot_id] = {
+                            "traveler_name": invitation.traveler_name,
+                            "url": build_preference_invitation_url(
+                                origin, invitation.token
+                            ),
+                            "expires_at": invitation.expires_at,
+                        }
+                    except Exception:
+                        st.error(
+                            "TripSync could not create a fresh link.",
+                            icon=":material/error:",
+                        )
+                    else:
+                        st.rerun()
+
+    if st.button(
+        "Refresh responses",
+        icon=":material/refresh:",
+        key=f"refresh-preference-draft-{draft.draft_id}",
+    ):
+        st.rerun()
+    return draft.to_trip_request() if draft.is_ready else None
+
+
+def _render_review_step() -> None:
+    st.markdown(
+        '<div class="ts-section-label">One check before recommendations</div>',
+        unsafe_allow_html=True,
+    )
+    st.header("Is this the right planning brief?")
+    active_draft_id = str(
+        st.session_state.get("active_preference_draft_id") or ""
+    )
+    trip: TripRequest | None = None
+    if active_draft_id:
+        account = current_account_session()
+        if account is None:
+            st.warning("Sign in to reopen this group draft.", icon=":material/login:")
+            return
+        try:
+            draft = get_preference_draft(active_draft_id, account.access_token)
+        except Exception:
+            st.error(
+                "TripSync could not refresh this group draft. Check the Supabase "
+                "schema and try again.",
+                icon=":material/cloud_off:",
+            )
+            return
+        st.caption(
+            f"{draft.trip.destination}, {draft.trip.country} · "
+            f"{draft.trip.days} days · {draft.trip.budget_level.value} budget · "
+            f"{draft.trip.pace.value} pace"
+        )
+        trip = _render_draft_readiness(draft)
+        if trip is not None:
+            st.session_state.trip_request = trip.model_dump(mode="json")
+            st.divider()
+            _render_summary(trip, show_edit=False)
+    elif st.session_state.trip_request:
+        trip = TripRequest.model_validate(st.session_state.trip_request)
+        _render_summary(trip, show_edit=False)
+        edit_trip_col, edit_people_col = st.columns(2)
+        if edit_trip_col.button(
+            "Edit trip details",
+            icon=":material/edit_location_alt:",
+            width="stretch",
+        ):
+            st.session_state.planner_step = "trip"
+            st.rerun()
+        if edit_people_col.button(
+            "Edit preferences",
+            icon=":material/group:",
+            width="stretch",
+        ):
+            st.session_state.planner_step = "travelers"
+            st.rerun()
+    else:
+        st.session_state.planner_step = "trip"
+        st.rerun()
+
+    if trip is not None and st.button(
+        "Find our best fits",
+        type="primary",
+        icon=":material/auto_awesome:",
+        width="stretch",
+    ):
+        _reset_activity_selections()
+        st.session_state.planner_step = "results"
+        st.rerun()
+
+
+def _assignment_from_state() -> PreferenceAssignment | None:
+    payload = st.session_state.get(PREFERENCE_ASSIGNMENT_KEY)
+    if not isinstance(payload, dict):
+        return None
+    try:
+        profile_payload = payload.get("profile")
+        return PreferenceAssignment(
+            draft_id=str(payload["draft_id"]),
+            slot_id=str(payload["slot_id"]),
+            traveler_name=str(payload["traveler_name"]),
+            trip=TripBasics.model_validate(payload["trip"]),
+            profile=(
+                TravelerProfile.model_validate(profile_payload)
+                if profile_payload
+                else None
+            ),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _render_invited_profile_step() -> None:
+    assignment = _assignment_from_state()
+    account = current_account_session()
+    if assignment is None or account is None:
+        st.session_state.app_workspace = "Account"
+        st.warning("Open your named invitation again after signing in.")
+        return
+
+    trip = assignment.trip
+    existing = assignment.profile
+    key_prefix = f"invited-profile-{assignment.slot_id}"
+    defaults = {
+        f"{key_prefix}-interests": list(existing.interests) if existing else [],
+        f"{key_prefix}-custom": [],
+        f"{key_prefix}-walking": (
+            existing.walking_tolerance.value if existing else "moderate"
+        ),
+        f"{key_prefix}-food": list(existing.food_restrictions) if existing else [],
+        f"{key_prefix}-must-dos": (
+            ", ".join(existing.must_do_activities) if existing else ""
+        ),
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+
+    st.markdown(
+        '<div class="ts-section-label">Your named invitation</div>',
+        unsafe_allow_html=True,
+    )
+    st.title(f"Add {assignment.traveler_name}’s preferences")
+    st.caption(
+        f"For {trip.destination}, {trip.country} · {trip.days} days. "
+        "Only this named profile can be changed from your link."
+    )
+    if existing is not None:
+        st.success("Your preferences are already in the group draft. You can update them below.")
+
+    with st.form(f"invited-profile-form-{assignment.slot_id}"):
+        st.text_input("Name", value=assignment.traveler_name, disabled=True)
+        interests = st.pills(
+            "Interests",
+            INTEREST_OPTIONS,
+            selection_mode="multi",
+            key=f"{key_prefix}-interests",
+            help="Choose at least one interest.",
+            width="stretch",
+        )
+        custom_interests = st.multiselect(
+            "Add your own interests",
+            options=[],
+            key=f"{key_prefix}-custom",
+            placeholder="Optional · type an interest then press Enter",
+            accept_new_options=True,
+            max_selections=12,
+        )
+        walking = st.segmented_control(
+            "Walking tolerance",
+            ["low", "moderate", "high"],
+            key=f"{key_prefix}-walking",
+            format_func=str.title,
+            required=True,
+            width="stretch",
+        )
+        food = st.multiselect(
+            "Food restrictions",
+            FOOD_RESTRICTION_OPTIONS,
+            key=f"{key_prefix}-food",
+            accept_new_options=True,
+            max_selections=12,
+        )
+        must_dos = st.text_input(
+            "Must-do activities",
+            key=f"{key_prefix}-must-dos",
+            placeholder="Optional · museum, neighborhood, landmark",
+        )
+        submitted = st.form_submit_button(
+            "Update my preferences" if existing else "Share my preferences",
+            type="primary",
+            icon=":material/check_circle:",
+            width="stretch",
+        )
+
+    if submitted:
+        try:
+            profile = _traveler_profile_from_input(
+                {
+                    "name": assignment.traveler_name,
+                    "interests": combine_interest_tags(
+                        interests or [], custom_interests or []
+                    ),
+                    "walking_tolerance": walking,
+                    "food_restrictions": food,
+                    "must_do_activities": must_dos,
+                }
+            )
+            submit_preference_profile(assignment, profile, account.access_token)
+        except (ValidationError, ValueError) as error:
+            st.error(str(error), icon=":material/error:")
+        except Exception:
+            st.error(
+                "TripSync could not save your preferences. Ask the organizer for "
+                "a fresh link if this continues.",
+                icon=":material/error:",
+            )
+        else:
+            st.session_state[PREFERENCE_ASSIGNMENT_KEY] = {
+                **st.session_state[PREFERENCE_ASSIGNMENT_KEY],
+                "profile": profile.model_dump(mode="json"),
+            }
+            st.success(
+                "Your preferences are in. The organizer will see that you’re ready.",
+                icon=":material/task_alt:",
+            )
 
 
 def _activity_lookup(activities: list[Activity]) -> dict[str, Activity]:
@@ -2585,13 +3013,18 @@ def render_app() -> None:
     """Render the complete TripSync preference flow."""
 
     _initialize_state()
-    _render_hero()
+    step = st.session_state.planner_step
+    if step == "trip":
+        _render_hero()
     _render_progress()
 
-    step = st.session_state.planner_step
     if step == "trip":
         _render_trip_step()
     elif step == "travelers":
         _render_travelers_step()
+    elif step == "profile":
+        _render_invited_profile_step()
+    elif step == "review":
+        _render_review_step()
     else:
         _render_results_step()

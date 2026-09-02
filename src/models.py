@@ -116,14 +116,19 @@ class TravelerProfile(TripSyncModel):
         return value
 
 
-class TripRequest(TripSyncModel):
-    """Trip-level inputs used by recommendation and itinerary planning."""
+class TripBasics(TripSyncModel):
+    """Shared trip details that can exist before every traveler has replied."""
 
     destination: str = Field(min_length=1, max_length=120)
     country: str = Field(min_length=1, max_length=80)
     days: int = Field(ge=1, le=5)
     budget_level: BudgetLevel
     pace: TripPace
+
+
+class TripRequest(TripBasics):
+    """Complete trip inputs used by recommendation and itinerary planning."""
+
     travelers: list[TravelerProfile] = Field(min_length=2, max_length=6)
 
     @model_validator(mode="after")

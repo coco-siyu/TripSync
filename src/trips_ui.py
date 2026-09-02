@@ -18,6 +18,7 @@ from src.invitations import (
     revoke_trip_sharing,
 )
 from src.models import ItineraryPlan
+from src.preference_invitations import PreferenceDraft, list_preference_drafts
 from src.trips import (
     SavedTrip,
     itinerary_versions,
@@ -41,6 +42,64 @@ _OPEN_SAVED_ITINERARY_KEY = "open_saved_itinerary"
 _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 _SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
 _SHARE_LINKS_KEY = "trip_share_links"
+
+
+def _resume_preference_draft(draft: PreferenceDraft) -> None:
+    """Open a durable pre-recommendation draft in the planner."""
+
+    st.session_state.trip_basics = draft.trip.model_dump(mode="json")
+    st.session_state.trip_request = (
+        draft.to_trip_request().model_dump(mode="json")
+        if draft.is_ready
+        else None
+    )
+    st.session_state.traveler_count = len(draft.slots)
+    st.session_state.preference_collection_mode = "Invite separately"
+    st.session_state.active_preference_draft_id = draft.draft_id
+    st.session_state.preference_invite_links = {}
+    st.session_state.planner_step = "review"
+    st.session_state.app_workspace = "Plan a trip"
+
+
+def _render_preference_drafts(account) -> None:
+    """Show unfinished group setup separately from saved itineraries."""
+
+    if account is None:
+        return
+    try:
+        drafts = list_preference_drafts(account.access_token)
+    except Exception:
+        st.warning(
+            "Group preference drafts are unavailable. Apply the latest Supabase "
+            "schema to enable named invitations.",
+            icon=":material/group_off:",
+        )
+        return
+    if not drafts:
+        return
+
+    with st.expander(f"Group preference drafts ({len(drafts)})", expanded=True):
+        st.caption(
+            "These are trips still collecting named traveler responses. They are "
+            "not saved itineraries yet."
+        )
+        for draft in drafts:
+            complete_count = sum(slot.is_complete for slot in draft.slots)
+            with st.container(border=True):
+                summary_col, action_col = st.columns(
+                    [4, 1], vertical_alignment="center"
+                )
+                summary_col.markdown(f"**{draft.title}**")
+                summary_col.caption(
+                    f"{complete_count} of {len(draft.slots)} profiles ready"
+                )
+                action_col.button(
+                    "Review",
+                    key=f"resume-preference-draft-{draft.draft_id}",
+                    type="primary" if draft.is_ready else "secondary",
+                    on_click=_resume_preference_draft,
+                    args=(draft,),
+                )
 
 
 def _dismiss_trip_notice(key: str) -> None:
@@ -729,6 +788,7 @@ def render_saved_trips() -> None:
     )
     _render_persistent_trip_notices()
     invited_record_key = _render_invitation_notice()
+    _render_preference_drafts(account)
     if notice := st.session_state.pop(_SAVED_ITINERARY_FLASH_KEY, None):
         st.toast(notice, icon=":material/check_circle:")
     records = list_saved_trips(

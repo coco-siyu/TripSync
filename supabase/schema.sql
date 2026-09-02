@@ -263,6 +263,8 @@ as $$
 declare
   account_user_id uuid := auth.uid();
   deleted_shared_trips integer := 0;
+  deleted_preference_drafts integer := 0;
+  cleared_preference_profiles integer := 0;
   deleted_trips integer := 0;
   deleted_llm_feedback integer := 0;
   deleted_overall_feedback integer := 0;
@@ -274,6 +276,20 @@ begin
   delete from public.trip_members
   where member_id = account_user_id;
   get diagnostics deleted_shared_trips = row_count;
+
+  update public.preference_slots
+  set member_id = null, profile_json = null, updated_at = pg_catalog.now()
+  where member_id = account_user_id
+    and not exists (
+      select 1 from public.preference_drafts
+      where preference_drafts.draft_id = preference_slots.draft_id
+        and preference_drafts.owner_id = account_user_id
+    );
+  get diagnostics cleared_preference_profiles = row_count;
+
+  delete from public.preference_drafts
+  where owner_id = account_user_id;
+  get diagnostics deleted_preference_drafts = row_count;
 
   delete from public.saved_trips
   where session_id = account_user_id::text;
@@ -289,6 +305,8 @@ begin
 
   return pg_catalog.jsonb_build_object(
     'shared_trips', deleted_shared_trips,
+    'preference_drafts', deleted_preference_drafts,
+    'preference_profiles', cleared_preference_profiles,
     'saved_trips', deleted_trips,
     'llm_feedback', deleted_llm_feedback,
     'overall_experience_feedback', deleted_overall_feedback
@@ -778,3 +796,444 @@ $$;
 
 revoke all on function public.revoke_trip_sharing(text) from public;
 grant execute on function public.revoke_trip_sharing(text) to authenticated;
+
+-- Phase 2.5 group setup: collect one named preference profile per traveler
+-- before recommendations exist. These capabilities are deliberately separate
+-- from saved-trip viewer/collaborator access.
+create table if not exists public.preference_drafts (
+  draft_id text primary key check (draft_id ~ '^[a-f0-9]{32}$'),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  title text not null check (char_length(btrim(title)) between 1 and 160),
+  trip_json jsonb not null check (jsonb_typeof(trip_json) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.preference_slots (
+  draft_id text not null references public.preference_drafts(draft_id) on delete cascade,
+  slot_id text not null check (slot_id ~ '^[a-f0-9]{32}$'),
+  traveler_name text not null check (
+    char_length(btrim(traveler_name)) between 1 and 80
+  ),
+  position smallint not null check (position between 0 and 5),
+  member_id uuid references auth.users(id) on delete set null,
+  profile_json jsonb check (
+    profile_json is null or jsonb_typeof(profile_json) = 'object'
+  ),
+  updated_at timestamptz not null default now(),
+  primary key (draft_id, slot_id),
+  unique (draft_id, position)
+);
+
+create unique index if not exists preference_slots_unique_name_idx
+  on public.preference_slots (draft_id, lower(btrim(traveler_name)));
+create index if not exists preference_slots_member_idx
+  on public.preference_slots (member_id, updated_at desc);
+create unique index if not exists preference_slots_one_member_per_draft_idx
+  on public.preference_slots (draft_id, member_id)
+  where member_id is not null;
+
+create table if not exists public.preference_invitations (
+  token_hash text primary key check (token_hash ~ '^[a-f0-9]{64}$'),
+  draft_id text not null,
+  slot_id text not null,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  foreign key (draft_id, slot_id)
+    references public.preference_slots(draft_id, slot_id) on delete cascade
+);
+
+create index if not exists preference_invitations_slot_idx
+  on public.preference_invitations (draft_id, slot_id);
+create index if not exists preference_invitations_expires_idx
+  on public.preference_invitations (expires_at);
+
+alter table public.preference_drafts enable row level security;
+alter table public.preference_slots enable row level security;
+alter table public.preference_invitations enable row level security;
+
+revoke all on table public.preference_drafts from anon, authenticated;
+grant select, delete on table public.preference_drafts to authenticated;
+revoke all on table public.preference_slots from anon, authenticated;
+grant select on table public.preference_slots to authenticated;
+revoke all on table public.preference_invitations from anon, authenticated;
+grant select, delete on table public.preference_invitations to authenticated;
+
+drop policy if exists "Owners can read preference drafts"
+  on public.preference_drafts;
+create policy "Owners can read preference drafts"
+on public.preference_drafts for select
+to authenticated
+using (owner_id = (select auth.uid()));
+
+drop policy if exists "Owners can delete preference drafts"
+  on public.preference_drafts;
+create policy "Owners can delete preference drafts"
+on public.preference_drafts for delete
+to authenticated
+using (owner_id = (select auth.uid()));
+
+drop policy if exists "Owners and assigned travelers can read preference slots"
+  on public.preference_slots;
+create policy "Owners and assigned travelers can read preference slots"
+on public.preference_slots for select
+to authenticated
+using (
+  member_id = (select auth.uid())
+  or exists (
+    select 1 from public.preference_drafts
+    where preference_drafts.draft_id = preference_slots.draft_id
+      and preference_drafts.owner_id = (select auth.uid())
+  )
+);
+
+drop policy if exists "Owners can manage preference invitations"
+  on public.preference_invitations;
+create policy "Owners can manage preference invitations"
+on public.preference_invitations for select
+to authenticated
+using (owner_id = (select auth.uid()));
+
+drop policy if exists "Owners can delete preference invitations"
+  on public.preference_invitations;
+create policy "Owners can delete preference invitations"
+on public.preference_invitations for delete
+to authenticated
+using (owner_id = (select auth.uid()));
+
+create or replace function private.create_preference_draft(
+  target_draft_id text,
+  draft_title text,
+  trip_payload jsonb,
+  slot_payloads jsonb
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  slot jsonb;
+  slot_count integer;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in before inviting travelers.' using errcode = '42501';
+  end if;
+  if target_draft_id is null or target_draft_id !~ '^[a-f0-9]{32}$'
+    or draft_title is null
+    or char_length(pg_catalog.btrim(draft_title)) not between 1 and 160
+    or trip_payload is null or pg_catalog.jsonb_typeof(trip_payload) <> 'object'
+    or pg_catalog.octet_length(trip_payload::text) > 16384
+    or slot_payloads is null or pg_catalog.jsonb_typeof(slot_payloads) <> 'array' then
+    raise exception 'Preference draft is invalid.' using errcode = '22023';
+  end if;
+  slot_count := pg_catalog.jsonb_array_length(slot_payloads);
+  if slot_count not between 2 and 6
+    or (select count(distinct pg_catalog.lower(pg_catalog.btrim(value ->> 'traveler_name')))
+        from pg_catalog.jsonb_array_elements(slot_payloads)) <> slot_count then
+    raise exception 'Traveler slots are invalid.' using errcode = '22023';
+  end if;
+
+  insert into public.preference_drafts (
+    draft_id, owner_id, title, trip_json
+  ) values (
+    target_draft_id, account_user_id, pg_catalog.btrim(draft_title), trip_payload
+  );
+
+  for slot in select value from pg_catalog.jsonb_array_elements(slot_payloads)
+  loop
+    if coalesce(slot ->> 'slot_id', '') !~ '^[a-f0-9]{32}$'
+      or char_length(pg_catalog.btrim(coalesce(slot ->> 'traveler_name', '')))
+        not between 1 and 80
+      or (slot ->> 'position')::integer not between 0 and 5
+      or (
+        (slot ->> 'position')::integer = 0
+        and pg_catalog.jsonb_typeof(slot -> 'profile') <> 'object'
+      )
+      or (
+        (slot ->> 'position')::integer > 0
+        and (
+          coalesce(slot ->> 'token_hash', '') !~ '^[a-f0-9]{64}$'
+          or (slot ->> 'expires_at')::timestamptz <= pg_catalog.now()
+        )
+      ) then
+      raise exception 'Traveler slot is invalid.' using errcode = '22023';
+    end if;
+
+    insert into public.preference_slots (
+      draft_id, slot_id, traveler_name, position, member_id, profile_json
+    ) values (
+      target_draft_id,
+      slot ->> 'slot_id',
+      pg_catalog.btrim(slot ->> 'traveler_name'),
+      (slot ->> 'position')::smallint,
+      case when (slot ->> 'position')::integer = 0 then account_user_id else null end,
+      case when (slot ->> 'position')::integer = 0 then slot -> 'profile' else null end
+    );
+
+    if (slot ->> 'position')::integer > 0 then
+      insert into public.preference_invitations (
+        token_hash, draft_id, slot_id, owner_id, expires_at
+      ) values (
+        slot ->> 'token_hash',
+        target_draft_id,
+        slot ->> 'slot_id',
+        account_user_id,
+        (slot ->> 'expires_at')::timestamptz
+      );
+    end if;
+  end loop;
+
+  return target_draft_id;
+end;
+$$;
+
+revoke all on function private.create_preference_draft(text, text, jsonb, jsonb)
+  from public;
+grant execute on function private.create_preference_draft(text, text, jsonb, jsonb)
+  to authenticated;
+
+create or replace function public.create_preference_draft(
+  target_draft_id text,
+  draft_title text,
+  trip_payload jsonb,
+  slot_payloads jsonb
+)
+returns text
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.create_preference_draft(
+    target_draft_id, draft_title, trip_payload, slot_payloads
+  );
+$$;
+
+revoke all on function public.create_preference_draft(text, text, jsonb, jsonb)
+  from public;
+grant execute on function public.create_preference_draft(text, text, jsonb, jsonb)
+  to authenticated;
+
+create or replace function private.replace_preference_invitation(
+  target_draft_id text,
+  target_slot_id text,
+  new_token_hash text,
+  new_expires_at timestamptz
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+begin
+  if account_user_id is null
+    or new_token_hash !~ '^[a-f0-9]{64}$'
+    or new_expires_at <= pg_catalog.now()
+    or not exists (
+      select 1
+      from public.preference_slots
+      join public.preference_drafts using (draft_id)
+      where preference_slots.draft_id = target_draft_id
+        and preference_slots.slot_id = target_slot_id
+        and preference_slots.member_id is null
+        and preference_slots.profile_json is null
+        and preference_drafts.owner_id = account_user_id
+    ) then
+    raise exception 'Pending traveler slot was not found.' using errcode = '42501';
+  end if;
+
+  delete from public.preference_invitations
+  where draft_id = target_draft_id and slot_id = target_slot_id;
+  insert into public.preference_invitations (
+    token_hash, draft_id, slot_id, owner_id, expires_at
+  ) values (
+    new_token_hash, target_draft_id, target_slot_id,
+    account_user_id, new_expires_at
+  );
+  return true;
+end;
+$$;
+
+revoke all on function private.replace_preference_invitation(text, text, text, timestamptz)
+  from public;
+grant execute on function private.replace_preference_invitation(text, text, text, timestamptz)
+  to authenticated;
+
+create or replace function public.replace_preference_invitation(
+  target_draft_id text,
+  target_slot_id text,
+  new_token_hash text,
+  new_expires_at timestamptz
+)
+returns boolean
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.replace_preference_invitation(
+    target_draft_id, target_slot_id, new_token_hash, new_expires_at
+  );
+$$;
+
+revoke all on function public.replace_preference_invitation(text, text, text, timestamptz)
+  from public;
+grant execute on function public.replace_preference_invitation(text, text, text, timestamptz)
+  to authenticated;
+
+create or replace function private.claim_preference_invitation(invite_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  invitation public.preference_invitations%rowtype;
+  target_slot public.preference_slots%rowtype;
+  target_trip jsonb;
+  invite_hash text;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in before sharing preferences.' using errcode = '42501';
+  end if;
+  if invite_token is null or pg_catalog.length(invite_token) < 32
+    or pg_catalog.length(invite_token) > 256 then
+    raise exception 'Preference invitation is invalid.' using errcode = '22023';
+  end if;
+  invite_hash := pg_catalog.encode(
+    extensions.digest(invite_token, 'sha256'), 'hex'
+  );
+  select * into invitation
+  from public.preference_invitations
+  where token_hash = invite_hash
+  for update;
+  if not found then
+    raise exception 'Preference invitation is invalid.' using errcode = '22023';
+  end if;
+
+  select * into target_slot
+  from public.preference_slots
+  where draft_id = invitation.draft_id and slot_id = invitation.slot_id
+  for update;
+  if not found or (
+    invitation.expires_at <= pg_catalog.now()
+    and target_slot.member_id is distinct from account_user_id
+  ) or (
+    target_slot.member_id is not null
+    and target_slot.member_id <> account_user_id
+  ) or exists (
+    select 1 from public.preference_slots
+    where draft_id = invitation.draft_id
+      and member_id = account_user_id
+      and slot_id <> invitation.slot_id
+  ) then
+    raise exception 'This named invitation has already been accepted.' using errcode = '42501';
+  end if;
+  update public.preference_slots
+  set member_id = account_user_id, updated_at = pg_catalog.now()
+  where draft_id = invitation.draft_id and slot_id = invitation.slot_id;
+  update public.preference_drafts
+  set updated_at = pg_catalog.now()
+  where draft_id = invitation.draft_id;
+  select trip_json into target_trip
+  from public.preference_drafts
+  where draft_id = invitation.draft_id;
+
+  return pg_catalog.jsonb_build_object(
+    'draft_id', target_slot.draft_id,
+    'slot_id', target_slot.slot_id,
+    'traveler_name', target_slot.traveler_name,
+    'trip', target_trip,
+    'profile', target_slot.profile_json
+  );
+end;
+$$;
+
+revoke all on function private.claim_preference_invitation(text) from public;
+grant execute on function private.claim_preference_invitation(text) to authenticated;
+
+create or replace function public.claim_preference_invitation(invite_token text)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.claim_preference_invitation(invite_token);
+$$;
+
+revoke all on function public.claim_preference_invitation(text) from public;
+grant execute on function public.claim_preference_invitation(text) to authenticated;
+
+create or replace function private.submit_preference_profile(
+  target_draft_id text,
+  target_slot_id text,
+  profile_payload jsonb
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  expected_name text;
+begin
+  select traveler_name into expected_name
+  from public.preference_slots
+  where draft_id = target_draft_id
+    and slot_id = target_slot_id
+    and member_id = account_user_id
+  for update;
+  if account_user_id is null or not found
+    or profile_payload is null
+    or pg_catalog.jsonb_typeof(profile_payload) <> 'object'
+    or pg_catalog.octet_length(profile_payload::text) > 16384
+    or pg_catalog.lower(pg_catalog.btrim(coalesce(profile_payload ->> 'name', '')))
+      <> pg_catalog.lower(pg_catalog.btrim(expected_name))
+    or pg_catalog.jsonb_typeof(profile_payload -> 'interests') <> 'array'
+    or pg_catalog.jsonb_array_length(profile_payload -> 'interests') not between 1 and 12
+    or coalesce(profile_payload ->> 'walking_tolerance', '')
+      not in ('low', 'moderate', 'high')
+    or pg_catalog.jsonb_typeof(profile_payload -> 'food_restrictions') <> 'array'
+    or pg_catalog.jsonb_typeof(profile_payload -> 'must_do_activities') <> 'array' then
+    raise exception 'Traveler profile is invalid.' using errcode = '22023';
+  end if;
+
+  update public.preference_slots
+  set profile_json = profile_payload, updated_at = pg_catalog.now()
+  where draft_id = target_draft_id and slot_id = target_slot_id;
+  update public.preference_drafts
+  set updated_at = pg_catalog.now()
+  where draft_id = target_draft_id;
+  return true;
+end;
+$$;
+
+revoke all on function private.submit_preference_profile(text, text, jsonb)
+  from public;
+grant execute on function private.submit_preference_profile(text, text, jsonb)
+  to authenticated;
+
+create or replace function public.submit_preference_profile(
+  target_draft_id text,
+  target_slot_id text,
+  profile_payload jsonb
+)
+returns boolean
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.submit_preference_profile(
+    target_draft_id, target_slot_id, profile_payload
+  );
+$$;
+
+revoke all on function public.submit_preference_profile(text, text, jsonb)
+  from public;
+grant execute on function public.submit_preference_profile(text, text, jsonb)
+  to authenticated;
