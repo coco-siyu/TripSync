@@ -66,7 +66,12 @@ from src.search import (
     RetrievedActivity,
     retrieve_activities,
 )
-from src.trips import list_saved_trips, save_shared_itinerary_version, save_trip
+from src.trips import (
+    PREFERENCE_DRAFT_STATE_KEY,
+    list_saved_trips,
+    save_shared_itinerary_version,
+    save_trip,
+)
 from src.auth_ui import (
     PREFERENCE_ASSIGNMENT_KEY,
     current_account_session,
@@ -2226,6 +2231,11 @@ def _save_current_trip(
         "rejected_activities": st.session_state.rejected_activities,
         "itinerary_narrative": st.session_state.itinerary_narrative,
     }
+    preference_draft_id = str(
+        st.session_state.get("active_preference_draft_id") or ""
+    ).strip()
+    if preference_draft_id:
+        planning_state[PREFERENCE_DRAFT_STATE_KEY] = preference_draft_id
     access_role = str(st.session_state.get("saved_trip_access_role") or "owner")
     if access_role == "collaborator":
         if not save_itinerary_version:

@@ -33,7 +33,8 @@ _ITINERARY_STATE_KEYS = (
     "rejected_activities",
     "itinerary_narrative",
 )
-_ANONYMOUS_SESSION_PATTERN = re.compile(r"^[a-f0-9]{32}$")
+_HEX_IDENTIFIER_PATTERN = re.compile(r"^[a-f0-9]{32}$")
+PREFERENCE_DRAFT_STATE_KEY = "preference_draft_id"
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,19 @@ class SavedTrip:
     @property
     def can_create_itineraries(self) -> bool:
         return self.access_role in {"owner", "collaborator"}
+
+    @property
+    def preference_draft_id(self) -> str | None:
+        """Return the durable named-preference origin for this trip, if any."""
+
+        value = str(self.state.get(PREFERENCE_DRAFT_STATE_KEY) or "").strip()
+        return value if _HEX_IDENTIFIER_PATTERN.fullmatch(value) else None
+
+    @property
+    def is_group_plan(self) -> bool:
+        """Distinguish invited/shared planning from an owner's solo setup."""
+
+        return self.preference_draft_id is not None or not self.is_owner
 
 
 def itinerary_versions(
@@ -238,7 +252,7 @@ def claim_anonymous_trips(
     """Atomically move anonymous remote trips to the authenticated user."""
 
     normalized_session_id = anonymous_session_id.strip()
-    if not _ANONYMOUS_SESSION_PATTERN.fullmatch(normalized_session_id):
+    if not _HEX_IDENTIFIER_PATTERN.fullmatch(normalized_session_id):
         raise ValueError("The anonymous browser session is not valid")
     result = rpc_authenticated(
         "claim_anonymous_trips",
@@ -301,6 +315,14 @@ def save_trip(
         or session_id
     )
     stored_state = dict(state)
+    previous_preference_draft_id = str(
+        previous_state.get(PREFERENCE_DRAFT_STATE_KEY) or ""
+    ).strip()
+    if (
+        PREFERENCE_DRAFT_STATE_KEY not in stored_state
+        and _HEX_IDENTIFIER_PATTERN.fullmatch(previous_preference_draft_id)
+    ):
+        stored_state[PREFERENCE_DRAFT_STATE_KEY] = previous_preference_draft_id
     if save_itinerary_version and state.get("itinerary_plan"):
         versions = itinerary_versions(
             previous_state, fallback_updated_at=previous_updated_at

@@ -88,6 +88,11 @@ named link is tied to one traveler slot, requires sign-in, and can only edit tha
 slot. The organizer sees which profiles are ready and starts recommendations
 after everyone has replied. These setup invitations do not grant access to a
 saved trip or its itinerary versions.
+**My trips** keeps invitation-based and shared trips under **Group planning**,
+while trips entered without invitations stay under **Self planning**. When a
+group itinerary is first saved, its originating preference draft is recorded in
+the saved state so later itinerary versions remain in the same group. Older
+exact matches can be linked once with **Confirm group link**.
 Signing in atomically moves plans saved in that browser into the account. Apply
 `supabase/schema.sql` again when upgrading an existing deployment; it installs
 the private-trip policies, guarded browser-plan transfer, Phase 2 sharing, and

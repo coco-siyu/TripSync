@@ -18,7 +18,11 @@ from src.invitations import (
     revoke_trip_sharing,
 )
 from src.models import ItineraryPlan
-from src.preference_invitations import PreferenceDraft, list_preference_drafts
+from src.preference_invitations import (
+    PreferenceDraft,
+    link_saved_trip_to_preference_draft,
+    list_preference_drafts,
+)
 from src.trips import (
     SavedTrip,
     itinerary_versions,
@@ -61,45 +65,45 @@ def _resume_preference_draft(draft: PreferenceDraft) -> None:
     st.session_state.app_workspace = "Plan a trip"
 
 
-def _render_preference_drafts(account) -> None:
-    """Show unfinished group setup separately from saved itineraries."""
+def _load_preference_drafts(account) -> list[PreferenceDraft]:
+    """Load the signed-in organizer's durable group-planning drafts."""
 
     if account is None:
-        return
+        return []
     try:
-        drafts = list_preference_drafts(account.access_token)
+        return list_preference_drafts(account.access_token)
     except Exception:
         st.warning(
             "Group preference drafts are unavailable. Apply the latest Supabase "
             "schema to enable named invitations.",
             icon=":material/group_off:",
         )
-        return
+        return []
+
+
+def _render_preference_drafts(drafts: list[PreferenceDraft]) -> None:
+    """Show group setups that have not become saved trips yet."""
+
     if not drafts:
         return
-
-    with st.expander(f"Group preference drafts ({len(drafts)})", expanded=True):
-        st.caption(
-            "These are trips still collecting named traveler responses. They are "
-            "not saved itineraries yet."
-        )
-        for draft in drafts:
-            complete_count = sum(slot.is_complete for slot in draft.slots)
-            with st.container(border=True):
-                summary_col, action_col = st.columns(
-                    [4, 1], vertical_alignment="center"
-                )
-                summary_col.markdown(f"**{draft.title}**")
-                summary_col.caption(
-                    f"{complete_count} of {len(draft.slots)} profiles ready"
-                )
-                action_col.button(
-                    "Review",
-                    key=f"resume-preference-draft-{draft.draft_id}",
-                    type="primary" if draft.is_ready else "secondary",
-                    on_click=_resume_preference_draft,
-                    args=(draft,),
-                )
+    st.markdown("#### Trips collecting preferences")
+    for draft in drafts:
+        complete_count = sum(slot.is_complete for slot in draft.slots)
+        with st.container(border=True):
+            summary_col, action_col = st.columns(
+                [4, 1], vertical_alignment="center"
+            )
+            summary_col.markdown(f"**{draft.title}**")
+            summary_col.caption(
+                f"{complete_count} of {len(draft.slots)} profiles ready"
+            )
+            action_col.button(
+                "Review",
+                key=f"resume-preference-draft-{draft.draft_id}",
+                type="primary" if draft.is_ready else "secondary",
+                on_click=_resume_preference_draft,
+                args=(draft,),
+            )
 
 
 def _dismiss_trip_notice(key: str) -> None:
@@ -185,6 +189,7 @@ def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> Non
     st.session_state.saved_itinerary_version_id = restored_state.get(
         "active_itinerary_version_id"
     )
+    st.session_state.active_preference_draft_id = record.preference_draft_id
     st.session_state.saved_trip_read_mode = False
     st.session_state.planner_step = "results"
     st.session_state.app_workspace = "Plan a trip"
@@ -218,6 +223,7 @@ def _start_new_itinerary(record: SavedTrip) -> None:
     st.session_state.saved_trip_owner_id = record.owner_id
     st.session_state.saved_trip_access_role = record.access_role
     st.session_state.saved_itinerary_version_id = None
+    st.session_state.active_preference_draft_id = record.preference_draft_id
     st.session_state.saved_trip_read_mode = False
     st.session_state.planner_step = "results"
     st.session_state.app_workspace = "Plan a trip"
@@ -777,36 +783,66 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
             )
 
 
-def render_saved_trips() -> None:
-    st.markdown('<div class="ts-section-label">Your saved plans</div>', unsafe_allow_html=True)
-    st.title("Pick up where you left off")
-    account = current_account_session()
-    st.caption(
-        "Signed-in plans are private and follow your account across devices."
-        if account
-        else "Plans in this active session stay private. Sign in to keep them across sessions and devices."
-    )
-    _render_persistent_trip_notices()
-    invited_record_key = _render_invitation_notice()
-    _render_preference_drafts(account)
-    if notice := st.session_state.pop(_SAVED_ITINERARY_FLASH_KEY, None):
-        st.toast(notice, icon=":material/check_circle:")
-    records = list_saved_trips(
-        st.session_state.feedback_session_id,
-        auth_access_token=(account.access_token if account else None),
-    )
-    if not records:
-        st.info(
-            "Save a plan from the results screen and it will appear here. "
-            + (
-                "Plans saved in another tab or expired session appear after you sign in."
-                if account is None
-                else "No plans are currently saved to this account."
-            ),
-            icon=":material/bookmark:",
-        )
-        return
+def _legacy_group_matches(
+    records: list[SavedTrip],
+    drafts: list[PreferenceDraft],
+) -> dict[str, PreferenceDraft]:
+    """Find unambiguous exact matches saved before draft origins were recorded."""
 
+    explicitly_linked_ids = {
+        record.preference_draft_id
+        for record in records
+        if record.preference_draft_id is not None
+    }
+    candidates = [
+        record
+        for record in records
+        if record.is_owner and record.preference_draft_id is None
+    ]
+    matches: dict[str, PreferenceDraft] = {}
+    for draft in drafts:
+        if not draft.is_ready or draft.draft_id in explicitly_linked_ids:
+            continue
+        matching_records = [
+            record
+            for record in candidates
+            if record.trip == draft.to_trip_request()
+            and record.record_key not in matches
+        ]
+        if len(matching_records) == 1:
+            matches[matching_records[0].record_key] = draft
+    return matches
+
+
+def _trip_option_label(record: SavedTrip, version_count: int) -> str:
+    noun = "itinerary" if version_count == 1 else "itineraries"
+    sharing = (
+        " · shared to collaborate"
+        if record.access_role == "collaborator"
+        else " · shared with you"
+        if not record.is_owner
+        else " · planned together"
+        if record.preference_draft_id
+        else ""
+    )
+    return f"{record.title} · {version_count} saved {noun}{sharing}"
+
+
+def _render_saved_trip_collection(
+    records: list[SavedTrip],
+    *,
+    selector_label: str,
+    selector_key: str,
+    invited_record_key: str | None = None,
+    legacy_matches: dict[str, PreferenceDraft] | None = None,
+    account=None,
+) -> None:
+    """Render one independently selectable group of saved trips."""
+
+    if not records:
+        st.caption("No saved trips in this section yet.")
+        return
+    legacy_matches = legacy_matches or {}
     records_by_key = {record.record_key: record for record in records}
     versions_by_record_key = {
         record.record_key: itinerary_versions(
@@ -816,26 +852,19 @@ def render_saved_trips() -> None:
         for record in records
     }
     trip_labels = {
-        record.record_key: (
-            f"{record.title} · {len(versions_by_record_key[record.record_key])} saved "
-            f"{'itinerary' if len(versions_by_record_key[record.record_key]) == 1 else 'itineraries'}"
-            + (
-                " · shared to collaborate"
-                if record.access_role == "collaborator"
-                else " · shared with you"
-                if not record.is_owner
-                else ""
-            )
+        record.record_key: _trip_option_label(
+            record,
+            len(versions_by_record_key[record.record_key]),
         )
         for record in records
     }
     if invited_record_key in records_by_key:
-        st.session_state["saved-trip-selector"] = invited_record_key
+        st.session_state[selector_key] = invited_record_key
     selected_record_key = st.selectbox(
-        "Choose a trip",
+        selector_label,
         options=list(records_by_key),
         format_func=trip_labels.__getitem__,
-        key="saved-trip-selector",
+        key=selector_key,
         persist_state="session",
     )
     record = records_by_key[selected_record_key]
@@ -863,6 +892,41 @@ def render_saved_trips() -> None:
                 "itineraries, while only the owner can change this trip.",
                 icon=":material/visibility:",
             )
+        elif record.preference_draft_id:
+            st.info(
+                "Planned together · this trip was built from named traveler "
+                "preferences.",
+                icon=":material/groups:",
+            )
+        elif draft := legacy_matches.get(record.record_key):
+            st.info(
+                "This trip exactly matches a completed group draft created before "
+                "TripSync started recording origins.",
+                icon=":material/join_inner:",
+            )
+            if st.button(
+                "Confirm group link",
+                key=f"confirm-group-link-{record.record_key}",
+                icon=":material/link:",
+            ):
+                try:
+                    if account is None:
+                        raise ValueError("Sign in to link this group trip")
+                    link_saved_trip_to_preference_draft(
+                        record,
+                        draft,
+                        account.access_token,
+                    )
+                except Exception:
+                    st.error(
+                        "TripSync could not link this saved trip to its group draft.",
+                        icon=":material/error:",
+                    )
+                else:
+                    st.session_state[_SAVED_ITINERARY_FLASH_KEY] = (
+                        f"Linked {record.title} to its group planning history."
+                    )
+                    st.rerun()
         _render_trip_brief(record)
         if record.can_create_itineraries:
             with st.container(horizontal=True):
@@ -945,4 +1009,98 @@ def render_saved_trips() -> None:
             record,
             active_version,
             version_ids.index(active_version_id),
+        )
+
+
+def render_saved_trips() -> None:
+    st.markdown(
+        '<div class="ts-section-label">Your saved plans</div>',
+        unsafe_allow_html=True,
+    )
+    st.title("Pick up where you left off")
+    account = current_account_session()
+    st.caption(
+        "Signed-in plans are private and follow your account across devices."
+        if account
+        else "Plans in this active session stay private. Sign in to keep them "
+        "across sessions and devices."
+    )
+    _render_persistent_trip_notices()
+    invited_record_key = _render_invitation_notice()
+    if notice := st.session_state.pop(_SAVED_ITINERARY_FLASH_KEY, None):
+        st.toast(notice, icon=":material/check_circle:")
+
+    drafts = _load_preference_drafts(account)
+    records = list_saved_trips(
+        st.session_state.feedback_session_id,
+        auth_access_token=(account.access_token if account else None),
+    )
+    legacy_matches = _legacy_group_matches(records, drafts)
+    group_records = [
+        record
+        for record in records
+        if record.is_group_plan or record.record_key in legacy_matches
+    ]
+    self_records = [
+        record
+        for record in records
+        if record not in group_records
+    ]
+    represented_draft_ids = {
+        draft_id
+        for record in group_records
+        if (draft_id := record.preference_draft_id)
+    } | {draft.draft_id for draft in legacy_matches.values()}
+    active_drafts = [
+        draft for draft in drafts if draft.draft_id not in represented_draft_ids
+    ]
+
+    group_count = len(active_drafts) + len(group_records)
+    with st.expander(
+        f"Group planning ({group_count})",
+        expanded=bool(group_count),
+    ):
+        st.caption(
+            "Trips collecting named preferences and itineraries planned with "
+            "other people."
+        )
+        _render_preference_drafts(active_drafts)
+        if active_drafts and group_records:
+            st.divider()
+        if group_records:
+            st.markdown("#### Group trips and itineraries")
+        _render_saved_trip_collection(
+            group_records,
+            selector_label="Choose a group trip",
+            selector_key="group-trip-selector",
+            invited_record_key=invited_record_key,
+            legacy_matches=legacy_matches,
+            account=account,
+        )
+
+    with st.expander(
+        f"Self planning ({len(self_records)})",
+        expanded=not group_count,
+    ):
+        st.caption(
+            "Trips you planned by entering everyone’s preferences yourself."
+        )
+        _render_saved_trip_collection(
+            self_records,
+            selector_label="Choose a self-planned trip",
+            selector_key="self-trip-selector",
+            invited_record_key=invited_record_key,
+            account=account,
+        )
+
+    if not records and not drafts:
+        st.info(
+            "Save a plan from the results screen and it will appear here. "
+            + (
+                "Plans saved in another tab or expired session appear after you "
+                "sign in."
+                if account is None
+                else "No plans are currently saved to this account."
+            ),
+            icon=":material/bookmark:",
         )

@@ -15,12 +15,16 @@ from src.invitations import invitation_token_hash
 from src.models import TravelerProfile, TripBasics
 from src.preference_invitations import (
     PreferenceAssignment,
+    PreferenceDraft,
+    PreferenceSlot,
     build_preference_invitation_url,
     claim_preference_invitation,
     create_preference_draft,
+    link_saved_trip_to_preference_draft,
     list_preference_drafts,
     submit_preference_profile,
 )
+from src.trips import PREFERENCE_DRAFT_STATE_KEY, SavedTrip
 
 
 def _trip() -> TripBasics:
@@ -184,6 +188,46 @@ class PreferenceInvitationTests(unittest.TestCase):
         self.assertEqual(
             [traveler.name for traveler in drafts[0].to_trip_request().travelers],
             ["Coco", "Sam"],
+        )
+
+    def test_links_an_exact_legacy_saved_trip_to_its_group_draft(self) -> None:
+        organizer = _profile("Coco")
+        invitee = _profile("Sam")
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=_trip(),
+            slots=(
+                PreferenceSlot("a" * 32, "Coco", 0, organizer, "owner-user"),
+                PreferenceSlot("b" * 32, "Sam", 1, invitee, "member-user"),
+            ),
+            updated_at="2026-09-02T12:00:00+00:00",
+        )
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=draft.to_trip_request(),
+            state={"itinerary_versions": []},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+        )
+        with patch(
+            "src.preference_invitations.update_authenticated"
+        ) as update_mock:
+            linked = link_saved_trip_to_preference_draft(
+                record, draft, "access-token"
+            )
+
+        self.assertEqual(linked.preference_draft_id, "d" * 32)
+        update_row = update_mock.call_args.args[1]
+        self.assertEqual(
+            update_row["state_json"][PREFERENCE_DRAFT_STATE_KEY],
+            "d" * 32,
+        )
+        self.assertEqual(
+            update_mock.call_args.kwargs["filters"],
+            {"session_id": "owner-user", "trip_id": "saved-trip"},
         )
 
 

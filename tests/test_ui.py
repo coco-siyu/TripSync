@@ -21,7 +21,7 @@ from src.llm import NarrationGenerationError
 from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
 from src.catalog import load_curated_activities
 from src.search import retrieve_activities as real_retrieve_activities
-from src.trips import SavedTrip
+from src.trips import PREFERENCE_DRAFT_STATE_KEY, SavedTrip
 from src.invitations import SharedTripIdentity, TripInvitation
 from src.preference_invitations import (
     PreferenceAssignment,
@@ -853,7 +853,9 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.run(timeout=10)
 
             trip_selector = next(
-                box for box in app.selectbox if box.label == "Choose a trip"
+                box
+                for box in app.selectbox
+                if box.label == "Choose a self-planned trip"
             )
             self.assertEqual(len(trip_selector.options), 2)
             self.assertEqual(
@@ -868,7 +870,9 @@ class StreamlitInteractionTests(unittest.TestCase):
             )
 
             next(
-                box for box in app.selectbox if box.label == "Choose a trip"
+                box
+                for box in app.selectbox
+                if box.label == "Choose a self-planned trip"
             ).select(":rome-trip").run(timeout=10)
             next(
                 button
@@ -882,6 +886,86 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertEqual(app.session_state["selected_activity_ids"], [])
         self.assertFalse(app.session_state["auto_select_must_dos"])
         self.assertIsNone(app.session_state["itinerary_plan"])
+
+    def test_my_trips_separates_group_and_self_planning(self) -> None:
+        trip = build_sample_trip()
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=TripBasics.model_validate(
+                trip.model_dump(mode="json", exclude={"travelers"})
+            ),
+            slots=tuple(
+                PreferenceSlot(
+                    chr(97 + index) * 32,
+                    traveler.name,
+                    index,
+                    traveler,
+                    "owner-user" if index == 0 else "member-user",
+                )
+                for index, traveler in enumerate(trip.travelers)
+            ),
+            updated_at="2026-09-02T12:00:00+00:00",
+        )
+        group_record = SavedTrip(
+            trip_id="group-trip",
+            title="Rome with friends",
+            trip=trip,
+            state={PREFERENCE_DRAFT_STATE_KEY: draft.draft_id},
+            updated_at="2026-09-02T13:00:00+00:00",
+            owner_id="owner-user",
+        )
+        self_record = SavedTrip(
+            trip_id="self-trip",
+            title="Rome by myself",
+            trip=trip,
+            state={},
+            updated_at="2026-09-02T12:30:00+00:00",
+            owner_id="owner-user",
+        )
+        with (
+            patch(
+                "src.trips_ui.list_saved_trips",
+                return_value=[group_record, self_record],
+            ),
+            patch(
+                "src.trips_ui.list_preference_drafts",
+                return_value=[draft],
+            ),
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertTrue(
+            any(item.label == "Group planning (1)" for item in app.expander)
+        )
+        self.assertTrue(
+            any(item.label == "Self planning (1)" for item in app.expander)
+        )
+        self.assertTrue(
+            any(box.label == "Choose a group trip" for box in app.selectbox)
+        )
+        self.assertTrue(
+            any(
+                box.label == "Choose a self-planned trip"
+                for box in app.selectbox
+            )
+        )
+        self.assertFalse(any(button.label == "Review" for button in app.button))
+        self.assertTrue(
+            any("Planned together" in item.value for item in app.info)
+        )
 
     def test_signed_in_invitee_claims_a_read_only_trip(self) -> None:
         trip = build_sample_trip()
@@ -1528,6 +1612,24 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertEqual(
             saved_state["itinerary_plan"],
             app.session_state["itinerary_plan"],
+        )
+
+    def test_group_itinerary_save_records_its_preference_draft_origin(self) -> None:
+        app = self._sample_results_app()
+        app.session_state["active_preference_draft_id"] = "d" * 32
+        app.button(key="build-itinerary").click().run()
+
+        with patch("src.ui.save_trip") as save:
+            save.return_value = SimpleNamespace(
+                trip_id="group-trip",
+                title="Rome, Italy · 3 days",
+            )
+            app.button(key="save-itinerary").click().run()
+
+        saved_state = save.call_args.args[1]
+        self.assertEqual(
+            saved_state[PREFERENCE_DRAFT_STATE_KEY],
+            "d" * 32,
         )
 
     def test_itinerary_offers_a_grounded_adjustment_request(self) -> None:

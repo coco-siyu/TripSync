@@ -74,3 +74,9 @@ Raw invitation tokens are never stored. Supabase stores a SHA-256 hash, binds a
 slot to the first authenticated account that claims its link, and restricts
 profile updates to that account. Preference invitations do not create viewer or
 collaborator access to saved itineraries.
+
+When a draft becomes a saved trip, its 32-character `draft_id` is stored as
+`preference_draft_id` in the saved trip's root `state_json`. This origin is kept
+outside individual itinerary snapshots and is preserved whenever later versions
+are saved. It lets My trips distinguish durable group planning from self-entered
+planning without duplicating a linked draft and saved trip.

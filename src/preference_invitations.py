@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -11,7 +11,12 @@ from uuid import uuid4
 
 from src.invitations import invitation_token_hash
 from src.models import TravelerProfile, TripBasics, TripRequest
-from src.supabase_store import rpc_authenticated, select_authenticated
+from src.supabase_store import (
+    rpc_authenticated,
+    select_authenticated,
+    update_authenticated,
+)
+from src.trips import PREFERENCE_DRAFT_STATE_KEY, SavedTrip
 
 
 @dataclass(frozen=True)
@@ -342,3 +347,31 @@ def get_preference_draft(draft_id: str, access_token: str) -> PreferenceDraft:
         if draft.draft_id == draft_id:
             return draft
     raise LookupError("Preference draft was not found")
+
+
+def link_saved_trip_to_preference_draft(
+    record: SavedTrip,
+    draft: PreferenceDraft,
+    access_token: str,
+) -> SavedTrip:
+    """Durably identify a legacy saved trip as the result of its exact draft."""
+
+    if not access_token.strip() or not record.is_owner:
+        raise ValueError("A signed-in trip owner is required")
+    if not record.owner_id or record.owner_id != draft.owner_id:
+        raise ValueError("The trip and preference draft must have the same owner")
+    if record.trip != draft.to_trip_request():
+        raise ValueError("The saved trip does not match this preference draft")
+
+    updated_at = datetime.now(UTC).isoformat()
+    updated_state = {
+        **record.state,
+        PREFERENCE_DRAFT_STATE_KEY: draft.draft_id,
+    }
+    update_authenticated(
+        "saved_trips",
+        {"state_json": updated_state, "updated_at": updated_at},
+        access_token,
+        filters={"session_id": record.owner_id, "trip_id": record.trip_id},
+    )
+    return replace(record, state=updated_state, updated_at=updated_at)

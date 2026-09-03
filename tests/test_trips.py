@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from src.models import ItineraryPlan, TripRequest
 from src.trips import (
+    PREFERENCE_DRAFT_STATE_KEY,
     SavedTrip,
     claim_anonymous_trips,
     itinerary_versions,
@@ -270,6 +271,32 @@ class SavedTripsTests(unittest.TestCase):
         self.assertEqual(updated.trip_id, saved.trip_id)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].state["selected_activity_ids"], ["rome_pantheon", "rome_forum"])
+
+    def test_later_saves_preserve_the_group_preference_origin(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        draft_id = "d" * 32
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "trips.db"
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
+                saved = save_trip(
+                    trip,
+                    {
+                        "selected_activity_ids": ["rome_pantheon"],
+                        PREFERENCE_DRAFT_STATE_KEY: draft_id,
+                    },
+                )
+                save_trip(
+                    trip,
+                    {"selected_activity_ids": ["rome_forum"]},
+                    trip_id=saved.trip_id,
+                )
+                record = list_saved_trips()[0]
+
+        self.assertEqual(record.preference_draft_id, draft_id)
+        self.assertTrue(record.is_group_plan)
 
     def test_local_saved_trips_are_isolated_by_browser_session(self) -> None:
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
