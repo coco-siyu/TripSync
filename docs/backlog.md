@@ -7,6 +7,10 @@ dependency and intended delivery sequence.
 
 ### P0 — Models and persistence
 
+Current progress: dates, stay area, traveler budget/pace/time fields, and
+backward-compatible group planning defaults are implemented. Generated
+itineraries now persist broad time blocks; draft/published status remains.
+
 - [ ] **MVP-01: Add backward-compatible planning fields**
   - Add start and end dates, validate one to five consecutive full days, and
     migrate older day-count-only trips safely.
@@ -24,9 +28,12 @@ dependency and intended delivery sequence.
 
 ### P0 — Core group flow
 
-- [ ] **MVP-03: Simplify the traveler preference form**
-  - Require interests, budget band, walking comfort, and dietary needs.
-  - Make must-dos, pace, preferred time, and the short note optional.
+Current progress: the shared compact traveler form is implemented for both
+collection paths, and organizers can build once two profiles are ready.
+
+- [x] **MVP-03: Simplify the traveler preference form**
+  - Require interests, budget band, and walking comfort.
+  - Make dietary needs, must-dos, pace, preferred time, and the short note optional.
   - Use one concise submitted form with stable widget keys.
   - Depends on MVP-01.
 
@@ -38,7 +45,7 @@ dependency and intended delivery sequence.
 
 ### P0 — Planner and publishing
 
-- [ ] **MVP-05: Add block-based scheduling**
+- [x] **MVP-05: Add block-based scheduling**
   - Place activities into morning, afternoon, or evening blocks.
   - Preserve pace, duration, transition, duplication, and capacity guardrails.
   - Keep the data model extensible for fixed reservation times later.

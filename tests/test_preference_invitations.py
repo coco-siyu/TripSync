@@ -190,6 +190,27 @@ class PreferenceInvitationTests(unittest.TestCase):
             ["Coco", "Sam"],
         )
 
+    def test_organizer_can_build_before_every_invitee_replies(self) -> None:
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=_trip(),
+            slots=(
+                PreferenceSlot("a" * 32, "Coco", 0, _profile("Coco"), "owner-user"),
+                PreferenceSlot("b" * 32, "Sam", 1, _profile("Sam"), "member-user"),
+                PreferenceSlot("c" * 32, "Alex", 2),
+            ),
+            updated_at="2026-09-02T12:00:00+00:00",
+        )
+
+        self.assertFalse(draft.is_ready)
+        self.assertTrue(draft.can_build)
+        self.assertEqual(
+            [profile.name for profile in draft.to_trip_request().travelers],
+            ["Coco", "Sam"],
+        )
+
     def test_links_an_exact_legacy_saved_trip_to_its_group_draft(self) -> None:
         organizer = _profile("Coco")
         invitee = _profile("Sam")

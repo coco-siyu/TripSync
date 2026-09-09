@@ -193,7 +193,8 @@ def _score_budget(
     activity: Activity,
     trip: TripRequest,
 ) -> tuple[float, bool, str | None]:
-    difference = _BUDGET_RANK[activity.budget_level] - _BUDGET_RANK[trip.budget_level]
+    group_budget = trip.planning_budget_level
+    difference = _BUDGET_RANK[activity.budget_level] - _BUDGET_RANK[group_budget]
     if difference <= 0:
         return 100.0, True, None
     if difference == 1:
@@ -201,13 +202,13 @@ def _score_budget(
             50.0,
             False,
             f"Budget trade-off: activity is {activity.budget_level.value}, "
-            f"above the group's {trip.budget_level.value} budget.",
+            f"above the group's {group_budget.value} budget.",
         )
     return (
         0.0,
         False,
         f"Budget conflict: activity is {activity.budget_level.value}, "
-        f"well above the group's {trip.budget_level.value} budget.",
+        f"well above the group's {group_budget.value} budget.",
     )
 
 

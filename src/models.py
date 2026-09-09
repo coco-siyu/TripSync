@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import (
@@ -39,6 +39,22 @@ class TripPace(str, Enum):
     RELAXED = "relaxed"
     BALANCED = "balanced"
     PACKED = "packed"
+
+
+class TimePreference(str, Enum):
+    """Optional part of the day a traveler generally prefers."""
+
+    MORNING = "morning"
+    EVENING = "evening"
+    FLEXIBLE = "flexible"
+
+
+class TimeBlock(str, Enum):
+    """Broad itinerary period without claiming an exact reservation time."""
+
+    MORNING = "morning"
+    AFTERNOON = "afternoon"
+    EVENING = "evening"
 
 
 class ItinerarySource(str, Enum):
@@ -95,8 +111,12 @@ class TravelerProfile(TripSyncModel):
     name: str = Field(min_length=1, max_length=80)
     interests: list[str] = Field(min_length=1, max_length=12)
     walking_tolerance: WalkingLevel
+    daily_budget_level: BudgetLevel | None = None
     food_restrictions: list[str] = Field(default_factory=list, max_length=12)
     must_do_activities: list[str] = Field(default_factory=list, max_length=12)
+    pace_preference: TripPace | None = None
+    time_preference: TimePreference | None = None
+    note: str | None = Field(default=None, min_length=1, max_length=300)
 
     @field_validator(
         "interests",
@@ -124,6 +144,35 @@ class TripBasics(TripSyncModel):
     days: int = Field(ge=1, le=5)
     budget_level: BudgetLevel
     pace: TripPace
+    start_date: date | None = None
+    end_date: date | None = None
+    accommodation_neighborhood: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+    )
+
+    @field_validator("accommodation_neighborhood", mode="before")
+    @classmethod
+    def normalize_optional_neighborhood(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        return value.strip() or None
+
+    @model_validator(mode="after")
+    def validate_trip_dates(self) -> TripBasics:
+        if self.start_date is None and self.end_date is None:
+            return self
+        if self.start_date is None or self.end_date is None:
+            raise ValueError("start and end dates must be provided together")
+        dated_days = (self.end_date - self.start_date).days + 1
+        if dated_days < 1:
+            raise ValueError("end date cannot be before start date")
+        if dated_days > 5:
+            raise ValueError("trip dates cannot span more than five days")
+        if dated_days != self.days:
+            raise ValueError("trip dates must match the selected number of days")
+        return self
 
 
 class TripRequest(TripBasics):
@@ -137,6 +186,45 @@ class TripRequest(TripBasics):
         if len(normalized_names) != len(set(normalized_names)):
             raise ValueError("traveler names must be unique")
         return self
+
+    @property
+    def planning_budget_level(self) -> BudgetLevel:
+        """Return the group's upper-middle submitted budget, with legacy fallback."""
+
+        ranks = {
+            BudgetLevel.FREE: 0,
+            BudgetLevel.LOW: 1,
+            BudgetLevel.MODERATE: 2,
+            BudgetLevel.HIGH: 3,
+        }
+        submitted = sorted(
+            (
+                traveler.daily_budget_level
+                for traveler in self.travelers
+                if traveler.daily_budget_level is not None
+            ),
+            key=ranks.__getitem__,
+        )
+        return submitted[len(submitted) // 2] if submitted else self.budget_level
+
+    @property
+    def planning_pace(self) -> TripPace:
+        """Return the group's upper-middle submitted pace, with legacy fallback."""
+
+        ranks = {
+            TripPace.RELAXED: 0,
+            TripPace.BALANCED: 1,
+            TripPace.PACKED: 2,
+        }
+        submitted = sorted(
+            (
+                traveler.pace_preference
+                for traveler in self.travelers
+                if traveler.pace_preference is not None
+            ),
+            key=ranks.__getitem__,
+        )
+        return submitted[len(submitted) // 2] if submitted else self.pace
 
 
 class Activity(TripSyncModel):
@@ -248,6 +336,7 @@ class ScheduledActivity(TripSyncModel):
     activity_id: str = Field(pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
     activity_name: str = Field(min_length=1, max_length=160)
     duration_hours: float = Field(gt=0, le=12)
+    time_block: TimeBlock | None = None
     source: ItinerarySource
     must_do_owners: list[str] = Field(default_factory=list, max_length=6)
     traveler_names: list[str] = Field(default_factory=list, max_length=6)
@@ -267,6 +356,25 @@ class ItineraryDay(TripSyncModel):
 
     @model_validator(mode="after")
     def validate_daily_totals(self) -> ItineraryDay:
+        time_blocks = [activity.time_block for activity in self.activities]
+        if any(block is not None for block in time_blocks) and any(
+            block is None for block in time_blocks
+        ):
+            raise ValueError("time blocks must cover every activity in a day")
+        if time_blocks and all(block is not None for block in time_blocks):
+            block_order = {
+                TimeBlock.MORNING: 0,
+                TimeBlock.AFTERNOON: 1,
+                TimeBlock.EVENING: 2,
+            }
+            order = [
+                block_order[block]
+                for block in time_blocks
+                if block is not None
+            ]
+            if order != sorted(order):
+                raise ValueError("time blocks must follow the day's activity order")
+
         activity_total = round(
             sum(activity.duration_hours for activity in self.activities),
             2,

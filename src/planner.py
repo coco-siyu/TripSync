@@ -12,6 +12,7 @@ from src.models import (
     ItineraryPlan,
     ItinerarySource,
     ScheduledActivity,
+    TimeBlock,
     TripPace,
     TripRequest,
     UnscheduledActivity,
@@ -165,6 +166,46 @@ def _route_order(
 
     unlocated = [scheduled for scheduled in activities if scheduled not in located]
     return [*ordered, *unlocated]
+
+
+def _assign_time_blocks(
+    activities: Sequence[ScheduledActivity],
+) -> list[ScheduledActivity]:
+    """Apply broad, ordered day parts without inventing exact start times."""
+
+    total = len(activities)
+    if total == 0:
+        return []
+    if total == 1:
+        blocks = [TimeBlock.MORNING]
+    elif total == 2:
+        blocks = [TimeBlock.MORNING, TimeBlock.AFTERNOON]
+    else:
+        blocks = [
+            TimeBlock.MORNING,
+            *([TimeBlock.AFTERNOON] * (total - 2)),
+            TimeBlock.EVENING,
+        ]
+    return [
+        activity.model_copy(update={"time_block": block})
+        for activity, block in zip(activities, blocks, strict=True)
+    ]
+
+
+def itinerary_time_block_label(
+    activity: ScheduledActivity,
+    position: int,
+    total: int,
+) -> str:
+    """Return one consistent label, including for legacy saved plans."""
+
+    if activity.time_block is not None:
+        return activity.time_block.value.title()
+    if total <= 1 or position == 0:
+        return "Morning"
+    if total >= 3 and position == total - 1:
+        return "Evening"
+    return "Afternoon"
 
 
 def route_summary_for_day(
@@ -386,7 +427,7 @@ def build_itinerary(
     }
     owners_by_id = must_do_owners_by_activity_id or {}
     excluded_ids = set(excluded_activity_ids)
-    rule = PACE_RULES[trip.pace]
+    rule = PACE_RULES[trip.planning_pace]
     days = [
         _DayState(day_number=day_number)
         for day_number in range(1, trip.days + 1)
@@ -461,7 +502,9 @@ def build_itinerary(
                 scheduled_or_selected_ids.add(activity_id)
 
     for day in days:
-        day.activities = _route_order(day.activities, activity_by_id)
+        day.activities = _assign_time_blocks(
+            _route_order(day.activities, activity_by_id)
+        )
 
     itinerary_days = [
         ItineraryDay(
@@ -478,7 +521,7 @@ def build_itinerary(
     return ItineraryPlan(
         destination=trip.destination,
         country=trip.country,
-        pace=trip.pace,
+        pace=trip.planning_pace,
         auto_fill=auto_fill,
         days=itinerary_days,
         unscheduled=unscheduled,
@@ -583,7 +626,9 @@ def replace_itinerary_activity(
     updated_activities = list(remaining_activities)
     if replacement is not None:
         updated_activities.insert(target_position, replacement)
-    updated_activities = _route_order(updated_activities, activity_by_id)
+    updated_activities = _assign_time_blocks(
+        _route_order(updated_activities, activity_by_id)
+    )
 
     activity_hours = round(
         sum(activity.duration_hours for activity in updated_activities),
@@ -697,7 +742,9 @@ def apply_itinerary_change_proposal(
         else:
             updated_activities.insert(target_position, replacement)
 
-    updated_activities = _route_order(updated_activities, activity_by_id)
+    updated_activities = _assign_time_blocks(
+        _route_order(updated_activities, activity_by_id)
+    )
 
     rule = PACE_RULES[plan.pace]
     activity_hours = round(

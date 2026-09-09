@@ -18,6 +18,7 @@ from src.invitations import (
     revoke_trip_sharing,
 )
 from src.models import ItineraryPlan
+from src.planner import itinerary_time_block_label
 from src.preference_invitations import (
     PreferenceDraft,
     link_saved_trip_to_preference_draft,
@@ -746,7 +747,11 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
                 if day.pace_override_approved:
                     st.warning("This day exceeds its recommended pace.", icon=":material/schedule:")
                 for index, activity in enumerate(day.activities):
-                    slot = ("Morning", "Midday", "Afternoon", "Evening")[min(index, 3)]
+                    slot = itinerary_time_block_label(
+                        activity,
+                        index,
+                        len(day.activities),
+                    )
                     st.markdown(f"**{slot} · {activity.activity_name}**")
                     metadata = [
                         _hours_label(activity.duration_hours),
@@ -825,7 +830,12 @@ def _trip_option_label(record: SavedTrip, version_count: int) -> str:
         if record.preference_draft_id
         else ""
     )
-    return f"{record.title} · {version_count} saved {noun}{sharing}"
+    saved_at = record.updated_at[:16].replace("T", " ")
+    saved_label = f" · saved {saved_at} UTC" if saved_at else ""
+    return (
+        f"{record.title} · {version_count} saved {noun}"
+        f"{saved_label}{sharing}"
+    )
 
 
 def _render_saved_trip_collection(

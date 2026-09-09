@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from datetime import date, timedelta
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -37,8 +38,10 @@ from src.models import (
     ItinerarySource,
     RejectedActivity,
     RejectionReason,
+    TimePreference,
     TravelerProfile,
     TripBasics,
+    TripPace,
     TripRequest,
 )
 from src.must_dos import UnmatchedMustDo, resolve_must_dos
@@ -50,6 +53,7 @@ from src.narration import (
 from src.planner import (
     apply_itinerary_change_proposal,
     build_itinerary,
+    itinerary_time_block_label,
     replace_itinerary_activity,
     route_summary_for_day,
 )
@@ -242,18 +246,7 @@ def build_trip_request(
 ) -> TripRequest:
     """Validate UI values using the shared application models."""
 
-    travelers = [
-        TravelerProfile(
-            name=traveler["name"],
-            interests=traveler["interests"],
-            walking_tolerance=traveler["walking_tolerance"],
-            food_restrictions=traveler.get("food_restrictions", []),
-            must_do_activities=parse_tag_text(
-                traveler.get("must_do_activities", "")
-            ),
-        )
-        for traveler in traveler_inputs
-    ]
+    travelers = [_traveler_profile_from_input(values) for values in traveler_inputs]
     return TripRequest(**trip_basics, travelers=travelers)
 
 
@@ -267,21 +260,30 @@ def build_sample_trip() -> TripRequest:
             "days": 3,
             "budget_level": "moderate",
             "pace": "balanced",
+            "start_date": date.today(),
+            "end_date": date.today() + timedelta(days=2),
+            "accommodation_neighborhood": "Centro Storico",
         },
         [
             {
                 "name": "Coco",
                 "interests": ["history", "food", "photography"],
                 "walking_tolerance": "moderate",
+                "daily_budget_level": "moderate",
                 "food_restrictions": ["vegetarian"],
                 "must_do_activities": "Colosseum",
+                "pace_preference": "balanced",
+                "time_preference": "morning",
             },
             {
                 "name": "Sam",
                 "interests": ["art", "architecture", "relaxation"],
                 "walking_tolerance": "low",
+                "daily_budget_level": "moderate",
                 "food_restrictions": [],
                 "must_do_activities": "Borghese Gallery",
+                "pace_preference": "relaxed",
+                "time_preference": "evening",
             },
         ],
     )
@@ -317,6 +319,9 @@ def _initialize_state() -> None:
             "days": 3,
             "budget_level": "moderate",
             "pace": "balanced",
+            "start_date": date.today().isoformat(),
+            "end_date": (date.today() + timedelta(days=2)).isoformat(),
+            "accommodation_neighborhood": None,
         },
         "traveler_count": 2,
         "preference_collection_mode": "Together now",
@@ -380,11 +385,15 @@ def _start_new_trip() -> None:
         "days": 3,
         "budget_level": "moderate",
         "pace": "balanced",
+        "start_date": date.today().isoformat(),
+        "end_date": (date.today() + timedelta(days=2)).isoformat(),
+        "accommodation_neighborhood": None,
     }
     st.session_state.traveler_count = 2
     st.session_state.preference_collection_mode = "Together now"
     st.session_state.active_preference_draft_id = None
     st.session_state.preference_invite_links = {}
+    st.session_state.pop(SAVED_TRIP_CONFIRMATION_KEY, None)
     st.session_state.pop(PREFERENCE_ASSIGNMENT_KEY, None)
     st.session_state.trip_request = None
     _reset_activity_selections()
@@ -407,8 +416,12 @@ def _start_new_trip() -> None:
         "traveler_interests_",
         "traveler_custom_interests_",
         "traveler_walking_",
+        "traveler_budget_",
         "traveler_food_",
         "traveler_must_do_",
+        "traveler_pace_",
+        "traveler_time_",
+        "traveler_note_",
         "invitee_name_",
         "invited-profile-",
     )
@@ -555,6 +568,24 @@ def _render_progress() -> None:
 
 def _render_trip_step() -> None:
     basics = st.session_state.trip_basics
+    today = date.today()
+
+    def saved_date(field: str, fallback: date) -> date:
+        value = basics.get(field)
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                pass
+        return fallback
+
+    saved_start = saved_date("start_date", today)
+    saved_end = saved_date(
+        "end_date",
+        saved_start + timedelta(days=int(basics.get("days", 3)) - 1),
+    )
     if "catalog_destination_index" not in st.session_state:
         st.session_state.catalog_destination_index = (
             load_packaged_destination_index()
@@ -605,30 +636,26 @@ def _render_trip_step() -> None:
             key="trip_destination_country",
             placeholder="e.g. Italy",
         )
+        if destination and str(destination).casefold() != "rome":
+            st.caption(
+                f"{destination} is available with limited catalog coverage. "
+                "Rome is the fully supported MVP destination."
+            )
 
         with st.form("trip_basics_form"):
-            days = st.slider(
-                "How many days?",
-                min_value=1,
-                max_value=5,
-                value=basics["days"],
-                help="The current MVP supports one-to-five-day trips.",
+            trip_dates = st.date_input(
+                "Trip dates",
+                value=(saved_start, saved_end),
+                help="Choose one to five consecutive full days.",
             )
-            budget_level = st.segmented_control(
-                "Shared activity budget",
-                ["free", "low", "moderate", "high"],
-                default=basics["budget_level"],
-                format_func=str.title,
-                required=True,
-                width="stretch",
-            )
-            pace = st.segmented_control(
-                "Preferred pace",
-                ["relaxed", "balanced", "packed"],
-                default=basics["pace"],
-                format_func=str.title,
-                required=True,
-                width="stretch",
+            accommodation_neighborhood = st.text_input(
+                "Where are you staying?",
+                value=basics.get("accommodation_neighborhood") or "",
+                placeholder="Optional · neighborhood or area",
+                help=(
+                    "This helps keep the route convenient. If blank, TripSync "
+                    "uses the city center as the planning anchor."
+                ),
             )
 
             submitted = st.form_submit_button(
@@ -644,18 +671,35 @@ def _render_trip_step() -> None:
                     "Choose a destination and enter its country before continuing.",
                     icon=":material/error:",
                 )
+            elif not isinstance(trip_dates, (tuple, list)) or len(trip_dates) != 2:
+                st.error("Choose both a start and end date.", icon=":material/error:")
             else:
-                st.session_state.trip_basics = {
-                    "destination": destination,
-                    "country": country,
-                    "days": days,
-                    "budget_level": budget_level,
-                    "pace": pace,
-                }
-                st.session_state.active_preference_draft_id = None
-                st.session_state.preference_invite_links = {}
-                st.session_state.planner_step = "travelers"
-                st.rerun()
+                start_date, end_date = trip_dates
+                days = (end_date - start_date).days + 1
+                if not 1 <= days <= 5:
+                    st.error(
+                        "The MVP supports trips from one to five full days.",
+                        icon=":material/error:",
+                    )
+                else:
+                    st.session_state.trip_basics = {
+                        "destination": destination,
+                        "country": country,
+                        "days": days,
+                        # Legacy fallbacks remain for older plans and incomplete
+                        # invited groups. Individual preferences drive planning.
+                        "budget_level": "moderate",
+                        "pace": "balanced",
+                        "start_date": start_date.isoformat(),
+                        "end_date": end_date.isoformat(),
+                        "accommodation_neighborhood": (
+                            accommodation_neighborhood.strip() or None
+                        ),
+                    }
+                    st.session_state.active_preference_draft_id = None
+                    st.session_state.preference_invite_links = {}
+                    st.session_state.planner_step = "travelers"
+                    st.rerun()
 
         if st.button(
             "Preview a sample group",
@@ -685,63 +729,165 @@ def _render_trip_step() -> None:
             st.rerun()
 
 
-def _traveler_input(index: int, *, heading: str | None = None) -> dict[str, Any]:
+def _traveler_input(
+    index: int,
+    *,
+    heading: str | None = None,
+    key_prefix: str | None = None,
+    fixed_name: str | None = None,
+    existing: TravelerProfile | None = None,
+) -> dict[str, Any]:
+    """Render the one traveler form used by both collection paths."""
+
     traveler_number = index + 1
+
+    def widget_key(field: str) -> str:
+        if key_prefix is not None:
+            return f"{key_prefix}_{field}"
+        return f"traveler_{field}_{index}"
+
+    defaults = {
+        widget_key("name"): fixed_name or (existing.name if existing else ""),
+        widget_key("interests"): (
+            [
+                interest
+                for interest in existing.interests
+                if interest in INTEREST_OPTIONS
+            ]
+            if existing
+            else []
+        ),
+        widget_key("custom_interests"): (
+            [
+                interest
+                for interest in existing.interests
+                if interest not in INTEREST_OPTIONS
+            ]
+            if existing
+            else []
+        ),
+        widget_key("walking"): (
+            existing.walking_tolerance.value if existing else "moderate"
+        ),
+        widget_key("budget"): (
+            existing.daily_budget_level.value
+            if existing and existing.daily_budget_level
+            else "moderate"
+        ),
+        widget_key("food"): list(existing.food_restrictions) if existing else [],
+        widget_key("must_do"): (
+            ", ".join(existing.must_do_activities) if existing else ""
+        ),
+        widget_key("pace"): (
+            existing.pace_preference.value
+            if existing and existing.pace_preference
+            else None
+        ),
+        widget_key("time"): (
+            existing.time_preference.value
+            if existing and existing.time_preference
+            else None
+        ),
+        widget_key("note"): existing.note if existing and existing.note else "",
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+
     with st.container(key=f"traveler-card-{traveler_number}"):
         st.subheader(heading or f"Traveler {traveler_number}")
         name = st.text_input(
             "Name",
-            key=f"traveler_name_{index}",
+            key=widget_key("name"),
             placeholder="Who is joining?",
+            disabled=fixed_name is not None,
         )
         interests = st.pills(
             "Interests",
             INTEREST_OPTIONS,
             selection_mode="multi",
-            key=f"traveler_interests_{index}",
-            help="Choose at least one interest.",
+            key=widget_key("interests"),
+            help="Choose one to five interests in total.",
             width="stretch",
         )
         custom_interests = st.multiselect(
             "Add your own interests",
             options=[],
-            key=f"traveler_custom_interests_{index}",
+            key=widget_key("custom_interests"),
             placeholder="Optional · type ‘Renaissance painting’ then press Enter",
             accept_new_options=True,
-            max_selections=12,
+            max_selections=5,
             help="Use a specific phrase when the preset interests do not describe the trip you want.",
             label_visibility="collapsed",
         )
         walking_tolerance = st.segmented_control(
             "Walking tolerance",
             ["low", "moderate", "high"],
-            default="moderate",
             format_func=str.title,
-            key=f"traveler_walking_{index}",
+            key=widget_key("walking"),
             required=True,
             width="stretch",
         )
-        food_restrictions = st.multiselect(
-            "Food restrictions",
-            FOOD_RESTRICTION_OPTIONS,
-            key=f"traveler_food_{index}",
-            placeholder="Optional · choose or type your own",
-            accept_new_options=True,
-            max_selections=12,
+        daily_budget_level = st.segmented_control(
+            "Daily budget per person",
+            ["low", "moderate", "high"],
+            format_func={
+                "low": "€50–100",
+                "moderate": "€100–175",
+                "high": "€175+",
+            }.get,
+            key=widget_key("budget"),
+            required=True,
+            width="stretch",
         )
-        must_do_activities = st.text_input(
-            "Must-do activities",
-            key=f"traveler_must_do_{index}",
-            placeholder="Optional · Colosseum, Vatican Museums",
-            help="Separate multiple activities with commas.",
-        )
+
+        with st.expander("Optional preferences"):
+            pace_preference = st.selectbox(
+                "Preferred pace",
+                [None, *[pace.value for pace in TripPace]],
+                format_func=lambda value: (
+                    "No preference" if value is None else str(value).title()
+                ),
+                key=widget_key("pace"),
+            )
+            time_preference = st.selectbox(
+                "Preferred time of day",
+                [None, *[preference.value for preference in TimePreference]],
+                format_func=lambda value: (
+                    "No preference" if value is None else str(value).title()
+                ),
+                key=widget_key("time"),
+            )
+            food_restrictions = st.multiselect(
+                "Dietary needs",
+                FOOD_RESTRICTION_OPTIONS,
+                key=widget_key("food"),
+                placeholder="Optional · choose or type your own",
+                accept_new_options=True,
+                max_selections=12,
+            )
+            must_do_activities = st.text_input(
+                "Must-do activities",
+                key=widget_key("must_do"),
+                placeholder="Optional · Colosseum, Vatican Museums",
+                help="Up to three, separated with commas.",
+            )
+            note = st.text_area(
+                "Anything else the organizer should know?",
+                key=widget_key("note"),
+                max_chars=300,
+                placeholder="Optional · I prefer quiet mornings or need regular breaks",
+            )
 
     return {
         "name": name,
         "interests": combine_interest_tags(interests or [], custom_interests),
         "walking_tolerance": walking_tolerance,
+        "daily_budget_level": daily_budget_level,
         "food_restrictions": food_restrictions,
         "must_do_activities": must_do_activities,
+        "pace_preference": pace_preference,
+        "time_preference": time_preference,
+        "note": note,
     }
 
 
@@ -755,14 +901,24 @@ def _traveler_profile_from_input(values: dict[str, Any]) -> TravelerProfile:
     """Validate one traveler form without requiring a complete group yet."""
 
     must_dos = values.get("must_do_activities", [])
+    interests = values.get("interests", [])
+    parsed_must_dos = (
+        parse_tag_text(must_dos) if isinstance(must_dos, str) else must_dos
+    )
+    if len(interests) > 5:
+        raise ValueError("Choose no more than five interests")
+    if len(parsed_must_dos) > 3:
+        raise ValueError("Add no more than three must-do activities")
     return TravelerProfile(
         name=values.get("name", ""),
-        interests=values.get("interests", []),
+        interests=interests,
         walking_tolerance=values.get("walking_tolerance", "moderate"),
+        daily_budget_level=values.get("daily_budget_level"),
         food_restrictions=values.get("food_restrictions", []),
-        must_do_activities=(
-            parse_tag_text(must_dos) if isinstance(must_dos, str) else must_dos
-        ),
+        must_do_activities=parsed_must_dos,
+        pace_preference=values.get("pace_preference"),
+        time_preference=values.get("time_preference"),
+        note=values.get("note") or None,
     )
 
 
@@ -945,9 +1101,17 @@ def _render_summary(trip: TripRequest, *, show_edit: bool = True) -> None:
 
         labels = [
             f"{len(trip.travelers)} travelers",
-            f"{trip.budget_level.value} budget",
-            f"{trip.pace.value} pace",
+            f"{trip.planning_budget_level.value} daily budget",
+            f"{trip.planning_pace.value} pace",
         ]
+        if trip.start_date and trip.end_date:
+            labels.insert(
+                0,
+                f"{trip.start_date:%b %d}–{trip.end_date:%b %d}",
+            )
+        labels.append(
+            f"Stay: {trip.accommodation_neighborhood or 'city center'}"
+        )
         st.markdown(_chip_row(labels), unsafe_allow_html=True)
         st.caption(
             " · ".join(
@@ -978,7 +1142,11 @@ def _render_draft_readiness(draft: PreferenceDraft) -> TripRequest | None:
         text=(
             "Everyone has replied."
             if draft.is_ready
-            else "Recommendations unlock when every named traveler has replied."
+            else (
+                "You can build now; remaining travelers can reply later."
+                if draft.can_build
+                else "At least two profiles are needed to build the first draft."
+            )
         ),
     )
     for slot in draft.slots:
@@ -1040,7 +1208,7 @@ def _render_draft_readiness(draft: PreferenceDraft) -> TripRequest | None:
         key=f"refresh-preference-draft-{draft.draft_id}",
     ):
         st.rerun()
-    return draft.to_trip_request() if draft.is_ready else None
+    return draft.to_trip_request() if draft.can_build else None
 
 
 def _render_review_step() -> None:
@@ -1069,8 +1237,7 @@ def _render_review_step() -> None:
             return
         st.caption(
             f"{draft.trip.destination}, {draft.trip.country} · "
-            f"{draft.trip.days} days · {draft.trip.budget_level.value} budget · "
-            f"{draft.trip.pace.value} pace"
+            f"{draft.trip.days} days"
         )
         trip = _render_draft_readiness(draft)
         if trip is not None:
@@ -1142,19 +1309,6 @@ def _render_invited_profile_step() -> None:
     trip = assignment.trip
     existing = assignment.profile
     key_prefix = f"invited-profile-{assignment.slot_id}"
-    defaults = {
-        f"{key_prefix}-interests": list(existing.interests) if existing else [],
-        f"{key_prefix}-custom": [],
-        f"{key_prefix}-walking": (
-            existing.walking_tolerance.value if existing else "moderate"
-        ),
-        f"{key_prefix}-food": list(existing.food_restrictions) if existing else [],
-        f"{key_prefix}-must-dos": (
-            ", ".join(existing.must_do_activities) if existing else ""
-        ),
-    }
-    for key, value in defaults.items():
-        st.session_state.setdefault(key, value)
 
     st.markdown(
         '<div class="ts-section-label">Your named invitation</div>',
@@ -1169,42 +1323,12 @@ def _render_invited_profile_step() -> None:
         st.success("Your preferences are already in the group draft. You can update them below.")
 
     with st.form(f"invited-profile-form-{assignment.slot_id}"):
-        st.text_input("Name", value=assignment.traveler_name, disabled=True)
-        interests = st.pills(
-            "Interests",
-            INTEREST_OPTIONS,
-            selection_mode="multi",
-            key=f"{key_prefix}-interests",
-            help="Choose at least one interest.",
-            width="stretch",
-        )
-        custom_interests = st.multiselect(
-            "Add your own interests",
-            options=[],
-            key=f"{key_prefix}-custom",
-            placeholder="Optional · type an interest then press Enter",
-            accept_new_options=True,
-            max_selections=12,
-        )
-        walking = st.segmented_control(
-            "Walking tolerance",
-            ["low", "moderate", "high"],
-            key=f"{key_prefix}-walking",
-            format_func=str.title,
-            required=True,
-            width="stretch",
-        )
-        food = st.multiselect(
-            "Food restrictions",
-            FOOD_RESTRICTION_OPTIONS,
-            key=f"{key_prefix}-food",
-            accept_new_options=True,
-            max_selections=12,
-        )
-        must_dos = st.text_input(
-            "Must-do activities",
-            key=f"{key_prefix}-must-dos",
-            placeholder="Optional · museum, neighborhood, landmark",
+        traveler_input = _traveler_input(
+            0,
+            heading="Your preferences",
+            key_prefix=key_prefix,
+            fixed_name=assignment.traveler_name,
+            existing=existing,
         )
         submitted = st.form_submit_button(
             "Update my preferences" if existing else "Share my preferences",
@@ -1215,17 +1339,7 @@ def _render_invited_profile_step() -> None:
 
     if submitted:
         try:
-            profile = _traveler_profile_from_input(
-                {
-                    "name": assignment.traveler_name,
-                    "interests": combine_interest_tags(
-                        interests or [], custom_interests or []
-                    ),
-                    "walking_tolerance": walking,
-                    "food_restrictions": food,
-                    "must_do_activities": must_dos,
-                }
-            )
+            profile = _traveler_profile_from_input(traveler_input)
             submit_preference_profile(assignment, profile, account.access_token)
         except (ValidationError, ValueError) as error:
             st.error(str(error), icon=":material/error:")
@@ -1571,20 +1685,6 @@ def _render_result_card(
                     activity,
                     is_must_do=bool(must_do_owners),
                 )
-
-
-def _itinerary_slot_label(position: int, total: int) -> str:
-    if total == 1:
-        return "Flexible highlight"
-    labels = {
-        2: ("Morning", "Afternoon"),
-        3: ("Morning", "Midday", "Afternoon"),
-        4: ("Morning", "Late morning", "Afternoon", "Evening"),
-    }
-    day_labels = labels.get(total, ())
-    if position < len(day_labels):
-        return day_labels[position]
-    return f"Stop {position + 1}"
 
 
 def _json_copy(value: Any) -> Any:
@@ -2284,8 +2384,23 @@ def _save_current_trip(
         "access_role",
         access_role,
     )
+    record_key = getattr(
+        saved,
+        "record_key",
+        f"{st.session_state.saved_trip_owner_id or ''}:{saved.trip_id}",
+    )
+    is_group_plan = bool(
+        getattr(saved, "is_group_plan", False)
+        or preference_draft_id
+        or access_role == "collaborator"
+    )
+    st.session_state[
+        "group-trip-selector" if is_group_plan else "self-trip-selector"
+    ] = record_key
     st.session_state[SAVED_TRIP_CONFIRMATION_KEY] = {
         "trip_id": saved.trip_id,
+        "record_key": record_key,
+        "is_group_plan": is_group_plan,
         "title": saved.title,
         "account_backed": bool(account.get("access_token")),
         "collaborator": access_role == "collaborator",
@@ -2294,6 +2409,14 @@ def _save_current_trip(
 
 
 def _open_my_trips() -> None:
+    confirmation = st.session_state.get(SAVED_TRIP_CONFIRMATION_KEY)
+    if isinstance(confirmation, dict) and confirmation.get("record_key"):
+        selector_key = (
+            "group-trip-selector"
+            if confirmation.get("is_group_plan")
+            else "self-trip-selector"
+        )
+        st.session_state[selector_key] = confirmation["record_key"]
     st.session_state.app_workspace = "My trips"
 
 
@@ -2405,7 +2528,6 @@ def _render_itinerary(
                     )
                 else:
                     st.toast(f"Saved {saved.title}")
-            _render_saved_trip_confirmation()
         summary_labels = [
             f"{len(scheduled)} activities",
             f"{format_duration(total_activity_hours)} of activities",
@@ -2496,7 +2618,8 @@ def _render_itinerary(
                         if activity is not None
                         else "🧭"
                     )
-                    slot = _itinerary_slot_label(
+                    slot = itinerary_time_block_label(
+                        scheduled_activity,
                         position,
                         len(day.activities),
                     )
@@ -2837,8 +2960,7 @@ def _render_results_step() -> None:
             "Build an itinerary to add a new version to this shared trip. Only "
             "the owner can change or resave the trip brief."
         )
-    if not has_itinerary:
-        _render_saved_trip_confirmation()
+    saved_confirmation_slot = st.empty()
     retrieval_response = _retrieve_for_current_trip(trip, activities)
     retrieval_by_activity_id = {
         result.activity_id: result
@@ -3017,6 +3139,8 @@ def _render_results_step() -> None:
         activity_by_id,
         owners_by_activity_id,
     )
+    with saved_confirmation_slot.container():
+        _render_saved_trip_confirmation()
 
 
 def render_app() -> None:

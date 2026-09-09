@@ -53,9 +53,15 @@ class PreferenceDraft:
     def is_ready(self) -> bool:
         return len(self.slots) >= 2 and all(slot.is_complete for slot in self.slots)
 
+    @property
+    def can_build(self) -> bool:
+        """Return whether the organizer has enough profiles to build a draft."""
+
+        return sum(slot.is_complete for slot in self.slots) >= 2
+
     def to_trip_request(self) -> TripRequest:
-        if not self.is_ready:
-            raise ValueError("Every traveler must submit preferences first")
+        if not self.can_build:
+            raise ValueError("At least two travelers must submit preferences first")
         return TripRequest(
             **self.trip.model_dump(mode="json"),
             travelers=[slot.profile for slot in self.slots if slot.profile is not None],

@@ -14,12 +14,14 @@ from src.models import (
     ItineraryPlan,
     ItinerarySource,
     ScheduledActivity,
+    TimeBlock,
     TravelerProfile,
     TripRequest,
 )
 from src.planner import (
     PACE_RULES,
     build_itinerary,
+    itinerary_time_block_label,
     replace_itinerary_activity,
     route_summary_for_day,
 )
@@ -164,6 +166,54 @@ class ItineraryPlannerTests(unittest.TestCase):
             )
         )
 
+    def test_generated_days_have_ordered_time_blocks(self) -> None:
+        trip = make_trip(days=1, pace="packed")
+        plan = build_itinerary(
+            trip,
+            self.activities,
+            rank_activities(self.activities, trip),
+            [],
+            auto_fill=True,
+        )
+        blocks = [activity.time_block for activity in plan.days[0].activities]
+
+        self.assertTrue(blocks)
+        self.assertNotIn(None, blocks)
+        self.assertEqual(blocks[0], TimeBlock.MORNING)
+        if len(blocks) > 1:
+            self.assertEqual(blocks[-1], TimeBlock.EVENING)
+        self.assertEqual(
+            blocks,
+            sorted(
+                blocks,
+                key={
+                    TimeBlock.MORNING: 0,
+                    TimeBlock.AFTERNOON: 1,
+                    TimeBlock.EVENING: 2,
+                }.__getitem__,
+            ),
+        )
+
+    def test_display_label_uses_persisted_block_and_legacy_fallback(self) -> None:
+        activity = ScheduledActivity(
+            activity_id="rome_test",
+            activity_name="Test activity",
+            duration_hours=1,
+            source="recommendation",
+            reason="A test activity.",
+            time_block="afternoon",
+        )
+        legacy_activity = activity.model_copy(update={"time_block": None})
+
+        self.assertEqual(
+            itinerary_time_block_label(activity, 1, 2),
+            "Afternoon",
+        )
+        self.assertEqual(
+            itinerary_time_block_label(legacy_activity, 1, 2),
+            "Afternoon",
+        )
+
     def test_excluded_activity_is_not_added_by_auto_fill(self) -> None:
         plan = build_itinerary(
             self.trip,
@@ -234,6 +284,12 @@ class ItineraryPlannerTests(unittest.TestCase):
             all(
                 day.planned_hours <= day.capacity_hours
                 for day in outcome.plan.days
+            )
+        )
+        self.assertTrue(
+            all(
+                activity.time_block is not None
+                for activity in outcome.plan.days[0].activities
             )
         )
 
@@ -511,6 +567,20 @@ class ItineraryPlannerTests(unittest.TestCase):
             ValidationError,
             "planned hours exceed daily capacity",
         ):
+            ItineraryPlan.model_validate(payload)
+
+    def test_day_model_rejects_partial_time_block_assignment(self) -> None:
+        trip = make_trip(days=1, pace="packed")
+        plan = build_itinerary(
+            trip,
+            self.activities,
+            rank_activities(self.activities, trip),
+            [],
+        )
+        payload = plan.model_dump(mode="json")
+        payload["days"][0]["activities"][0]["time_block"] = None
+
+        with self.assertRaisesRegex(ValidationError, "cover every activity"):
             ItineraryPlan.model_validate(payload)
 
 

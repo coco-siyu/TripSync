@@ -40,6 +40,7 @@ from src.ui import (
     parse_tag_text,
     split_destination,
 )
+from src.trips_ui import _trip_option_label
 
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
@@ -103,8 +104,12 @@ class PreferenceFlowHelpersTests(unittest.TestCase):
                     "name": "Coco",
                     "interests": ["history", "food"],
                     "walking_tolerance": "moderate",
+                    "daily_budget_level": "low",
                     "food_restrictions": ["vegetarian"],
                     "must_do_activities": "Colosseum",
+                    "pace_preference": "relaxed",
+                    "time_preference": "morning",
+                    "note": "Regular breaks help.",
                 },
                 {
                     "name": "Sam",
@@ -118,6 +123,34 @@ class PreferenceFlowHelpersTests(unittest.TestCase):
 
         self.assertEqual(len(trip.travelers), 2)
         self.assertEqual(trip.travelers[0].must_do_activities, ["colosseum"])
+        self.assertEqual(trip.travelers[0].daily_budget_level.value, "low")
+        self.assertEqual(trip.travelers[0].time_preference.value, "morning")
+        self.assertEqual(trip.travelers[0].note, "Regular breaks help.")
+
+    def test_build_trip_request_enforces_concise_preference_limits(self) -> None:
+        travelers = [
+            {
+                "name": "Coco",
+                "interests": ["art", "food", "history", "nature", "culture", "cycling"],
+                "walking_tolerance": "moderate",
+            },
+            {
+                "name": "Sam",
+                "interests": ["art"],
+                "walking_tolerance": "low",
+            },
+        ]
+        with self.assertRaisesRegex(ValueError, "five interests"):
+            build_trip_request(
+                {
+                    "destination": "Rome",
+                    "country": "Italy",
+                    "days": 3,
+                    "budget_level": "moderate",
+                    "pace": "balanced",
+                },
+                travelers,
+            )
 
     def test_build_trip_request_rejects_missing_interest(self) -> None:
         with self.assertRaises(ValidationError):
@@ -154,6 +187,20 @@ class PreferenceFlowHelpersTests(unittest.TestCase):
         self.assertEqual(
             trip.travelers[1].must_do_activities,
             ["borghese gallery"],
+        )
+
+    def test_saved_trip_labels_include_timestamp_to_distinguish_duplicates(self) -> None:
+        record = SavedTrip(
+            trip_id="rome-trip",
+            title="Rome · 3 days",
+            trip=build_sample_trip(),
+            state={},
+            updated_at="2026-09-09T22:24:38.185733+00:00",
+        )
+
+        self.assertEqual(
+            _trip_option_label(record, 1),
+            "Rome · 3 days · 1 saved itinerary · saved 2026-09-09 22:24 UTC",
         )
 
 
@@ -887,6 +934,81 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertFalse(app.session_state["auto_select_must_dos"])
         self.assertIsNone(app.session_state["itinerary_plan"])
 
+    def test_saved_itinerary_uses_the_persisted_time_block_labels(self) -> None:
+        planner = self._sample_results_app()
+        planner.button(key="build-itinerary").click().run(timeout=10)
+        plan = ItineraryPlan.model_validate(planner.session_state["itinerary_plan"])
+        record = SavedTrip(
+            trip_id="rome-trip",
+            title="Rome · 3 days",
+            trip=build_sample_trip(),
+            state={
+                "itinerary_versions": [
+                    {
+                        "version_id": "version-one",
+                        "label": "Itinerary 1",
+                        "saved_at": "2026-09-09T22:16:00+00:00",
+                        "itinerary_plan": plan.model_dump(mode="json"),
+                    }
+                ]
+            },
+            updated_at="2026-09-09T22:16:00+00:00",
+        )
+
+        with patch("src.trips_ui.list_saved_trips", return_value=[record]):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["open_saved_itinerary"] = {
+                "record_key": record.record_key,
+                "version_id": "version-one",
+            }
+            app.run(timeout=10)
+
+        labels = [item.value for item in app.markdown]
+        self.assertFalse(app.exception)
+        self.assertTrue(any(label.startswith("**Afternoon ·") for label in labels))
+        self.assertFalse(any(label.startswith("**Midday ·") for label in labels))
+
+    def test_same_name_saved_trips_can_be_selected_independently(self) -> None:
+        trip = build_sample_trip()
+        records = [
+            SavedTrip(
+                trip_id="newer-rome",
+                title="Rome · 3 days",
+                trip=trip,
+                state={},
+                updated_at="2026-09-09T22:24:00+00:00",
+            ),
+            SavedTrip(
+                trip_id="older-rome",
+                title="Rome · 3 days",
+                trip=trip,
+                state={},
+                updated_at="2026-09-01T18:17:00+00:00",
+            ),
+        ]
+
+        with patch("src.trips_ui.list_saved_trips", return_value=records):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.run(timeout=10)
+            selector = next(
+                box
+                for box in app.selectbox
+                if box.label == "Choose a self-planned trip"
+            )
+            self.assertEqual(len(set(selector.options)), 2)
+            selector.select(":older-rome").run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["self-trip-selector"], ":older-rome")
+        self.assertTrue(
+            any(
+                "2026-09-01 18:17 UTC" in caption.value
+                for caption in app.caption
+            )
+        )
+
     def test_my_trips_separates_group_and_self_planning(self) -> None:
         trip = build_sample_trip()
         session = AccountSession(
@@ -1607,11 +1729,36 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.button(key="save-itinerary").click().run()
 
         self.assertEqual(app.session_state["saved_trip_id"], "saved-trip")
+        self.assertEqual(
+            app.session_state["self-trip-selector"],
+            f"{app.session_state['feedback_session_id']}:saved-trip",
+        )
         self.assertTrue(save.call_args.kwargs["save_itinerary_version"])
         saved_state = save.call_args.args[1]
         self.assertEqual(
             saved_state["itinerary_plan"],
             app.session_state["itinerary_plan"],
+        )
+
+    def test_stale_save_confirmation_does_not_duplicate_when_rebuilding(self) -> None:
+        app = self._sample_results_app()
+        app.session_state["saved_trip_confirmation"] = {
+            "trip_id": "saved-trip",
+            "title": "Rome, Italy · 3 days",
+            "account_backed": False,
+            "collaborator": False,
+        }
+        app.run(timeout=10)
+
+        app.button(key="build-itinerary").click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(
+            sum(
+                button.key == "view-recently-saved-trip"
+                for button in app.button
+            ),
+            1,
         )
 
     def test_group_itinerary_save_records_its_preference_draft_origin(self) -> None:

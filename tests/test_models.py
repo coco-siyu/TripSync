@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from datetime import date
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -86,6 +87,46 @@ class TripRequestTests(unittest.TestCase):
                 pace="balanced",
                 travelers=[traveler("Coco"), traveler("Sam")],
             )
+
+    def test_dates_must_match_trip_length(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "match"):
+            TripRequest(
+                destination="Rome",
+                country="Italy",
+                days=3,
+                start_date=date(2026, 10, 1),
+                end_date=date(2026, 10, 2),
+                budget_level="moderate",
+                pace="balanced",
+                travelers=[traveler("Coco"), traveler("Sam")],
+            )
+
+    def test_individual_preferences_set_group_planning_defaults(self) -> None:
+        coco = TravelerProfile.model_validate(
+            {
+                **traveler("Coco").model_dump(mode="json"),
+                "daily_budget_level": "low",
+                "pace_preference": "relaxed",
+            }
+        )
+        sam = TravelerProfile.model_validate(
+            {
+                **traveler("Sam").model_dump(mode="json"),
+                "daily_budget_level": "high",
+                "pace_preference": "packed",
+            }
+        )
+        request = TripRequest(
+            destination="Rome",
+            country="Italy",
+            days=3,
+            budget_level="moderate",
+            pace="balanced",
+            travelers=[coco, sam],
+        )
+
+        self.assertEqual(request.planning_budget_level, BudgetLevel.HIGH)
+        self.assertEqual(request.planning_pace, TripPace.PACKED)
 
 
 class ActivityTests(unittest.TestCase):
