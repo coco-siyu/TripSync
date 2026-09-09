@@ -968,6 +968,9 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertTrue(any(label.startswith("**Afternoon ·") for label in labels))
         self.assertFalse(any(label.startswith("**Midday ·") for label in labels))
+        self.assertTrue(
+            any("Estimated daily budget per person" in label for label in labels)
+        )
 
     def test_same_name_saved_trips_can_be_selected_independently(self) -> None:
         trip = build_sample_trip()
@@ -1714,6 +1717,13 @@ class StreamlitInteractionTests(unittest.TestCase):
             all(
                 day.planned_hours <= day.capacity_hours
                 for day in plan.days
+            )
+        )
+        self.assertTrue(all(day.budget_estimate is not None for day in plan.days))
+        self.assertTrue(
+            any(
+                "Estimated daily budget per person" in item.value
+                for item in app.markdown
             )
         )
 

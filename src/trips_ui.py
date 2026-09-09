@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from src.budget import daily_budget_label, euro_range
 from src.auth_ui import (
     TRIP_INVITATION_NOTICE_KEY,
     TRIP_TRANSFER_NOTICE_KEY,
@@ -746,6 +747,25 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
                 )
                 if day.pace_override_approved:
                     st.warning("This day exceeds its recommended pace.", icon=":material/schedule:")
+                estimate = day.budget_estimate
+                if estimate is not None:
+                    st.markdown(
+                        "**Estimated daily budget per person: "
+                        f"{euro_range(estimate.total_min_eur, estimate.total_max_eur)}**"
+                    )
+                    st.caption(
+                        "Activities "
+                        f"{euro_range(estimate.activity_min_eur, estimate.activity_max_eur)}"
+                        " · Meals and snacks "
+                        f"{euro_range(estimate.food_min_eur, estimate.food_max_eur)}"
+                    )
+                    if estimate.potentially_over_budget:
+                        st.warning(
+                            "The upper estimate is above the group’s "
+                            f"{daily_budget_label(estimate.target_budget_level)} "
+                            "daily band. This is advisory.",
+                            icon=":material/account_balance_wallet:",
+                        )
                 for index, activity in enumerate(day.activities):
                     slot = itinerary_time_block_label(
                         activity,

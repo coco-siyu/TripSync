@@ -51,7 +51,7 @@ collection paths, and organizers can build once two profiles are ready.
   - Keep the data model extensible for fixed reservation times later.
   - Depends on MVP-01.
 
-- [ ] **MVP-06: Add soft daily budget estimates**
+- [x] **MVP-06: Add soft daily budget estimates**
   - Derive the group middle budget band.
   - Define and document a deterministic range for each existing catalog budget
     level.

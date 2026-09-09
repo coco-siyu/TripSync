@@ -95,6 +95,8 @@ class ItineraryPlannerTests(unittest.TestCase):
         self.assertTrue(
             all(len(day.activities) <= rule.max_activities for day in plan.days)
         )
+        self.assertEqual(plan.budget_level.value, "moderate")
+        self.assertTrue(all(day.budget_estimate is not None for day in plan.days))
 
     def test_shortlisted_must_do_is_prioritized(self) -> None:
         plan = build_itinerary(

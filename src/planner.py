@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import asin, cos, radians, sin, sqrt
 
+from src.budget import activity_cost_range, estimate_daily_budget
 from src.models import (
     Activity,
     ItineraryDay,
@@ -168,7 +169,7 @@ def _route_order(
     return [*ordered, *unlocated]
 
 
-def _assign_time_blocks(
+def assign_time_blocks(
     activities: Sequence[ScheduledActivity],
 ) -> list[ScheduledActivity]:
     """Apply broad, ordered day parts without inventing exact start times."""
@@ -325,10 +326,13 @@ def _scheduled_activity(
     else:
         reason = "Added from the group-fit ranking to complete the day."
 
+    cost_min, cost_max = activity_cost_range(activity)
     return ScheduledActivity(
         activity_id=activity.id,
         activity_name=activity.name,
         duration_hours=activity.duration_hours,
+        estimated_cost_min_eur=cost_min,
+        estimated_cost_max_eur=cost_max,
         source=source,
         must_do_owners=owners,
         traveler_names=_traveler_names(result),
@@ -502,7 +506,7 @@ def build_itinerary(
                 scheduled_or_selected_ids.add(activity_id)
 
     for day in days:
-        day.activities = _assign_time_blocks(
+        day.activities = assign_time_blocks(
             _route_order(day.activities, activity_by_id)
         )
 
@@ -514,6 +518,10 @@ def build_itinerary(
             transition_hours=day.transition_hours,
             planned_hours=day.planned_hours,
             capacity_hours=rule.capacity_hours,
+            budget_estimate=estimate_daily_budget(
+                day.activities,
+                trip.planning_budget_level,
+            ),
         )
         for day in days
     ]
@@ -522,6 +530,7 @@ def build_itinerary(
         destination=trip.destination,
         country=trip.country,
         pace=trip.planning_pace,
+        budget_level=trip.planning_budget_level,
         auto_fill=auto_fill,
         days=itinerary_days,
         unscheduled=unscheduled,
@@ -626,7 +635,7 @@ def replace_itinerary_activity(
     updated_activities = list(remaining_activities)
     if replacement is not None:
         updated_activities.insert(target_position, replacement)
-    updated_activities = _assign_time_blocks(
+    updated_activities = assign_time_blocks(
         _route_order(updated_activities, activity_by_id)
     )
 
@@ -645,6 +654,11 @@ def replace_itinerary_activity(
         transition_hours=transition_hours,
         planned_hours=round(activity_hours + transition_hours, 2),
         capacity_hours=target_day.capacity_hours,
+        budget_estimate=(
+            estimate_daily_budget(updated_activities, plan.budget_level)
+            if plan.budget_level is not None
+            else None
+        ),
     )
     updated_days = [
         (
@@ -742,7 +756,7 @@ def apply_itinerary_change_proposal(
         else:
             updated_activities.insert(target_position, replacement)
 
-    updated_activities = _assign_time_blocks(
+    updated_activities = assign_time_blocks(
         _route_order(updated_activities, activity_by_id)
     )
 
@@ -785,6 +799,11 @@ def apply_itinerary_change_proposal(
             target_day.pace_override_approved
             or exceeds_activity_limit
             or exceeds_hour_limit
+        ),
+        budget_estimate=(
+            estimate_daily_budget(updated_activities, plan.budget_level)
+            if plan.budget_level is not None
+            else None
         ),
     )
     updated_plan = ItineraryPlan.model_validate(

@@ -11,9 +11,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from src.budget import estimate_daily_budget
 from src.feedback import DEFAULT_FEEDBACK_DATABASE_PATH
 from src.models import ItineraryDay, ItineraryPlan, TripRequest
-from src.planner import PACE_RULES, TRANSITION_HOURS
+from src.planner import PACE_RULES, TRANSITION_HOURS, assign_time_blocks
 from src.supabase_store import (
     is_configured,
     insert_authenticated,
@@ -169,7 +170,9 @@ def revise_itinerary_plan(
     revised_days = []
     pace_rule = PACE_RULES[plan.pace]
     for original_day in plan.days:
-        activities = activities_by_day[original_day.day_number]
+        activities = assign_time_blocks(
+            activities_by_day[original_day.day_number]
+        )
         activity_hours = round(sum(activity.duration_hours for activity in activities), 2)
         transition_hours = round(TRANSITION_HOURS * max(0, len(activities) - 1), 2)
         planned_hours = round(activity_hours + transition_hours, 2)
@@ -204,6 +207,11 @@ def revise_itinerary_plan(
                     exceeds_capacity or exceeds_activity_limit
                 )
                 and override_approved,
+                budget_estimate=(
+                    estimate_daily_budget(activities, plan.budget_level)
+                    if plan.budget_level is not None
+                    else None
+                ),
             )
         )
 

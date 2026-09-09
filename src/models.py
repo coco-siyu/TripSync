@@ -330,6 +330,31 @@ class Activity(TripSyncModel):
         return self
 
 
+class DailyBudgetEstimate(TripSyncModel):
+    """Advisory per-person daily costs derived from catalog bands."""
+
+    activity_min_eur: int = Field(ge=0)
+    activity_max_eur: int = Field(ge=0)
+    food_min_eur: int = Field(ge=0)
+    food_max_eur: int = Field(ge=0)
+    total_min_eur: int = Field(ge=0)
+    total_max_eur: int = Field(ge=0)
+    target_budget_level: BudgetLevel
+    potentially_over_budget: bool = False
+
+    @model_validator(mode="after")
+    def validate_cost_ranges(self) -> DailyBudgetEstimate:
+        if self.activity_min_eur > self.activity_max_eur:
+            raise ValueError("activity cost minimum cannot exceed maximum")
+        if self.food_min_eur > self.food_max_eur:
+            raise ValueError("food cost minimum cannot exceed maximum")
+        if self.total_min_eur != self.activity_min_eur + self.food_min_eur:
+            raise ValueError("total minimum must include activities and food")
+        if self.total_max_eur != self.activity_max_eur + self.food_max_eur:
+            raise ValueError("total maximum must include activities and food")
+        return self
+
+
 class ScheduledActivity(TripSyncModel):
     """A grounded activity placed on one itinerary day."""
 
@@ -337,10 +362,26 @@ class ScheduledActivity(TripSyncModel):
     activity_name: str = Field(min_length=1, max_length=160)
     duration_hours: float = Field(gt=0, le=12)
     time_block: TimeBlock | None = None
+    estimated_cost_min_eur: int | None = Field(default=None, ge=0)
+    estimated_cost_max_eur: int | None = Field(default=None, ge=0)
     source: ItinerarySource
     must_do_owners: list[str] = Field(default_factory=list, max_length=6)
     traveler_names: list[str] = Field(default_factory=list, max_length=6)
     reason: str = Field(min_length=1, max_length=300)
+
+    @model_validator(mode="after")
+    def validate_estimated_cost(self) -> ScheduledActivity:
+        if (self.estimated_cost_min_eur is None) != (
+            self.estimated_cost_max_eur is None
+        ):
+            raise ValueError("estimated activity cost requires both bounds")
+        if (
+            self.estimated_cost_min_eur is not None
+            and self.estimated_cost_max_eur is not None
+            and self.estimated_cost_min_eur > self.estimated_cost_max_eur
+        ):
+            raise ValueError("estimated activity cost minimum cannot exceed maximum")
+        return self
 
 
 class ItineraryDay(TripSyncModel):
@@ -353,6 +394,7 @@ class ItineraryDay(TripSyncModel):
     planned_hours: float = Field(ge=0, le=24)
     capacity_hours: float = Field(gt=0, le=12)
     pace_override_approved: bool = False
+    budget_estimate: DailyBudgetEstimate | None = None
 
     @model_validator(mode="after")
     def validate_daily_totals(self) -> ItineraryDay:
@@ -421,6 +463,7 @@ class ItineraryPlan(TripSyncModel):
     destination: str = Field(min_length=1, max_length=120)
     country: str = Field(min_length=1, max_length=80)
     pace: TripPace
+    budget_level: BudgetLevel | None = None
     auto_fill: bool
     days: list[ItineraryDay] = Field(min_length=1, max_length=5)
     unscheduled: list[UnscheduledActivity] = Field(default_factory=list)

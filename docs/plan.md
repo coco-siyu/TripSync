@@ -147,6 +147,16 @@ Budget is advisory. It never removes an activity or blocks publishing.
 Activity ranges are derived from a documented mapping of the catalog's existing
 free, low, moderate, and high price levels; they are estimates, not live prices.
 
+Deterministic per-person euro ranges:
+
+- Activity catalog level: free €0, low €5–20, moderate €20–40, high €40–80.
+- Daily meals and snacks: low €30–50, moderate €50–80, high €80–130.
+- Legacy free-budget trips use a €20–30 food allowance.
+
+The daily warning compares the combined upper estimate with the selected band:
+low €50–100, moderate €100–175, and high €175+. Because the high band has no
+declared ceiling, TripSync does not claim that its upper estimate exceeds it.
+
 ## Catalog boundary
 
 The MVP targets roughly 40 quality Rome activities, expanded from the current
