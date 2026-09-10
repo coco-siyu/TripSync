@@ -222,15 +222,9 @@ def handle_trip_invitation() -> None:
             ),
         }
     else:
-        collaborator = identity.access_role == "collaborator"
         st.session_state[TRIP_INVITATION_NOTICE_KEY] = {
             "level": "success",
-            "message": (
-                "The shared trip is ready. You can create itinerary versions "
-                "without changing the owner's trip brief."
-                if collaborator
-                else "The shared trip is now available here in read-only mode."
-            ),
+            "message": "The shared trip is now available here in read-only mode.",
             "record_key": f"{identity.owner_id}:{identity.trip_id}",
         }
 

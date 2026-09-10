@@ -44,8 +44,12 @@ Controlled values are:
 | `name` | string | Yes | Display name, unique within a trip |
 | `interests` | list of strings | Yes | One to twelve normalized interest tags |
 | `walking_tolerance` | string | Yes | Maximum preferred walking level |
+| `daily_budget_level` | string or `null` | No | Preferred daily budget band |
 | `food_restrictions` | list of strings | No | Dietary restrictions or allergies |
 | `must_do_activities` | list of strings | No | Activities the traveler wants prioritized |
+| `pace_preference` | string or `null` | No | Relaxed, balanced, or packed preference |
+| `time_preference` | string or `null` | No | Morning, evening, or flexible preference |
+| `note` | string or `null` | No | Organizer-only preference context |
 
 ## Trip request
 
@@ -67,8 +71,8 @@ A named-invitation draft stores the trip-level fields above before a complete
 `TripRequest` exists. Each draft has two to six ordered traveler slots. The
 organizer's slot starts with a validated profile; invited slots remain empty
 until their assigned signed-in account submits a validated `TravelerProfile`.
-Recommendations stay locked until every slot is complete, at which point the
-draft is converted to the same `TripRequest` used by the direct-entry flow.
+The organizer can build after at least two slots are complete. Pending slots
+remain attached to the preference draft without silently changing an itinerary.
 
 Raw invitation tokens are never stored. Supabase stores a SHA-256 hash, binds a
 slot to the first authenticated account that claims its link, and restricts
@@ -80,3 +84,13 @@ When a draft becomes a saved trip, its 32-character `draft_id` is stored as
 outside individual itinerary snapshots and is preserved whenever later versions
 are saved. It lets My trips distinguish durable group planning from self-entered
 planning without duplicating a linked draft and saved trip.
+
+## Shared itinerary privacy
+
+Owners read their complete `saved_trips` rows. Members cannot select those rows
+directly; `list_shared_trips()` returns a server-sanitized projection containing
+an anonymized group-interest profile and read-only itinerary snapshots. It
+removes traveler names, notes, dietary details, must-do ownership, rejected-item
+history, generated narrative, and personalized activity reasons before the
+payload reaches the browser. Legacy collaborator memberships are read-only;
+only the organizer can save a working draft or publish a version.

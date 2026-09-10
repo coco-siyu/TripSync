@@ -329,9 +329,8 @@ $$;
 revoke all on function public.delete_my_account_data() from public;
 grant execute on function public.delete_my_account_data() to authenticated;
 
--- Phase 2 sharing: viewer links remain read-only, while an explicitly selected
--- collaborator role may append itinerary versions through a guarded RPC. Trip
--- ownership, brief editing, sharing controls, and deletion remain owner-only.
+-- Shared itinerary links are read-only. Trip ownership, itinerary editing and
+-- publishing, sharing controls, and deletion remain organizer-only.
 -- Invitation records contain only a one-way token hash; the link capability is
 -- shown to its creator once and is never recoverable from the database.
 drop function if exists public.claim_trip_invitation(text);
@@ -491,26 +490,307 @@ on public.trip_invitations for delete
 to authenticated
 using (owner_id = (select auth.uid())::text);
 
--- Shared members may read saved snapshots, while direct mutation policies stay
--- owner-only. Collaborator writes use only the append RPC below.
+-- Shared members read a server-sanitized projection through list_shared_trips.
+-- Direct saved_trips reads remain owner-only so private traveler profiles and
+-- notes never enter a member's browser payload.
 drop policy if exists "Signed-in users can read their trips"
   on public.saved_trips;
 drop policy if exists "Signed-in users can read accessible trips"
   on public.saved_trips;
-create policy "Signed-in users can read accessible trips"
+create policy "Signed-in users can read their trips"
 on public.saved_trips for select
 to authenticated
 using (
-  session_id = (select auth.uid())::text
-  or exists (
-    select 1
-    from public.trip_members
-    where trip_members.owner_id = saved_trips.session_id
-      and trip_members.trip_id = saved_trips.trip_id
-      and trip_members.member_id = (select auth.uid())
-      and trip_members.role in ('viewer', 'collaborator')
-  )
+  (select auth.uid()) is not null
+  and session_id = (select auth.uid())::text
 );
+
+create or replace function private.sanitize_shared_itinerary_plan(source_plan jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  source_day jsonb;
+  source_activity jsonb;
+  source_unscheduled jsonb;
+  safe_activities jsonb;
+  safe_days jsonb := '[]'::jsonb;
+  safe_unscheduled jsonb := '[]'::jsonb;
+begin
+  if source_plan is null or pg_catalog.jsonb_typeof(source_plan) <> 'object' then
+    return null;
+  end if;
+
+  for source_day in
+    select value
+    from pg_catalog.jsonb_array_elements(
+      case
+        when pg_catalog.jsonb_typeof(source_plan -> 'days') = 'array'
+          then source_plan -> 'days'
+        else '[]'::jsonb
+      end
+    )
+  loop
+    safe_activities := '[]'::jsonb;
+    for source_activity in
+      select value
+      from pg_catalog.jsonb_array_elements(
+        case
+          when pg_catalog.jsonb_typeof(source_day -> 'activities') = 'array'
+            then source_day -> 'activities'
+          else '[]'::jsonb
+        end
+      )
+    loop
+      safe_activities := safe_activities || pg_catalog.jsonb_build_array(
+        (source_activity - 'traveler_names' - 'must_do_owners' - 'reason')
+        || pg_catalog.jsonb_build_object(
+          'traveler_names', '[]'::jsonb,
+          'must_do_owners', '[]'::jsonb,
+          'reason', 'Included for the group''s shared preferences.'
+        )
+      );
+    end loop;
+    safe_days := safe_days || pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_set(source_day, '{activities}', safe_activities, true)
+    );
+  end loop;
+
+  for source_unscheduled in
+    select value
+    from pg_catalog.jsonb_array_elements(
+      case
+        when pg_catalog.jsonb_typeof(source_plan -> 'unscheduled') = 'array'
+          then source_plan -> 'unscheduled'
+        else '[]'::jsonb
+      end
+    )
+  loop
+    safe_unscheduled := safe_unscheduled || pg_catalog.jsonb_build_array(
+      (source_unscheduled - 'reason')
+      || pg_catalog.jsonb_build_object(
+        'reason', 'This activity did not fit the shared schedule.'
+      )
+    );
+  end loop;
+
+  return pg_catalog.jsonb_set(
+    pg_catalog.jsonb_set(source_plan, '{days}', safe_days, true),
+    '{unscheduled}', safe_unscheduled, true
+  );
+end;
+$$;
+
+create or replace function private.sanitize_shared_itinerary_container(
+  source_container jsonb
+)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  safe_container jsonb;
+begin
+  if source_container is null
+    or pg_catalog.jsonb_typeof(source_container) <> 'object' then
+    return null;
+  end if;
+  safe_container := source_container
+    - 'itinerary_narrative'
+    - 'rejected_activities'
+    - 'dismissed_must_do_ids';
+  if pg_catalog.jsonb_typeof(source_container -> 'itinerary_plan') = 'object' then
+    safe_container := pg_catalog.jsonb_set(
+      safe_container,
+      '{itinerary_plan}',
+      private.sanitize_shared_itinerary_plan(
+        source_container -> 'itinerary_plan'
+      ),
+      true
+    );
+  end if;
+  return safe_container;
+end;
+$$;
+
+create or replace function private.sanitize_shared_trip(source_trip jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  traveler_count integer;
+  traveler_number integer;
+  group_interests jsonb;
+  safe_travelers jsonb := '[]'::jsonb;
+begin
+  if source_trip is null or pg_catalog.jsonb_typeof(source_trip) <> 'object' then
+    return null;
+  end if;
+  traveler_count := case
+    when pg_catalog.jsonb_typeof(source_trip -> 'travelers') = 'array'
+      then greatest(
+        2,
+        least(
+          6,
+          pg_catalog.jsonb_array_length(source_trip -> 'travelers')
+        )
+      )
+    else 2
+  end;
+  select coalesce(
+    pg_catalog.jsonb_agg(pg_catalog.to_jsonb(interest) order by interest),
+    '["general sightseeing"]'::jsonb
+  ) into group_interests
+  from (
+    select distinct interest.value as interest
+    from pg_catalog.jsonb_array_elements(source_trip -> 'travelers')
+      as traveler(profile),
+      lateral pg_catalog.jsonb_array_elements_text(
+        case
+          when pg_catalog.jsonb_typeof(traveler.profile -> 'interests') = 'array'
+            then traveler.profile -> 'interests'
+          else '[]'::jsonb
+        end
+      ) as interest(value)
+    where pg_catalog.btrim(interest.value) <> ''
+    order by interest.value
+    limit 12
+  ) aggregated_interests;
+
+  for traveler_number in 1..traveler_count loop
+    safe_travelers := safe_travelers || pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'name', 'Traveler ' || traveler_number,
+        'interests', group_interests,
+        'walking_tolerance', 'moderate',
+        'daily_budget_level', source_trip -> 'budget_level',
+        'food_restrictions', '[]'::jsonb,
+        'must_do_activities', '[]'::jsonb,
+        'pace_preference', null,
+        'time_preference', null,
+        'note', null
+      )
+    );
+  end loop;
+  return pg_catalog.jsonb_set(
+    source_trip, '{travelers}', safe_travelers, true
+  );
+end;
+$$;
+
+create or replace function private.sanitize_shared_trip_state(source_state jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  source_version jsonb;
+  safe_versions jsonb := '[]'::jsonb;
+  safe_state jsonb := '{}'::jsonb;
+begin
+  if source_state is null or pg_catalog.jsonb_typeof(source_state) <> 'object' then
+    return safe_state;
+  end if;
+  if source_state ? 'preference_draft_id' then
+    safe_state := safe_state || pg_catalog.jsonb_build_object(
+      'preference_draft_id', source_state -> 'preference_draft_id'
+    );
+  end if;
+  if source_state ? 'active_itinerary_version_id' then
+    safe_state := safe_state || pg_catalog.jsonb_build_object(
+      'active_itinerary_version_id', source_state -> 'active_itinerary_version_id'
+    );
+  end if;
+  if pg_catalog.jsonb_typeof(source_state -> 'itinerary_plan') = 'object' then
+    safe_state := safe_state || pg_catalog.jsonb_build_object(
+      'itinerary_plan', private.sanitize_shared_itinerary_plan(
+        source_state -> 'itinerary_plan'
+      )
+    );
+  end if;
+  if pg_catalog.jsonb_typeof(source_state -> 'working_itinerary_draft') = 'object' then
+    safe_state := safe_state || pg_catalog.jsonb_build_object(
+      'working_itinerary_draft', private.sanitize_shared_itinerary_container(
+        source_state -> 'working_itinerary_draft'
+      )
+    );
+  end if;
+  if pg_catalog.jsonb_typeof(source_state -> 'itinerary_versions') = 'array' then
+    for source_version in
+      select value
+      from pg_catalog.jsonb_array_elements(source_state -> 'itinerary_versions')
+    loop
+      safe_versions := safe_versions || pg_catalog.jsonb_build_array(
+        private.sanitize_shared_itinerary_container(source_version)
+      );
+    end loop;
+    safe_state := safe_state || pg_catalog.jsonb_build_object(
+      'itinerary_versions', safe_versions
+    );
+  end if;
+  return safe_state;
+end;
+$$;
+
+create or replace function private.list_shared_trips()
+returns table (
+  session_id text,
+  trip_id text,
+  title text,
+  trip_json jsonb,
+  state_json jsonb,
+  updated_at timestamptz,
+  access_role text
+)
+language sql
+security definer
+set search_path = ''
+as $$
+  select
+    saved_trips.session_id,
+    saved_trips.trip_id,
+    saved_trips.title,
+    private.sanitize_shared_trip(saved_trips.trip_json),
+    private.sanitize_shared_trip_state(saved_trips.state_json),
+    saved_trips.updated_at,
+    trip_members.role
+  from public.trip_members
+  join public.saved_trips
+    on saved_trips.session_id = trip_members.owner_id
+    and saved_trips.trip_id = trip_members.trip_id
+  where trip_members.member_id = (select auth.uid())
+    and trip_members.role in ('viewer', 'collaborator')
+  order by saved_trips.updated_at desc;
+$$;
+
+revoke all on function private.list_shared_trips() from public;
+grant execute on function private.list_shared_trips() to authenticated;
+
+create or replace function public.list_shared_trips()
+returns table (
+  session_id text,
+  trip_id text,
+  title text,
+  trip_json jsonb,
+  state_json jsonb,
+  updated_at timestamptz,
+  access_role text
+)
+language sql
+security invoker
+set search_path = ''
+as $$
+  select * from private.list_shared_trips();
+$$;
+
+revoke all on function public.list_shared_trips() from public;
+grant execute on function public.list_shared_trips() to authenticated;
 
 create extension if not exists pgcrypto with schema extensions;
 
@@ -584,162 +864,6 @@ $$;
 
 revoke all on function public.claim_trip_invitation(text) from public;
 grant execute on function public.claim_trip_invitation(text) to authenticated;
-
--- Collaborators can append a validated itinerary-shaped snapshot, but cannot
--- replace existing versions or mutate the owner's trip brief. A row lock keeps
--- simultaneous collaborator saves from overwriting each other.
-create or replace function private.append_shared_itinerary_version(
-  target_owner_id text,
-  target_trip_id text,
-  itinerary_version jsonb
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  account_user_id uuid := auth.uid();
-  current_state jsonb;
-  current_trip jsonb;
-  current_versions jsonb;
-  sanitized_version jsonb;
-  version_label text;
-begin
-  if account_user_id is null then
-    raise exception 'Sign in before saving an itinerary.' using errcode = '42501';
-  end if;
-  if target_owner_id is null or target_trip_id is null
-    or not exists (
-      select 1 from public.trip_members
-      where owner_id = target_owner_id
-        and trip_id = target_trip_id
-        and member_id = account_user_id
-        and role = 'collaborator'
-    ) then
-    raise exception 'Collaborator access is required.' using errcode = '42501';
-  end if;
-  if itinerary_version is null
-    or pg_catalog.jsonb_typeof(itinerary_version) <> 'object'
-    or pg_catalog.jsonb_typeof(itinerary_version -> 'itinerary_plan') <> 'object'
-    or (
-      itinerary_version ? 'selected_activity_ids'
-      and pg_catalog.jsonb_typeof(itinerary_version -> 'selected_activity_ids')
-        <> 'array'
-    )
-    or (
-      itinerary_version ? 'dismissed_must_do_ids'
-      and pg_catalog.jsonb_typeof(itinerary_version -> 'dismissed_must_do_ids')
-        <> 'array'
-    )
-    or (
-      itinerary_version ? 'auto_select_must_dos'
-      and pg_catalog.jsonb_typeof(itinerary_version -> 'auto_select_must_dos')
-        <> 'boolean'
-    )
-    or (
-      itinerary_version ? 'rejected_activities'
-      and pg_catalog.jsonb_typeof(itinerary_version -> 'rejected_activities')
-        <> 'object'
-    )
-    or pg_catalog.octet_length(itinerary_version::text) > 524288 then
-    raise exception 'Itinerary version is invalid.' using errcode = '22023';
-  end if;
-
-  select state_json, trip_json into current_state, current_trip
-  from public.saved_trips
-  where session_id = target_owner_id and trip_id = target_trip_id
-  for update;
-  if not found then
-    raise exception 'Shared trip was not found.' using errcode = '22023';
-  end if;
-  if coalesce(
-      pg_catalog.btrim(itinerary_version #>> '{itinerary_plan,destination}'),
-      ''
-    ) <> pg_catalog.btrim(current_trip ->> 'destination')
-    or coalesce(
-      pg_catalog.btrim(itinerary_version #>> '{itinerary_plan,country}'),
-      ''
-    ) <> pg_catalog.btrim(current_trip ->> 'country')
-    or pg_catalog.jsonb_typeof(itinerary_version #> '{itinerary_plan,days}')
-      <> 'array' then
-    raise exception 'Itinerary does not match this trip.' using errcode = '22023';
-  end if;
-
-  current_versions := case
-    when pg_catalog.jsonb_typeof(current_state -> 'itinerary_versions') = 'array'
-      then current_state -> 'itinerary_versions'
-    else '[]'::jsonb
-  end;
-  version_label := pg_catalog.left(
-    pg_catalog.btrim(coalesce(itinerary_version ->> 'label', '')),
-    80
-  );
-  if version_label = '' then
-    version_label := 'Itinerary ' || (pg_catalog.jsonb_array_length(current_versions) + 1);
-  end if;
-
-  sanitized_version := pg_catalog.jsonb_build_object(
-    'version_id', pg_catalog.replace(pg_catalog.gen_random_uuid()::text, '-', ''),
-    'label', version_label,
-    'saved_at', pg_catalog.now(),
-    'created_by', account_user_id::text,
-    'selected_activity_ids', coalesce(
-      itinerary_version -> 'selected_activity_ids', '[]'::jsonb
-    ),
-    'dismissed_must_do_ids', coalesce(
-      itinerary_version -> 'dismissed_must_do_ids', '[]'::jsonb
-    ),
-    'auto_select_must_dos', coalesce(
-      itinerary_version -> 'auto_select_must_dos', 'true'::jsonb
-    ),
-    'itinerary_plan', itinerary_version -> 'itinerary_plan',
-    'rejected_activities', coalesce(
-      itinerary_version -> 'rejected_activities', '{}'::jsonb
-    ),
-    'itinerary_narrative', coalesce(
-      itinerary_version -> 'itinerary_narrative', 'null'::jsonb
-    )
-  );
-
-  update public.saved_trips
-  set state_json = current_state || pg_catalog.jsonb_build_object(
-        'itinerary_versions', current_versions || pg_catalog.jsonb_build_array(sanitized_version),
-        'active_itinerary_version_id', sanitized_version ->> 'version_id'
-      ),
-      updated_at = pg_catalog.now()
-  where session_id = target_owner_id and trip_id = target_trip_id;
-
-  return sanitized_version;
-end;
-$$;
-
-revoke all on function private.append_shared_itinerary_version(text, text, jsonb)
-  from public;
-grant execute on function private.append_shared_itinerary_version(text, text, jsonb)
-  to authenticated;
-
-create or replace function public.append_shared_itinerary_version(
-  target_owner_id text,
-  target_trip_id text,
-  itinerary_version jsonb
-)
-returns jsonb
-language sql
-security invoker
-set search_path = ''
-as $$
-  select private.append_shared_itinerary_version(
-    target_owner_id,
-    target_trip_id,
-    itinerary_version
-  );
-$$;
-
-revoke all on function public.append_shared_itinerary_version(text, text, jsonb)
-  from public;
-grant execute on function public.append_shared_itinerary_version(text, text, jsonb)
-  to authenticated;
 
 create or replace function private.revoke_trip_sharing(
   target_trip_id text

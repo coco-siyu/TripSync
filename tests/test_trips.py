@@ -86,6 +86,7 @@ class SavedTripsTests(unittest.TestCase):
         with (
             patch("src.trips.is_configured", return_value=True),
             patch("src.trips.select_authenticated", return_value=[row]) as select_mock,
+            patch("src.trips.rpc_authenticated", return_value=[]),
         ):
             records = list_saved_trips(
                 "owner-user",
@@ -109,26 +110,21 @@ class SavedTripsTests(unittest.TestCase):
             "state_json": {},
             "updated_at": "2026-08-23T12:00:00+00:00",
         }
+        sanitized_shared_row = {
+            **base_row,
+            "session_id": "owner-user",
+            "access_role": "collaborator",
+        }
         with (
             patch("src.trips.is_configured", return_value=True),
             patch(
                 "src.trips.select_authenticated",
-                side_effect=[
-                    [
-                        {**base_row, "session_id": "viewer-user"},
-                        {**base_row, "session_id": "owner-user"},
-                    ],
-                    [
-                        {
-                            "owner_id": "owner-user",
-                            "trip_id": "same-trip",
-                            "member_id": "viewer-user",
-                            "role": "collaborator",
-                            "joined_at": "2026-08-25T12:00:00+00:00",
-                        }
-                    ],
-                ],
+                return_value=[{**base_row, "session_id": "viewer-user"}],
             ),
+            patch(
+                "src.trips.rpc_authenticated",
+                return_value=[sanitized_shared_row],
+            ) as rpc_mock,
         ):
             records = list_saved_trips(
                 "viewer-user",
@@ -142,8 +138,36 @@ class SavedTripsTests(unittest.TestCase):
                 ("owner-user:same-trip", "collaborator"),
             ],
         )
+        rpc_mock.assert_called_once_with(
+            "list_shared_trips", {}, "access-token"
+        )
 
-    def test_collaborator_appends_an_itinerary_version_through_guarded_rpc(self) -> None:
+    def test_shared_trip_reads_fail_closed_before_privacy_schema_is_applied(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"Private name", "interests":["art"], "walking_tolerance":"low", "note":"Private note"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        raw_shared_row = {
+            "session_id": "owner-user",
+            "trip_id": "shared-trip",
+            "title": "Rome plan",
+            "trip_json": trip.model_dump(mode="json"),
+            "state_json": {},
+            "updated_at": "2026-09-09T12:00:00+00:00",
+        }
+        with (
+            patch("src.trips.is_configured", return_value=True),
+            patch("src.trips.select_authenticated", return_value=[raw_shared_row]),
+            patch(
+                "src.trips.rpc_authenticated",
+                side_effect=RuntimeError("schema not applied"),
+            ),
+        ):
+            records = list_saved_trips(
+                "member-user",
+                auth_access_token="access-token",
+            )
+
+        self.assertEqual(records, [])
+
+    def test_collaborator_cannot_append_an_itinerary_version(self) -> None:
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
         plan = {
             "destination": "Rome",
@@ -181,34 +205,16 @@ class SavedTripsTests(unittest.TestCase):
             "owner-user",
             "collaborator",
         )
-        returned_version = {
-            "version_id": "a" * 32,
-            "label": "Itinerary 1",
-            "saved_at": "2026-08-25T13:00:00+00:00",
-            "created_by": "collaborator-user",
-            "itinerary_plan": plan,
-            "selected_activity_ids": [],
-        }
-        with patch(
-            "src.trips.rpc_authenticated",
-            return_value=returned_version,
-        ) as rpc_mock:
-            saved = save_shared_itinerary_version(
+        with (
+            patch("src.trips.rpc_authenticated") as rpc_mock,
+            self.assertRaisesRegex(ValueError, "Only the trip organizer"),
+        ):
+            save_shared_itinerary_version(
                 record,
                 {"itinerary_plan": plan, "selected_activity_ids": []},
                 "access-token",
             )
-
-        self.assertEqual(saved.access_role, "collaborator")
-        self.assertEqual(saved.state["active_itinerary_version_id"], "a" * 32)
-        self.assertEqual(len(itinerary_versions(saved.state)), 1)
-        rpc_mock.assert_called_once()
-        function_name, params, token = rpc_mock.call_args.args
-        self.assertEqual(function_name, "append_shared_itinerary_version")
-        self.assertEqual(params["target_owner_id"], "owner-user")
-        self.assertEqual(params["target_trip_id"], "shared-trip")
-        self.assertEqual(params["itinerary_version"]["itinerary_plan"], plan)
-        self.assertEqual(token, "access-token")
+        rpc_mock.assert_not_called()
 
     def test_claims_a_valid_anonymous_browser_namespace_via_authenticated_rpc(self) -> None:
         anonymous_session_id = "a" * 32

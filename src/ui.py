@@ -73,8 +73,6 @@ from src.search import (
 )
 from src.trips import (
     PREFERENCE_DRAFT_STATE_KEY,
-    list_saved_trips,
-    save_shared_itinerary_version,
     save_trip,
 )
 from src.auth_ui import (
@@ -2339,43 +2337,18 @@ def _save_current_trip(
     if preference_draft_id:
         planning_state[PREFERENCE_DRAFT_STATE_KEY] = preference_draft_id
     access_role = str(st.session_state.get("saved_trip_access_role") or "owner")
-    if access_role == "collaborator":
-        if not save_itinerary_version or save_working_draft:
-            raise ValueError("Collaborators can save itinerary versions only")
-        access_token = str(account.get("access_token") or "")
-        owner_id = str(st.session_state.get("saved_trip_owner_id") or "")
-        trip_id = str(st.session_state.get("saved_trip_id") or "")
-        shared_record = next(
-            (
-                record
-                for record in list_saved_trips(
-                    st.session_state.feedback_session_id,
-                    auth_access_token=access_token,
-                )
-                if record.owner_id == owner_id
-                and record.trip_id == trip_id
-                and record.access_role == "collaborator"
-            ),
-            None,
-        )
-        if shared_record is None:
-            raise RuntimeError("This collaborator trip is no longer available")
-        saved = save_shared_itinerary_version(
-            shared_record,
-            planning_state,
-            access_token,
-        )
-    else:
-        saved = save_trip(
-            trip,
-            planning_state,
-            trip_id=st.session_state.saved_trip_id,
-            session_id=st.session_state.feedback_session_id,
-            save_itinerary_version=save_itinerary_version,
-            save_working_draft=save_working_draft,
-            auth_access_token=account.get("access_token"),
-            owner_id=st.session_state.get("saved_trip_owner_id"),
-        )
+    if access_role != "owner":
+        raise ValueError("Only the trip organizer can save or publish itineraries")
+    saved = save_trip(
+        trip,
+        planning_state,
+        trip_id=st.session_state.saved_trip_id,
+        session_id=st.session_state.feedback_session_id,
+        save_itinerary_version=save_itinerary_version,
+        save_working_draft=save_working_draft,
+        auth_access_token=account.get("access_token"),
+        owner_id=st.session_state.get("saved_trip_owner_id"),
+    )
     st.session_state.saved_trip_id = saved.trip_id
     st.session_state.saved_trip_owner_id = getattr(
         saved,
@@ -2395,7 +2368,6 @@ def _save_current_trip(
     is_group_plan = bool(
         getattr(saved, "is_group_plan", False)
         or preference_draft_id
-        or access_role == "collaborator"
     )
     selector_key = (
         "group-trip-selector" if is_group_plan else "self-trip-selector"
@@ -2408,7 +2380,7 @@ def _save_current_trip(
         "is_group_plan": is_group_plan,
         "title": saved.title,
         "account_backed": bool(account.get("access_token")),
-        "collaborator": access_role == "collaborator",
+        "collaborator": False,
         "save_kind": (
             "published" if save_itinerary_version else "draft"
             if save_working_draft else "trip"
@@ -2545,11 +2517,7 @@ def _render_itinerary(
                         )
                     else:
                         st.toast(f"Draft saved to {saved.title}")
-                publish_label = (
-                    "Save itinerary version"
-                    if access_role == "collaborator"
-                    else "Publish version"
-                )
+                publish_label = "Publish version"
                 if st.button(
                     publish_label,
                     icon=":material/publish:",
@@ -3014,7 +2982,7 @@ def _render_results_step() -> None:
         return
     has_itinerary = bool(st.session_state.itinerary_plan)
     can_save_trip_brief = (
-        st.session_state.get("saved_trip_access_role") != "collaborator"
+        st.session_state.get("saved_trip_access_role") == "owner"
     )
     if not has_itinerary and can_save_trip_brief and st.button(
         "Save this trip",

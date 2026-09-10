@@ -33,7 +33,6 @@ from src.trips import (
     itinerary_versions,
     list_saved_trips,
     revise_itinerary_plan,
-    save_shared_itinerary_version,
     save_trip,
     state_for_itinerary_version,
     state_for_working_itinerary_draft,
@@ -347,7 +346,7 @@ def _render_trip_brief(record: SavedTrip) -> None:
 
 
 def _render_owner_sharing(record: SavedTrip) -> None:
-    """Let an owner create role-specific links or revoke all shared access."""
+    """Let an organizer create a read-only link or revoke shared access."""
 
     account = current_account_session()
     if account is None or not record.is_owner:
@@ -362,22 +361,10 @@ def _render_owner_sharing(record: SavedTrip) -> None:
         st.caption(
             "The link expires in 7 days and the recipient must sign in."
         )
-        access_label = st.segmented_control(
-            "Access",
-            options=["Can view", "Can create itineraries"],
-            default="Can view",
-            key=f"share-access-{record.record_key}",
-        )
-        access_role = (
-            "collaborator"
-            if access_label == "Can create itineraries"
-            else "viewer"
-        )
+        access_role = "viewer"
         st.caption(
-            "Collaborators can add itinerary versions, but cannot change the "
-            "trip brief, sharing settings, or ownership."
-            if access_role == "collaborator"
-            else "Viewers can read and compare saved itinerary versions."
+            "Members can view the latest draft and published versions. Only "
+            "the organizer can edit or publish."
         )
         if st.button(
             "Create sharing link",
@@ -410,11 +397,7 @@ def _render_owner_sharing(record: SavedTrip) -> None:
 
         link_details = share_links.get(record.record_key)
         if isinstance(link_details, dict) and link_details.get("url"):
-            st.caption(
-                "Collaborator link"
-                if link_details.get("access_role") == "collaborator"
-                else "Viewer link"
-            )
+            st.caption("Member link")
             st.code(str(link_details["url"]), language=None)
             expires_at = str(link_details.get("expires_at") or "")
             if expires_at:
@@ -701,33 +684,17 @@ def _render_itinerary_alternative_editor(
             (st.session_state.get("account_session") or {}).get("access_token")
             or ""
         )
-        if record.is_owner:
-            saved_record = save_trip(
-                record.trip,
-                source_state,
-                trip_id=record.trip_id,
-                session_id=st.session_state.feedback_session_id,
-                save_itinerary_version=True,
-                itinerary_label=label,
-                force_new_itinerary_version=True,
-                auth_access_token=access_token,
-                owner_id=record.owner_id,
-            )
-        else:
-            try:
-                saved_record = save_shared_itinerary_version(
-                    record,
-                    source_state,
-                    access_token,
-                    itinerary_label=label,
-                )
-            except (RuntimeError, ValueError):
-                st.error(
-                    "TripSync could not save this shared itinerary. Your access "
-                    "may have changed; refresh My trips and try again.",
-                    icon=":material/error:",
-                )
-                return
+        saved_record = save_trip(
+            record.trip,
+            source_state,
+            trip_id=record.trip_id,
+            session_id=st.session_state.feedback_session_id,
+            save_itinerary_version=True,
+            itinerary_label=label,
+            force_new_itinerary_version=True,
+            auth_access_token=access_token,
+            owner_id=record.owner_id,
+        )
         saved_version_id = str(
             saved_record.state.get("active_itinerary_version_id", version_id)
         )
@@ -796,9 +763,7 @@ def _render_saved_itinerary(
             )
         else:
             st.caption(
-                "This is a shared snapshot. You can create a new itinerary version."
-                if record.access_role == "collaborator"
-                else "This is a shared read-only snapshot."
+                "This is a shared read-only snapshot."
                 if not record.is_owner
                 else (
                     "This is a saved snapshot. Create an alternative here, or edit "
@@ -927,9 +892,7 @@ def _trip_option_label(
 ) -> str:
     noun = "itinerary" if version_count == 1 else "itineraries"
     sharing = (
-        " · shared to collaborate"
-        if record.access_role == "collaborator"
-        else " · shared with you"
+        " · shared with you"
         if not record.is_owner
         else " · planned together"
         if record.preference_draft_id
@@ -1010,17 +973,10 @@ def _render_saved_trip_collection(
     with st.container(border=True):
         st.subheader(record.title)
         st.caption(f"Last saved {record.updated_at[:16].replace('T', ' ')} UTC")
-        if record.access_role == "collaborator":
+        if not record.is_owner:
             st.info(
-                "Shared with you · collaborator. You can create and save new "
-                "itinerary versions, while the owner controls the trip brief "
-                "and sharing.",
-                icon=":material/edit_calendar:",
-            )
-        elif not record.is_owner:
-            st.info(
-                "Shared with you · read-only. You can view and compare saved "
-                "itineraries, while only the owner can change this trip.",
+                "Shared with you · read-only. You can view the latest draft and "
+                "published itineraries, while only the organizer can make changes.",
                 icon=":material/visibility:",
             )
         elif record.preference_draft_id:

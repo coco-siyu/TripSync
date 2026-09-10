@@ -26,8 +26,9 @@ draft/published itinerary status are implemented.
   - Ensure member-facing reads exclude individual profiles and sensitive notes.
   - Depends on MVP-01.
   - Current progress: one organizer-editable working draft is stored separately
-    from immutable published versions; members receive a read-only, aggregated
-    interface. Server-side profile redaction remains before completion.
+    from immutable published versions. Members receive a read-only, aggregated
+    interface through a server-sanitized database projection. Apply the latest
+    Supabase schema and complete shared-account QA before closing this item.
 
 ### P0 — Core group flow
 

@@ -1244,7 +1244,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             )
         )
 
-    def test_collaborator_can_start_a_new_shared_itinerary(self) -> None:
+    def test_legacy_collaborator_membership_is_read_only(self) -> None:
         trip = build_sample_trip()
         session = AccountSession(
             user_id="collaborator-user",
@@ -1271,24 +1271,15 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
 
-            self.assertTrue(
-                any("collaborator" in item.value for item in app.info)
-            )
-            next(
-                button
-                for button in app.button
-                if button.label == "Create new itinerary"
-            ).click().run(timeout=10)
+            self.assertTrue(any("read-only" in item.value for item in app.info))
 
         self.assertFalse(app.exception)
-        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
-        self.assertEqual(app.session_state["saved_trip_id"], "shared-trip")
-        self.assertEqual(app.session_state["saved_trip_owner_id"], "owner-user")
-        self.assertEqual(
-            app.session_state["saved_trip_access_role"],
-            "collaborator",
+        self.assertFalse(
+            any(
+                button.label in {"Create new itinerary", "Edit recommendations"}
+                for button in app.button
+            )
         )
-        self.assertEqual(app.session_state["selected_activity_ids"], [])
 
     def test_trip_owner_can_create_and_revoke_a_viewer_link(self) -> None:
         trip = build_sample_trip()
@@ -1354,7 +1345,7 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         revoke_mock.assert_called_once_with("owned-trip", "access-token")
 
-    def test_trip_owner_can_create_a_collaborator_link(self) -> None:
+    def test_trip_owner_sharing_is_read_only(self) -> None:
         trip = build_sample_trip()
         session = AccountSession(
             user_id="owner-user",
@@ -1383,7 +1374,7 @@ class StreamlitInteractionTests(unittest.TestCase):
                 return_value=TripInvitation(
                     token="x" * 43,
                     expires_at="2026-09-01T12:00:00+00:00",
-                    access_role="collaborator",
+                    access_role="viewer",
                 ),
             ) as create_mock,
         ):
@@ -1391,11 +1382,6 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.session_state["app_workspace"] = "My trips"
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
-            next(
-                control
-                for control in app.segmented_control
-                if control.label == "Access"
-            ).set_value("Can create itineraries").run(timeout=10)
             next(
                 button
                 for button in app.button
@@ -1407,10 +1393,10 @@ class StreamlitInteractionTests(unittest.TestCase):
             "owned-trip",
             "owner-user",
             "access-token",
-            access_role="collaborator",
+            access_role="viewer",
         )
         self.assertTrue(
-            any(item.value == "Collaborator link" for item in app.caption)
+            any(item.value == "Member link" for item in app.caption)
         )
 
     def test_signed_out_invitee_is_routed_to_account_without_claiming(self) -> None:

@@ -79,17 +79,17 @@ Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 With all three Supabase values configured, travelers can create accounts, change
 their password while signed in, keep private plans across devices, and
 permanently delete their account and account-linked data. A signed-in owner can
-also create a seven-day link from **My trips → Share trip**, choosing **Can
-view** or **Can create itineraries**. Viewers receive read-only access.
-Collaborators may build and append new itinerary versions, but cannot change the
-trip brief, sharing settings, ownership, or delete the owner's data.
+also create a seven-day member link from **My trips → Share trip**. Members can
+view the latest working draft and published versions, while only the organizer
+can edit or publish.
 During trip setup, an organizer can instead choose **Invite separately**. Each
 named link is tied to one traveler slot, requires sign-in, and can only edit that
-slot. The organizer sees which profiles are ready and starts recommendations
-after everyone has replied. These setup invitations do not grant access to a
+slot. The organizer sees which profiles are ready and can start recommendations
+after at least two are complete. These setup invitations do not grant access to a
 saved trip or its itinerary versions.
-**My trips** keeps invitation-based and shared trips under **Group planning**,
-while trips entered without invitations stay under **Self planning**. When a
+**My trips** separates **Drafts** from **Published** plans, then keeps
+invitation-based and shared trips under **Group planning**, while trips entered
+without invitations stay under **Self planning**. When a
 group itinerary is first saved, its originating preference draft is recorded in
 the saved state so later itinerary versions remain in the same group. Older
 exact matches can be linked once with **Confirm group link**.
@@ -111,8 +111,9 @@ so no additional Supabase redirect URL is required. Sharing links are capability
 secrets: TripSync stores only a one-way token hash, expires links after seven
 days, and removes the token from the browser URL immediately after it is
 accepted. **Revoke sharing** invalidates outstanding links and removes existing
-viewers and collaborators. Collaborator saves use a guarded database function
-that can only append itinerary snapshots; general updates remain owner-only.
+members. Shared reads use a server-sanitized projection: traveler names, notes,
+must-do ownership, and personalized itinerary reasons are excluded before the
+payload reaches the member's browser.
 
 Account deletion requires a fresh password verification. Its zero-argument
 database function derives the deletion target from the authenticated JWT,
