@@ -1018,18 +1018,19 @@ def _render_saved_trip_collection(
         can_start_new = record.can_create_itineraries and (
             content_mode == "published" or working_draft is None
         )
-        if can_start_new:
+        if record.is_owner:
             with st.container(horizontal=True):
-                st.button(
-                    "Create new itinerary",
-                    icon=":material/add_circle:",
-                    type="primary",
-                    key=f"new-itinerary-{record.record_key}",
-                    on_click=_start_new_itinerary,
-                    args=(record,),
-                )
-                if record.is_owner:
-                    _render_owner_sharing(record)
+                if can_start_new:
+                    st.button(
+                        "Create new itinerary",
+                        icon=":material/add_circle:",
+                        type="primary",
+                        key=f"new-itinerary-{record.record_key}",
+                        on_click=_start_new_itinerary,
+                        args=(record,),
+                    )
+                _render_owner_sharing(record)
+        if can_start_new:
             st.caption(
                 "Start from this trip's curated activities with an empty shortlist."
             )

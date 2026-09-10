@@ -984,6 +984,13 @@ class StreamlitInteractionTests(unittest.TestCase):
         planner = self._sample_results_app()
         planner.button(key="build-itinerary").click().run(timeout=10)
         plan = planner.session_state["itinerary_plan"]
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
         record = SavedTrip(
             trip_id="rome-draft",
             title="Rome · 3 days",
@@ -1008,11 +1015,16 @@ class StreamlitInteractionTests(unittest.TestCase):
                 ],
             },
             updated_at="2026-09-09T23:30:00+00:00",
+            owner_id="owner-user",
         )
 
-        with patch("src.trips_ui.list_saved_trips", return_value=[record]):
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
+        ):
             app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
             self.assertEqual(
                 [tab.label for tab in app.tabs],
@@ -1020,6 +1032,9 @@ class StreamlitInteractionTests(unittest.TestCase):
             )
             self.assertTrue(
                 any(button.label == "View draft" for button in app.button)
+            )
+            self.assertTrue(
+                any(button.label == "Create sharing link" for button in app.button)
             )
             next(
                 button
