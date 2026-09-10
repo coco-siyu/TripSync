@@ -886,7 +886,7 @@ def _legacy_group_matches(
             matches[matching_records[0].record_key] = draft
     return matches
 
-
+ 
 def _trip_option_label(
     record: SavedTrip, version_count: int, *, has_working_draft: bool = False
 ) -> str:
