@@ -57,6 +57,13 @@ class TimeBlock(str, Enum):
     EVENING = "evening"
 
 
+class ItineraryStatus(str, Enum):
+    """Lifecycle state for an editable plan or immutable snapshot."""
+
+    DRAFT = "draft"
+    PUBLISHED = "published"
+
+
 class ItinerarySource(str, Enum):
     """Why an activity was added to a generated itinerary."""
 
@@ -462,6 +469,7 @@ class ItineraryPlan(TripSyncModel):
 
     destination: str = Field(min_length=1, max_length=120)
     country: str = Field(min_length=1, max_length=80)
+    status: ItineraryStatus = ItineraryStatus.DRAFT
     pace: TripPace
     budget_level: BudgetLevel | None = None
     auto_fill: bool

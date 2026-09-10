@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from src.budget import estimate_daily_budget
 from src.feedback import DEFAULT_FEEDBACK_DATABASE_PATH
-from src.models import ItineraryDay, ItineraryPlan, TripRequest
+from src.models import ItineraryDay, ItineraryPlan, ItineraryStatus, TripRequest
 from src.planner import PACE_RULES, TRANSITION_HOURS, assign_time_blocks
 from src.supabase_store import (
     is_configured,
@@ -36,6 +36,8 @@ _ITINERARY_STATE_KEYS = (
 )
 _HEX_IDENTIFIER_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 PREFERENCE_DRAFT_STATE_KEY = "preference_draft_id"
+WORKING_DRAFT_STATE_KEY = "working_itinerary_draft"
+WORKING_DRAFT_ID = "working-draft"
 
 
 @dataclass(frozen=True)
@@ -88,13 +90,18 @@ def itinerary_versions(
         for version in state.get("itinerary_versions", [])
         if isinstance(version, dict) and version.get("version_id")
     ]
-    if versions or not state.get("itinerary_plan"):
+    if (
+        versions
+        or not state.get("itinerary_plan")
+        or isinstance(state.get(WORKING_DRAFT_STATE_KEY), dict)
+    ):
         return versions
     return [
         {
             "version_id": "legacy",
             "label": "Saved itinerary",
             "saved_at": fallback_updated_at,
+            "status": ItineraryStatus.PUBLISHED.value,
             **{
                 key: state.get(key)
                 for key in _ITINERARY_STATE_KEYS
@@ -102,6 +109,33 @@ def itinerary_versions(
             },
         }
     ]
+
+
+def working_itinerary_draft(state: dict) -> dict | None:
+    """Return the one editable itinerary draft stored beside published versions."""
+
+    raw_draft = state.get(WORKING_DRAFT_STATE_KEY)
+    if not isinstance(raw_draft, dict) or not raw_draft.get("itinerary_plan"):
+        return None
+    draft = dict(raw_draft)
+    draft.setdefault("version_id", WORKING_DRAFT_ID)
+    draft.setdefault("label", "Working draft")
+    draft.setdefault("status", ItineraryStatus.DRAFT.value)
+    return draft
+
+
+def state_for_working_itinerary_draft(state: dict) -> dict:
+    """Restore the editable draft into ordinary planner state."""
+
+    draft = working_itinerary_draft(state)
+    if draft is None:
+        return dict(state)
+    restored = dict(state)
+    restored.update(
+        {key: draft.get(key) for key in _ITINERARY_STATE_KEYS if key in draft}
+    )
+    restored["active_itinerary_version_id"] = None
+    return restored
 
 
 def state_for_itinerary_version(
@@ -226,16 +260,33 @@ def revise_itinerary_plan(
 def _snapshot_itinerary(
     state: dict, position: int, *, label: str | None = None
 ) -> dict:
-    return {
+    snapshot = {
         "version_id": uuid4().hex,
         "label": (label or "").strip() or f"Itinerary {position}",
         "saved_at": datetime.now(UTC).isoformat(),
+        "status": ItineraryStatus.PUBLISHED.value,
         **{
             key: state.get(key)
             for key in _ITINERARY_STATE_KEYS
             if key in state
         },
     }
+    return snapshot
+
+
+def _snapshot_working_draft(state: dict) -> dict:
+    snapshot = {
+        "version_id": WORKING_DRAFT_ID,
+        "label": "Working draft",
+        "saved_at": datetime.now(UTC).isoformat(),
+        "status": ItineraryStatus.DRAFT.value,
+        **{
+            key: state.get(key)
+            for key in _ITINERARY_STATE_KEYS
+            if key in state
+        },
+    }
+    return snapshot
 
 
 def _existing_trip_state(
@@ -304,6 +355,7 @@ def save_trip(
     trip_id: str | None = None,
     session_id: str = "local",
     save_itinerary_version: bool = False,
+    save_working_draft: bool = False,
     itinerary_label: str | None = None,
     force_new_itinerary_version: bool = False,
     auth_access_token: str | None = None,
@@ -311,6 +363,12 @@ def save_trip(
 ) -> SavedTrip:
     """Save a validated trip and its serializable planner state."""
 
+    if save_itinerary_version and save_working_draft:
+        raise ValueError("Choose either a working draft or a published version")
+    if (save_itinerary_version or save_working_draft) and not state.get(
+        "itinerary_plan"
+    ):
+        raise ValueError("Create an itinerary before saving it")
     resolved_trip_id = trip_id or uuid4().hex
     previous_state, previous_updated_at, existing_owner_id = _existing_trip_state(
         resolved_trip_id,
@@ -355,11 +413,22 @@ def save_trip(
         stored_state["active_itinerary_version_id"] = matching_version[
             "version_id"
         ]
+        stored_state.pop(WORKING_DRAFT_STATE_KEY, None)
     elif previous_state.get("itinerary_versions"):
         stored_state["itinerary_versions"] = previous_state["itinerary_versions"]
         stored_state["active_itinerary_version_id"] = previous_state.get(
             "active_itinerary_version_id"
         )
+    if save_working_draft:
+        stored_state[WORKING_DRAFT_STATE_KEY] = _snapshot_working_draft(state)
+    elif (
+        not save_itinerary_version
+        and previous_state.get(WORKING_DRAFT_STATE_KEY)
+        and WORKING_DRAFT_STATE_KEY not in stored_state
+    ):
+        stored_state[WORKING_DRAFT_STATE_KEY] = previous_state[
+            WORKING_DRAFT_STATE_KEY
+        ]
 
     record = SavedTrip(
         resolved_trip_id,

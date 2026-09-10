@@ -113,6 +113,9 @@ The organizer can adjust the current draft. Members have read-only access to the
 latest approved draft state and see updates after refreshing the page. Real-time
 synchronization is not required.
 
+The organizer uses **Save draft** to replace the one editable working copy.
+Saving a draft does not create a published itinerary version.
+
 Preferences stay private according to the visibility rules above. Week-two votes
 show individual choices only to the organizer; members see group totals. Named
 proposals are visible to the group.
@@ -121,6 +124,9 @@ proposals are visible to the group.
 
 Publishing creates an immutable itinerary snapshot. The organizer can continue
 later by starting a new editable draft from a published version.
+
+The organizer uses **Publish version** to copy the current plan into the saved
+version history and clear the superseded working draft.
 
 Publishing is blocked only when:
 

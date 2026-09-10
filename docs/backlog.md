@@ -7,16 +7,16 @@ dependency and intended delivery sequence.
 
 ### P0 — Models and persistence
 
-Current progress: dates, stay area, traveler budget/pace/time fields, and
-backward-compatible group planning defaults are implemented. Generated
-itineraries now persist broad time blocks; draft/published status remains.
+Current progress: dates, stay area, traveler budget/pace/time fields,
+backward-compatible group planning defaults, time blocks, and explicit
+draft/published itinerary status are implemented.
 
-- [ ] **MVP-01: Add backward-compatible planning fields**
+- [x] **MVP-01: Add backward-compatible planning fields**
   - Add start and end dates, validate one to five consecutive full days, and
     migrate older day-count-only trips safely.
   - Add traveler daily budget band and optional pace/time preferences.
   - Add optional accommodation neighborhood with central-Rome fallback.
-  - Add itinerary time blocks and explicit draft/published status.
+  - Add itinerary time blocks and explicit draft/published status. **Done.**
   - Preserve loading of existing saved trips and versions.
 
 - [ ] **MVP-02: Persist the shared working draft**
@@ -25,6 +25,9 @@ itineraries now persist broad time blocks; draft/published status remains.
   - Grant submitted preference members read-only access to the working draft.
   - Ensure member-facing reads exclude individual profiles and sensitive notes.
   - Depends on MVP-01.
+  - Current progress: one organizer-editable working draft is stored separately
+    from immutable published versions; members receive a read-only, aggregated
+    interface. Server-side profile redaction remains before completion.
 
 ### P0 — Core group flow
 

@@ -21,7 +21,11 @@ from src.llm import NarrationGenerationError
 from src.proposals import ItineraryChangeProposal, ItineraryChangeProposals
 from src.catalog import load_curated_activities
 from src.search import retrieve_activities as real_retrieve_activities
-from src.trips import PREFERENCE_DRAFT_STATE_KEY, SavedTrip
+from src.trips import (
+    PREFERENCE_DRAFT_STATE_KEY,
+    WORKING_DRAFT_STATE_KEY,
+    SavedTrip,
+)
 from src.invitations import SharedTripIdentity, TripInvitation
 from src.preference_invitations import (
     PreferenceAssignment,
@@ -966,10 +970,110 @@ class StreamlitInteractionTests(unittest.TestCase):
 
         labels = [item.value for item in app.markdown]
         self.assertFalse(app.exception)
+        self.assertEqual(
+            [tab.label for tab in app.tabs],
+            ["Drafts (0)", "Published (1)"],
+        )
         self.assertTrue(any(label.startswith("**Afternoon ·") for label in labels))
         self.assertFalse(any(label.startswith("**Midday ·") for label in labels))
         self.assertTrue(
             any("Estimated daily budget per person" in label for label in labels)
+        )
+
+    def test_owner_can_view_and_continue_a_saved_working_draft(self) -> None:
+        planner = self._sample_results_app()
+        planner.button(key="build-itinerary").click().run(timeout=10)
+        plan = planner.session_state["itinerary_plan"]
+        record = SavedTrip(
+            trip_id="rome-draft",
+            title="Rome · 3 days",
+            trip=build_sample_trip(),
+            state={
+                WORKING_DRAFT_STATE_KEY: {
+                    "version_id": "working-draft",
+                    "label": "Working draft",
+                    "status": "draft",
+                    "saved_at": "2026-09-09T23:30:00+00:00",
+                    "itinerary_plan": plan,
+                    "selected_activity_ids": ["rome_colosseum"],
+                },
+                "itinerary_versions": [
+                    {
+                        "version_id": "published-one",
+                        "label": "Itinerary 1",
+                        "status": "published",
+                        "saved_at": "2026-09-09T23:00:00+00:00",
+                        "itinerary_plan": plan,
+                    }
+                ],
+            },
+            updated_at="2026-09-09T23:30:00+00:00",
+        )
+
+        with patch("src.trips_ui.list_saved_trips", return_value=[record]):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.run(timeout=10)
+            self.assertEqual(
+                [tab.label for tab in app.tabs],
+                ["Drafts (1)", "Published (1)"],
+            )
+            self.assertTrue(
+                any(button.label == "View draft" for button in app.button)
+            )
+            next(
+                button
+                for button in app.button
+                if button.label == "Continue editing"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertEqual(app.session_state["saved_trip_id"], "rome-draft")
+        self.assertIn(
+            "rome_colosseum",
+            app.session_state["selected_activity_ids"],
+        )
+
+    def test_member_working_draft_view_hides_named_preferences(self) -> None:
+        planner = self._sample_results_app()
+        planner.button(key="build-itinerary").click().run(timeout=10)
+        record = SavedTrip(
+            trip_id="shared-draft",
+            title="Rome with friends",
+            trip=build_sample_trip(),
+            state={
+                WORKING_DRAFT_STATE_KEY: {
+                    "version_id": "working-draft",
+                    "label": "Working draft",
+                    "status": "draft",
+                    "saved_at": "2026-09-09T23:30:00+00:00",
+                    "itinerary_plan": planner.session_state["itinerary_plan"],
+                }
+            },
+            updated_at="2026-09-09T23:30:00+00:00",
+            owner_id="owner-user",
+            access_role="viewer",
+        )
+
+        with patch("src.trips_ui.list_saved_trips", return_value=[record]):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["open_saved_itinerary"] = {
+                "record_key": record.record_key,
+                "version_id": "working-draft",
+            }
+            app.run(timeout=10)
+
+        visible_text = " ".join(
+            item.value for item in [*app.caption, *app.markdown]
+        )
+        self.assertFalse(app.exception)
+        self.assertIn("Group interests:", visible_text)
+        self.assertNotIn("Coco:", visible_text)
+        self.assertNotIn("Must-do for Coco", visible_text)
+        self.assertFalse(
+            any(button.label == "Continue editing" for button in app.button)
         )
 
     def test_same_name_saved_trips_can_be_selected_independently(self) -> None:
@@ -1748,6 +1852,24 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertEqual(
             saved_state["itinerary_plan"],
             app.session_state["itinerary_plan"],
+        )
+
+    def test_itinerary_save_draft_does_not_publish_a_version(self) -> None:
+        app = self._sample_results_app()
+        app.button(key="build-itinerary").click().run()
+
+        with patch("src.ui.save_trip") as save:
+            save.return_value = SimpleNamespace(
+                trip_id="saved-trip",
+                title="Rome, Italy · 3 days",
+            )
+            app.button(key="save-itinerary-draft").click().run()
+
+        self.assertFalse(save.call_args.kwargs["save_itinerary_version"])
+        self.assertTrue(save.call_args.kwargs["save_working_draft"])
+        self.assertEqual(
+            app.session_state["saved_trip_confirmation"]["save_kind"],
+            "draft",
         )
 
     def test_stale_save_confirmation_does_not_duplicate_when_rebuilding(self) -> None:

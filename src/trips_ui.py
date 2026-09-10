@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import streamlit as st
 
 from src.budget import daily_budget_label, euro_range
@@ -27,12 +29,15 @@ from src.preference_invitations import (
 )
 from src.trips import (
     SavedTrip,
+    WORKING_DRAFT_ID,
     itinerary_versions,
     list_saved_trips,
     revise_itinerary_plan,
     save_shared_itinerary_version,
     save_trip,
     state_for_itinerary_version,
+    state_for_working_itinerary_draft,
+    working_itinerary_draft,
 )
 
 
@@ -134,10 +139,15 @@ def _render_persistent_trip_notices() -> None:
         if confirmation.get("account_backed")
         else "this active session"
     )
+    save_kind = confirmation.get("save_kind")
     st.success(
         (
             f"A new itinerary version is saved to {title}."
             if confirmation.get("collaborator")
+            else f"Your working draft is saved to {title}."
+            if save_kind == "draft"
+            else f"A published itinerary version is saved to {title}."
+            if save_kind == "published"
             else f"{title} is saved to {destination}."
         ),
         icon=(
@@ -191,6 +201,30 @@ def _open_trip_for_edit(record: SavedTrip, version_id: str | None = None) -> Non
     st.session_state.saved_itinerary_version_id = restored_state.get(
         "active_itinerary_version_id"
     )
+    st.session_state.active_preference_draft_id = record.preference_draft_id
+    st.session_state.saved_trip_read_mode = False
+    st.session_state.planner_step = "results"
+    st.session_state.app_workspace = "Plan a trip"
+
+
+def _open_working_draft_for_edit(record: SavedTrip) -> None:
+    """Restore the organizer's persisted working draft in the planner."""
+
+    if not record.is_owner:
+        return
+    st.session_state.trip_request = record.trip.model_dump(mode="json")
+    st.session_state.trip_basics = record.trip.model_dump(
+        mode="json", exclude={"travelers"}
+    )
+    restored_state = state_for_working_itinerary_draft(record.state)
+    for key, default in _RESTORED_STATE_DEFAULTS.items():
+        st.session_state[key] = restored_state.get(key, default)
+    for key, value in restored_state.items():
+        st.session_state[key] = value
+    st.session_state.saved_trip_id = record.trip_id
+    st.session_state.saved_trip_owner_id = record.owner_id
+    st.session_state.saved_trip_access_role = "owner"
+    st.session_state.saved_itinerary_version_id = None
     st.session_state.active_preference_draft_id = record.preference_draft_id
     st.session_state.saved_trip_read_mode = False
     st.session_state.planner_step = "results"
@@ -258,13 +292,20 @@ def itinerary_plan_for_version(
 ) -> ItineraryPlan | None:
     """Return one saved itinerary as a validated plan for read-only display."""
 
-    restored_state = state_for_itinerary_version(
-        record.state,
-        version_id,
-        fallback_updated_at=record.updated_at,
+    restored_state = (
+        state_for_working_itinerary_draft(record.state)
+        if version_id == WORKING_DRAFT_ID
+        else state_for_itinerary_version(
+            record.state,
+            version_id,
+            fallback_updated_at=record.updated_at,
+        )
     )
     raw_plan = restored_state.get("itinerary_plan")
-    return ItineraryPlan.model_validate(raw_plan) if raw_plan else None
+    if not raw_plan:
+        return None
+    status = "draft" if version_id == WORKING_DRAFT_ID else "published"
+    return ItineraryPlan.model_validate({**raw_plan, "status": status})
 
 
 def _hours_label(hours: float) -> str:
@@ -280,18 +321,28 @@ def _render_trip_brief(record: SavedTrip) -> None:
         f"{len(trip.travelers)} travelers · {trip.budget_level.value} budget · "
         f"{trip.pace.value} pace"
     )
-    st.caption(
-        " · ".join(
-            f"{traveler.name}: {', '.join(traveler.interests)}"
-            for traveler in trip.travelers
+    if record.is_owner:
+        st.caption(
+            " · ".join(
+                f"{traveler.name}: {', '.join(traveler.interests)}"
+                for traveler in trip.travelers
+            )
         )
-    )
+    else:
+        group_interests = sorted(
+            {
+                interest
+                for traveler in trip.travelers
+                for interest in traveler.interests
+            }
+        )
+        st.caption(f"Group interests: {', '.join(group_interests)}")
     must_do_briefs = [
         f"{traveler.name}: {', '.join(traveler.must_do_activities)}"
         for traveler in trip.travelers
         if traveler.must_do_activities
     ]
-    if must_do_briefs:
+    if must_do_briefs and record.is_owner:
         st.caption(f"Must-dos · {' · '.join(must_do_briefs)}")
 
 
@@ -687,7 +738,13 @@ def _render_itinerary_alternative_editor(
         st.rerun()
 
 
-def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> None:
+def _render_saved_itinerary(
+    record: SavedTrip,
+    version: dict,
+    position: int,
+    *,
+    is_working_draft: bool = False,
+) -> None:
     """Show a saved itinerary below its trip card without returning to the planner."""
 
     version_id = str(version["version_id"])
@@ -720,22 +777,34 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
     activity_count = sum(len(day.activities) for day in plan.days)
     activity_hours = sum(day.activity_hours for day in plan.days)
     with st.container(border=True):
-        st.markdown('<div class="ts-section-label">Saved itinerary</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="ts-section-label">Working draft</div>'
+            if is_working_draft
+            else '<div class="ts-section-label">Saved itinerary</div>',
+            unsafe_allow_html=True,
+        )
         st.subheader(_version_label(version, position))
         st.caption(
             f"{activity_count} activities · {_hours_label(activity_hours)} of activities · "
             f"{plan.pace.value} pace"
         )
-        st.caption(
-            "This is a shared snapshot. You can create a new itinerary version."
-            if record.access_role == "collaborator"
-            else "This is a shared read-only snapshot."
-            if not record.is_owner
-            else (
-                "This is a saved snapshot. Create an alternative here, or edit "
-                "matched attractions in the planner."
+        if is_working_draft:
+            st.caption(
+                "This is the organizer’s latest editable draft."
+                if record.is_owner
+                else "This is the organizer’s latest draft. It is read-only for members."
             )
-        )
+        else:
+            st.caption(
+                "This is a shared snapshot. You can create a new itinerary version."
+                if record.access_role == "collaborator"
+                else "This is a shared read-only snapshot."
+                if not record.is_owner
+                else (
+                    "This is a saved snapshot. Create an alternative here, or edit "
+                    "matched attractions in the planner."
+                )
+            )
 
         for day in plan.days:
             with st.container(border=True):
@@ -777,22 +846,36 @@ def _render_saved_itinerary(record: SavedTrip, version: dict, position: int) -> 
                         _hours_label(activity.duration_hours),
                         "Your shortlist" if activity.source.value == "shortlist" else "Group recommendation",
                     ]
-                    if activity.traveler_names:
+                    if activity.traveler_names and record.is_owner:
                         metadata.append(f"Serves {' + '.join(activity.traveler_names)}")
                     st.caption(" · ".join(metadata))
-                    if activity.must_do_owners:
+                    if activity.must_do_owners and record.is_owner:
                         st.caption(f"Must-do for {' + '.join(activity.must_do_owners)}")
-                    st.write(activity.reason)
+                    elif activity.must_do_owners:
+                        st.caption("Group must-do")
+                    st.write(
+                        activity.reason
+                        if record.is_owner
+                        else "Included for the group’s shared preferences."
+                    )
         if plan.unscheduled:
             with st.expander(f"Not scheduled ({len(plan.unscheduled)})"):
                 for activity in plan.unscheduled:
                     st.markdown(f"**{activity.activity_name}** — {activity.reason}")
 
-        if record.can_create_itineraries:
+        if record.can_create_itineraries and not is_working_draft:
             _render_itinerary_alternative_editor(record, version, position, plan)
 
         with st.container(horizontal=True):
-            if record.can_create_itineraries:
+            if is_working_draft and record.is_owner:
+                st.button(
+                    "Continue editing",
+                    icon=":material/edit:",
+                    key=f"edit-working-draft-{record.record_key}",
+                    on_click=_open_working_draft_for_edit,
+                    args=(record,),
+                )
+            elif record.can_create_itineraries:
                 st.button(
                     "Edit recommendations",
                     icon=":material/edit:",
@@ -839,7 +922,9 @@ def _legacy_group_matches(
     return matches
 
 
-def _trip_option_label(record: SavedTrip, version_count: int) -> str:
+def _trip_option_label(
+    record: SavedTrip, version_count: int, *, has_working_draft: bool = False
+) -> str:
     noun = "itinerary" if version_count == 1 else "itineraries"
     sharing = (
         " · shared to collaborate"
@@ -852,15 +937,17 @@ def _trip_option_label(record: SavedTrip, version_count: int) -> str:
     )
     saved_at = record.updated_at[:16].replace("T", " ")
     saved_label = f" · saved {saved_at} UTC" if saved_at else ""
+    draft_label = " · working draft" if has_working_draft else ""
     return (
         f"{record.title} · {version_count} saved {noun}"
-        f"{saved_label}{sharing}"
+        f"{draft_label}{saved_label}{sharing}"
     )
 
 
 def _render_saved_trip_collection(
     records: list[SavedTrip],
     *,
+    content_mode: Literal["drafts", "published"],
     selector_label: str,
     selector_key: str,
     invited_record_key: str | None = None,
@@ -881,10 +968,15 @@ def _render_saved_trip_collection(
         )
         for record in records
     }
+    drafts_by_record_key = {
+        record.record_key: working_itinerary_draft(record.state)
+        for record in records
+    }
     trip_labels = {
         record.record_key: _trip_option_label(
             record,
             len(versions_by_record_key[record.record_key]),
+            has_working_draft=drafts_by_record_key[record.record_key] is not None,
         )
         for record in records
     }
@@ -899,7 +991,16 @@ def _render_saved_trip_collection(
     )
     record = records_by_key[selected_record_key]
     open_itinerary = st.session_state.get(_OPEN_SAVED_ITINERARY_KEY, {})
-    versions = versions_by_record_key[record.record_key]
+    versions = (
+        versions_by_record_key[record.record_key]
+        if content_mode == "published"
+        else []
+    )
+    working_draft = (
+        drafts_by_record_key[record.record_key]
+        if content_mode == "drafts"
+        else None
+    )
     version_ids = [version["version_id"] for version in versions]
     version_labels = {
         version["version_id"]: _version_label(version, position)
@@ -958,7 +1059,10 @@ def _render_saved_trip_collection(
                     )
                     st.rerun()
         _render_trip_brief(record)
-        if record.can_create_itineraries:
+        can_start_new = record.can_create_itineraries and (
+            content_mode == "published" or working_draft is None
+        )
+        if can_start_new:
             with st.container(horizontal=True):
                 st.button(
                     "Create new itinerary",
@@ -973,7 +1077,7 @@ def _render_saved_trip_collection(
             st.caption(
                 "Start from this trip's curated activities with an empty shortlist."
             )
-        else:
+        elif not record.can_create_itineraries:
             if st.button(
                 "Remove from My trips",
                 icon=":material/person_remove:",
@@ -982,6 +1086,29 @@ def _render_saved_trip_collection(
                 args=(record,),
             ):
                 st.rerun()
+
+        if working_draft is not None:
+            st.markdown("#### Working draft")
+            st.caption(
+                "Editable by the organizer · saved "
+                f"{str(working_draft.get('saved_at') or '')[:16].replace('T', ' ')} UTC"
+            )
+            with st.container(horizontal=True):
+                st.button(
+                    "View draft",
+                    icon=":material/visibility:",
+                    key=f"view-working-draft-{record.record_key}",
+                    on_click=_open_saved_itinerary,
+                    args=(record, WORKING_DRAFT_ID),
+                )
+                if record.is_owner:
+                    st.button(
+                        "Continue editing",
+                        icon=":material/edit:",
+                        key=f"continue-working-draft-{record.record_key}",
+                        on_click=_open_working_draft_for_edit,
+                        args=(record,),
+                    )
 
         if versions:
             st.markdown("#### Saved itineraries")
@@ -1018,19 +1145,29 @@ def _render_saved_trip_collection(
                     )
             _render_itinerary_comparison(record, versions)
         else:
-            st.caption("No itineraries have been saved for this trip yet.")
+            st.caption("No published itineraries have been saved for this trip yet.")
 
     if open_itinerary.get("record_key") != record.record_key:
         return
 
     active_version_id = str(open_itinerary.get("version_id") or "")
-    active_version = next(
-        (
-            version
-            for version in versions
-            if version["version_id"] == active_version_id
-        ),
-        None,
+    if (
+        content_mode == "drafts" and active_version_id != WORKING_DRAFT_ID
+    ) or (
+        content_mode == "published" and active_version_id == WORKING_DRAFT_ID
+    ):
+        return
+    active_version = (
+        working_draft
+        if active_version_id == WORKING_DRAFT_ID
+        else next(
+            (
+                version
+                for version in versions
+                if version["version_id"] == active_version_id
+            ),
+            None,
+        )
     )
     if active_version is None:
         st.info("This saved itinerary is no longer available.", icon=":material/info:")
@@ -1038,7 +1175,77 @@ def _render_saved_trip_collection(
         _render_saved_itinerary(
             record,
             active_version,
-            version_ids.index(active_version_id),
+            -1 if active_version_id == WORKING_DRAFT_ID else version_ids.index(active_version_id),
+            is_working_draft=active_version_id == WORKING_DRAFT_ID,
+        )
+
+
+def _render_saved_trip_sections(
+    *,
+    content_mode: Literal["drafts", "published"],
+    group_records: list[SavedTrip],
+    self_records: list[SavedTrip],
+    active_preference_drafts: list[PreferenceDraft],
+    invited_record_key: str | None,
+    legacy_matches: dict[str, PreferenceDraft],
+    account,
+) -> None:
+    """Render Group/Self organization inside one lifecycle tab."""
+
+    def belongs(record: SavedTrip) -> bool:
+        versions = itinerary_versions(
+            record.state,
+            fallback_updated_at=record.updated_at,
+        )
+        if content_mode == "published":
+            return bool(versions)
+        return working_itinerary_draft(record.state) is not None or not versions
+
+    visible_group_records = [record for record in group_records if belongs(record)]
+    visible_self_records = [record for record in self_records if belongs(record)]
+    shown_preference_drafts = (
+        active_preference_drafts if content_mode == "drafts" else []
+    )
+    group_count = len(shown_preference_drafts) + len(visible_group_records)
+    selector_prefix = "" if content_mode == "drafts" else "published-"
+
+    with st.expander(
+        f"Group planning ({group_count})",
+        expanded=bool(group_count),
+    ):
+        st.caption(
+            "Trips collecting named preferences and itineraries planned with "
+            "other people."
+        )
+        _render_preference_drafts(shown_preference_drafts)
+        if shown_preference_drafts and visible_group_records:
+            st.divider()
+        if visible_group_records:
+            st.markdown("#### Group trips and itineraries")
+        _render_saved_trip_collection(
+            visible_group_records,
+            content_mode=content_mode,
+            selector_label="Choose a group trip",
+            selector_key=f"{selector_prefix}group-trip-selector",
+            invited_record_key=invited_record_key,
+            legacy_matches=legacy_matches,
+            account=account,
+        )
+
+    with st.expander(
+        f"Self planning ({len(visible_self_records)})",
+        expanded=not group_count,
+    ):
+        st.caption(
+            "Trips you planned by entering everyone’s preferences yourself."
+        )
+        _render_saved_trip_collection(
+            visible_self_records,
+            content_mode=content_mode,
+            selector_label="Choose a self-planned trip",
+            selector_key=f"{selector_prefix}self-trip-selector",
+            invited_record_key=invited_record_key,
+            account=account,
         )
 
 
@@ -1085,43 +1292,53 @@ def render_saved_trips() -> None:
         draft for draft in drafts if draft.draft_id not in represented_draft_ids
     ]
 
-    group_count = len(active_drafts) + len(group_records)
-    with st.expander(
-        f"Group planning ({group_count})",
-        expanded=bool(group_count),
-    ):
-        st.caption(
-            "Trips collecting named preferences and itineraries planned with "
-            "other people."
+    draft_count = len(active_drafts) + sum(
+        working_itinerary_draft(record.state) is not None
+        or not itinerary_versions(
+            record.state,
+            fallback_updated_at=record.updated_at,
         )
-        _render_preference_drafts(active_drafts)
-        if active_drafts and group_records:
-            st.divider()
-        if group_records:
-            st.markdown("#### Group trips and itineraries")
-        _render_saved_trip_collection(
-            group_records,
-            selector_label="Choose a group trip",
-            selector_key="group-trip-selector",
-            invited_record_key=invited_record_key,
-            legacy_matches=legacy_matches,
-            account=account,
+        for record in records
+    )
+    published_count = sum(
+        len(
+            itinerary_versions(
+                record.state,
+                fallback_updated_at=record.updated_at,
+            )
         )
-
-    with st.expander(
-        f"Self planning ({len(self_records)})",
-        expanded=not group_count,
-    ):
-        st.caption(
-            "Trips you planned by entering everyone’s preferences yourself."
-        )
-        _render_saved_trip_collection(
-            self_records,
-            selector_label="Choose a self-planned trip",
-            selector_key="self-trip-selector",
-            invited_record_key=invited_record_key,
-            account=account,
-        )
+        for record in records
+    )
+    draft_label = f"Drafts ({draft_count})"
+    published_label = f"Published ({published_count})"
+    draft_tab, published_tab = st.tabs(
+        [draft_label, published_label],
+        default=draft_label if draft_count else published_label,
+        key="my-trips-status-tab",
+        on_change="rerun",
+    )
+    if draft_tab.open:
+        with draft_tab:
+            _render_saved_trip_sections(
+                content_mode="drafts",
+                group_records=group_records,
+                self_records=self_records,
+                active_preference_drafts=active_drafts,
+                invited_record_key=invited_record_key,
+                legacy_matches=legacy_matches,
+                account=account,
+            )
+    if published_tab.open:
+        with published_tab:
+            _render_saved_trip_sections(
+                content_mode="published",
+                group_records=group_records,
+                self_records=self_records,
+                active_preference_drafts=active_drafts,
+                invited_record_key=invited_record_key,
+                legacy_matches=legacy_matches,
+                account=account,
+            )
 
     if not records and not drafts:
         st.info(

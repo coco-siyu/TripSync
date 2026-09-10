@@ -2320,6 +2320,7 @@ def _save_current_trip(
     trip: TripRequest,
     *,
     save_itinerary_version: bool,
+    save_working_draft: bool = False,
 ) -> Any:
     """Persist the current planning state, including an itinerary snapshot."""
 
@@ -2339,7 +2340,7 @@ def _save_current_trip(
         planning_state[PREFERENCE_DRAFT_STATE_KEY] = preference_draft_id
     access_role = str(st.session_state.get("saved_trip_access_role") or "owner")
     if access_role == "collaborator":
-        if not save_itinerary_version:
+        if not save_itinerary_version or save_working_draft:
             raise ValueError("Collaborators can save itinerary versions only")
         access_token = str(account.get("access_token") or "")
         owner_id = str(st.session_state.get("saved_trip_owner_id") or "")
@@ -2371,6 +2372,7 @@ def _save_current_trip(
             trip_id=st.session_state.saved_trip_id,
             session_id=st.session_state.feedback_session_id,
             save_itinerary_version=save_itinerary_version,
+            save_working_draft=save_working_draft,
             auth_access_token=account.get("access_token"),
             owner_id=st.session_state.get("saved_trip_owner_id"),
         )
@@ -2395,9 +2397,11 @@ def _save_current_trip(
         or preference_draft_id
         or access_role == "collaborator"
     )
-    st.session_state[
+    selector_key = (
         "group-trip-selector" if is_group_plan else "self-trip-selector"
-    ] = record_key
+    )
+    st.session_state[selector_key] = record_key
+    st.session_state[f"published-{selector_key}"] = record_key
     st.session_state[SAVED_TRIP_CONFIRMATION_KEY] = {
         "trip_id": saved.trip_id,
         "record_key": record_key,
@@ -2405,6 +2409,10 @@ def _save_current_trip(
         "title": saved.title,
         "account_backed": bool(account.get("access_token")),
         "collaborator": access_role == "collaborator",
+        "save_kind": (
+            "published" if save_itinerary_version else "draft"
+            if save_working_draft else "trip"
+        ),
     }
     return saved
 
@@ -2418,6 +2426,7 @@ def _open_my_trips() -> None:
             else "self-trip-selector"
         )
         st.session_state[selector_key] = confirmation["record_key"]
+        st.session_state[f"published-{selector_key}"] = confirmation["record_key"]
     st.session_state.app_workspace = "My trips"
 
 
@@ -2433,10 +2442,15 @@ def _render_saved_trip_confirmation() -> None:
         return
     title = str(confirmation.get("title") or "Trip")
     if confirmation.get("account_backed"):
+        save_kind = confirmation.get("save_kind")
         st.success(
             (
                 f"A new itinerary version is saved to {title}."
                 if confirmation.get("collaborator")
+                else f"Your working draft is saved to {title}."
+                if save_kind == "draft"
+                else f"A published itinerary version is saved to {title}."
+                if save_kind == "published"
                 else f"{title} is saved to your account."
             ),
             icon=":material/cloud_done:",
@@ -2509,31 +2523,53 @@ def _render_itinerary(
         )
         st.header(f"Your {len(plan.days)}-day itinerary")
         if not read_only:
-            save_label = (
-                "Save another itinerary version"
-                if st.session_state.saved_trip_id
-                else "Save trip & itinerary"
+            access_role = str(
+                st.session_state.get("saved_trip_access_role") or "owner"
             )
-            if st.button(
-                save_label,
-                icon=":material/bookmark_add:",
-                key="save-itinerary",
-                type="primary",
-            ):
-                try:
-                    saved = _save_current_trip(
-                        trip,
-                        save_itinerary_version=True,
-                    )
-                except (RuntimeError, ValueError):
-                    st.error(
-                        "TripSync could not save this itinerary version. Your "
-                        "collaboration access may have changed; return to My trips "
-                        "and try again.",
-                        icon=":material/error:",
-                    )
-                else:
-                    st.toast(f"Saved {saved.title}")
+            with st.container(horizontal=True):
+                if access_role == "owner" and st.button(
+                    "Save draft",
+                    icon=":material/save:",
+                    key="save-itinerary-draft",
+                ):
+                    try:
+                        saved = _save_current_trip(
+                            trip,
+                            save_itinerary_version=False,
+                            save_working_draft=True,
+                        )
+                    except (RuntimeError, ValueError):
+                        st.error(
+                            "TripSync could not save this working draft. Try again.",
+                            icon=":material/error:",
+                        )
+                    else:
+                        st.toast(f"Draft saved to {saved.title}")
+                publish_label = (
+                    "Save itinerary version"
+                    if access_role == "collaborator"
+                    else "Publish version"
+                )
+                if st.button(
+                    publish_label,
+                    icon=":material/publish:",
+                    key="save-itinerary",
+                    type="primary",
+                ):
+                    try:
+                        saved = _save_current_trip(
+                            trip,
+                            save_itinerary_version=True,
+                        )
+                    except (RuntimeError, ValueError):
+                        st.error(
+                            "TripSync could not publish this itinerary version. "
+                            "Your collaboration access may have changed; return to "
+                            "My trips and try again.",
+                            icon=":material/error:",
+                        )
+                    else:
+                        st.toast(f"Published {saved.title}")
         summary_labels = [
             f"{len(scheduled)} activities",
             f"{format_duration(total_activity_hours)} of activities",

@@ -13,6 +13,7 @@ from unittest.mock import patch
 from src.models import ItineraryPlan, TripRequest
 from src.trips import (
     PREFERENCE_DRAFT_STATE_KEY,
+    WORKING_DRAFT_STATE_KEY,
     SavedTrip,
     claim_anonymous_trips,
     itinerary_versions,
@@ -21,11 +22,57 @@ from src.trips import (
     save_shared_itinerary_version,
     save_trip,
     state_for_itinerary_version,
+    state_for_working_itinerary_draft,
+    working_itinerary_draft,
 )
 from src.trips_ui import itinerary_comparison_for_versions, itinerary_plan_for_version
 
 
 class SavedTripsTests(unittest.TestCase):
+    def test_working_draft_is_replaced_then_cleared_when_published(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        first_state = {
+            "selected_activity_ids": ["rome_pantheon"],
+            "itinerary_plan": {"days": [{"day_number": 1}]},
+        }
+        second_state = {
+            "selected_activity_ids": ["rome_colosseum"],
+            "itinerary_plan": {"days": [{"day_number": 1}]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "trips.db"
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
+                saved = save_trip(trip, first_state, save_working_draft=True)
+                updated = save_trip(
+                    trip,
+                    second_state,
+                    trip_id=saved.trip_id,
+                    save_working_draft=True,
+                )
+                published = save_trip(
+                    trip,
+                    second_state,
+                    trip_id=saved.trip_id,
+                    save_itinerary_version=True,
+                )
+
+        self.assertEqual(itinerary_versions(updated.state), [])
+        draft = working_itinerary_draft(updated.state)
+        self.assertIsNotNone(draft)
+        assert draft is not None
+        self.assertEqual(draft["status"], "draft")
+        self.assertEqual(
+            state_for_working_itinerary_draft(updated.state)[
+                "selected_activity_ids"
+            ],
+            ["rome_colosseum"],
+        )
+        self.assertNotIn(WORKING_DRAFT_STATE_KEY, published.state)
+        self.assertEqual(itinerary_versions(published.state)[0]["status"], "published")
+
     def test_lists_rls_visible_owned_trips(self) -> None:
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
         row = {
