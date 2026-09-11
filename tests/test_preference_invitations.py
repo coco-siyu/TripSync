@@ -21,6 +21,7 @@ from src.preference_invitations import (
     claim_preference_invitation,
     create_preference_draft,
     link_saved_trip_to_preference_draft,
+    list_my_preference_assignments,
     list_preference_drafts,
     submit_preference_profile,
 )
@@ -136,6 +137,31 @@ class PreferenceInvitationTests(unittest.TestCase):
             "access-token",
         )
 
+    def test_lists_preference_assignments_claimed_by_current_account(self) -> None:
+        response = [
+            {
+                "draft_id": "d" * 32,
+                "slot_id": "s" * 32,
+                "traveler_name": "Alex",
+                "trip": _trip().model_dump(mode="json"),
+                "profile": None,
+            }
+        ]
+        with patch(
+            "src.preference_invitations.rpc_authenticated",
+            return_value=response,
+        ) as rpc_mock:
+            assignments = list_my_preference_assignments("access-token")
+
+        rpc_mock.assert_called_once_with(
+            "list_my_preference_assignments",
+            {},
+            "access-token",
+        )
+        self.assertEqual(len(assignments), 1)
+        self.assertEqual(assignments[0].traveler_name, "Alex")
+        self.assertIsNone(assignments[0].profile)
+
     def test_invitee_cannot_change_the_name_on_their_slot(self) -> None:
         assignment = PreferenceAssignment(
             "d" * 32, "s" * 32, "Sam", _trip()
@@ -209,6 +235,46 @@ class PreferenceInvitationTests(unittest.TestCase):
         self.assertEqual(
             [profile.name for profile in draft.to_trip_request().travelers],
             ["Coco", "Sam"],
+        )
+
+    def test_later_reply_does_not_change_an_existing_trip_snapshot(self) -> None:
+        initial_draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=_trip(),
+            slots=(
+                PreferenceSlot("a" * 32, "Coco", 0, _profile("Coco"), "owner-user"),
+                PreferenceSlot("b" * 32, "Sam", 1, _profile("Sam"), "member-user"),
+                PreferenceSlot("c" * 32, "Alex", 2),
+            ),
+            updated_at="2026-09-02T12:00:00+00:00",
+        )
+        existing_snapshot = initial_draft.to_trip_request()
+        updated_draft = PreferenceDraft(
+            **{
+                **initial_draft.__dict__,
+                "slots": (
+                    *initial_draft.slots[:2],
+                    PreferenceSlot(
+                        "c" * 32,
+                        "Alex",
+                        2,
+                        _profile("Alex"),
+                        "alex-user",
+                    ),
+                ),
+                "updated_at": "2026-09-02T13:00:00+00:00",
+            }
+        )
+
+        self.assertEqual(
+            [profile.name for profile in existing_snapshot.travelers],
+            ["Coco", "Sam"],
+        )
+        self.assertEqual(
+            [profile.name for profile in updated_draft.to_trip_request().travelers],
+            ["Coco", "Sam", "Alex"],
         )
 
     def test_links_an_exact_legacy_saved_trip_to_its_group_draft(self) -> None:

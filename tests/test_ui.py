@@ -15,6 +15,7 @@ from tests import configure_test_output
 configure_test_output()
 
 from src.auth import AccountSession
+from src.auth_ui import PREFERENCE_ASSIGNMENT_KEY
 from src.models import ItineraryPlan, ItinerarySource, TravelerProfile, TripBasics
 from src.narration import ItineraryNarrative, NarratedActivity, NarratedDay
 from src.llm import NarrationGenerationError
@@ -1050,6 +1051,174 @@ class StreamlitInteractionTests(unittest.TestCase):
             app.session_state["selected_activity_ids"],
         )
 
+    def test_owner_can_review_late_preference_responses_without_mutating_trip(self) -> None:
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        original_trip = build_sample_trip()
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=TripBasics.model_validate(
+                original_trip.model_dump(mode="json", exclude={"travelers"})
+            ),
+            slots=(
+                PreferenceSlot(
+                    "a" * 32,
+                    "Coco",
+                    0,
+                    original_trip.travelers[0],
+                    "owner-user",
+                ),
+                PreferenceSlot(
+                    "b" * 32,
+                    "Sam",
+                    1,
+                    original_trip.travelers[1],
+                    "member-user",
+                ),
+                PreferenceSlot(
+                    "c" * 32,
+                    "Alex",
+                    2,
+                    TravelerProfile(
+                        name="Alex",
+                        interests=["archaeology"],
+                        walking_tolerance="low",
+                    ),
+                    "alex-user",
+                ),
+            ),
+            updated_at="2026-09-10T14:00:00+00:00",
+        )
+        record = SavedTrip(
+            trip_id="group-trip",
+            title="Rome · 3 days",
+            trip=original_trip,
+            state={PREFERENCE_DRAFT_STATE_KEY: draft.draft_id},
+            updated_at="2026-09-10T13:00:00+00:00",
+            owner_id="owner-user",
+        )
+
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[draft]),
+            patch("src.ui.get_preference_draft", return_value=draft),
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+
+            self.assertTrue(
+                any(
+                    "existing draft has not changed" in item.value
+                    for item in app.info
+                )
+            )
+            next(
+                button
+                for button in app.button
+                if button.label == "Review latest responses"
+            ).click().run(timeout=10)
+
+            self.assertEqual(app.session_state["app_workspace"], "My trips")
+            self.assertTrue(
+                any(
+                    "next recommendation set will use 3 profiles"
+                    in item.value
+                    for item in app.info
+                )
+            )
+            next(
+                button
+                for button in app.button
+                if button.label == "Update recommendations"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertEqual(app.session_state["planner_step"], "review")
+        self.assertEqual(app.session_state["saved_trip_id"], "group-trip")
+        self.assertEqual(app.session_state["saved_trip_owner_id"], "owner-user")
+        self.assertEqual(
+            [
+                traveler["name"]
+                for traveler in app.session_state["trip_request"]["travelers"]
+            ],
+            ["Coco", "Sam", "Alex"],
+        )
+
+    def test_owner_can_inspect_response_status_inside_my_trips(self) -> None:
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        trip = build_sample_trip()
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=TripBasics.model_validate(
+                trip.model_dump(mode="json", exclude={"travelers"})
+            ),
+            slots=(
+                PreferenceSlot(
+                    "a" * 32,
+                    "Coco",
+                    0,
+                    trip.travelers[0],
+                    "owner-user",
+                ),
+                PreferenceSlot(
+                    "b" * 32,
+                    "Sam",
+                    1,
+                    trip.travelers[1],
+                    "member-user",
+                ),
+                PreferenceSlot("c" * 32, "Alex", 2),
+            ),
+            updated_at="2026-09-10T14:00:00+00:00",
+        )
+        record = SavedTrip(
+            trip_id="group-trip",
+            title="Rome · 3 days",
+            trip=trip,
+            state={PREFERENCE_DRAFT_STATE_KEY: draft.draft_id},
+            updated_at="2026-09-10T13:00:00+00:00",
+            owner_id="owner-user",
+        )
+
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[draft]),
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+            next(
+                button
+                for button in app.button
+                if button.label == "View response status"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "My trips")
+        self.assertTrue(
+            any("2 of 3 profiles ready" in item.value for item in app.subheader)
+        )
+        self.assertTrue(any(item.value == "Not joined" for item in app.warning))
+
     def test_member_working_draft_view_hides_named_preferences(self) -> None:
         planner = self._sample_results_app()
         planner.button(key="build-itinerary").click().run(timeout=10)
@@ -1464,6 +1633,52 @@ class StreamlitInteractionTests(unittest.TestCase):
             any("preferences" in item.value for item in app.info)
         )
 
+    def test_claimed_invitee_can_resume_pending_preferences_from_my_trips(self) -> None:
+        session = AccountSession(
+            user_id="alex-user",
+            email="alex@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        assignment = PreferenceAssignment(
+            draft_id="d" * 32,
+            slot_id="s" * 32,
+            traveler_name="Alex",
+            trip=TripBasics(
+                destination="Rome",
+                country="Italy",
+                days=3,
+                budget_level="moderate",
+                pace="balanced",
+            ),
+        )
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
+            patch(
+                "src.trips_ui.list_my_preference_assignments",
+                return_value=[assignment],
+            ),
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+            next(
+                button
+                for button in app.button
+                if button.label == "Complete preferences"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertEqual(app.session_state["planner_step"], "profile")
+        self.assertEqual(
+            app.session_state[PREFERENCE_ASSIGNMENT_KEY]["traveler_name"],
+            "Alex",
+        )
+
     def test_named_preference_invitee_can_submit_only_their_profile(self) -> None:
         session = AccountSession(
             user_id="member-user",
@@ -1614,6 +1829,72 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         self.assertFalse(
             any(button.label == "Find our best fits" for button in app.button)
+        )
+
+    def test_organizer_can_build_with_two_profiles_and_one_pending(self) -> None:
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=TripBasics(
+                destination="Rome",
+                country="Italy",
+                days=3,
+                budget_level="moderate",
+                pace="balanced",
+            ),
+            slots=(
+                PreferenceSlot(
+                    "a" * 32,
+                    "Coco",
+                    0,
+                    TravelerProfile(
+                        name="Coco",
+                        interests=["history"],
+                        walking_tolerance="moderate",
+                    ),
+                    "owner-user",
+                ),
+                PreferenceSlot(
+                    "b" * 32,
+                    "Sam",
+                    1,
+                    TravelerProfile(
+                        name="Sam",
+                        interests=["art"],
+                        walking_tolerance="moderate",
+                    ),
+                    "member-user",
+                ),
+                PreferenceSlot("c" * 32, "Alex", 2),
+            ),
+            updated_at="2026-09-10T12:00:00+00:00",
+        )
+        with patch("src.ui.get_preference_draft", return_value=draft):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["account_session"] = session.as_dict()
+            app.session_state["planner_step"] = "review"
+            app.session_state["active_preference_draft_id"] = draft.draft_id
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertTrue(
+            any(header.value == "2 of 3 profiles ready" for header in app.subheader)
+        )
+        self.assertTrue(any(item.value == "Not joined" for item in app.warning))
+        self.assertTrue(
+            any(button.label == "Find our best fits" for button in app.button)
+        )
+        self.assertEqual(
+            [traveler["name"] for traveler in app.session_state["trip_request"]["travelers"]],
+            ["Coco", "Sam"],
         )
 
     def test_results_views_are_ordered_and_must_dos_initialize_shortlist(

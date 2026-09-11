@@ -278,6 +278,47 @@ def claim_preference_invitation(
         raise RuntimeError("Supabase returned an invalid preference assignment") from error
 
 
+def list_my_preference_assignments(
+    access_token: str,
+) -> list[PreferenceAssignment]:
+    """Return named preference slots already claimed by the signed-in traveler."""
+
+    if not access_token.strip():
+        raise ValueError("A signed-in traveler is required")
+    result = rpc_authenticated(
+        "list_my_preference_assignments",
+        {},
+        access_token,
+    )
+    if not isinstance(result, list):
+        raise RuntimeError("Preference requests could not be loaded")
+
+    assignments: list[PreferenceAssignment] = []
+    try:
+        for item in result:
+            if not isinstance(item, dict):
+                raise TypeError("Invalid preference assignment")
+            profile_payload = item.get("profile")
+            assignments.append(
+                PreferenceAssignment(
+                    draft_id=str(item["draft_id"]),
+                    slot_id=str(item["slot_id"]),
+                    traveler_name=str(item["traveler_name"]),
+                    trip=TripBasics.model_validate(item["trip"]),
+                    profile=(
+                        TravelerProfile.model_validate(profile_payload)
+                        if profile_payload
+                        else None
+                    ),
+                )
+            )
+    except (KeyError, TypeError, ValueError) as error:
+        raise RuntimeError(
+            "Supabase returned invalid preference requests"
+        ) from error
+    return assignments
+
+
 def submit_preference_profile(
     assignment: PreferenceAssignment,
     profile: TravelerProfile | dict[str, Any],

@@ -1361,3 +1361,55 @@ revoke all on function public.submit_preference_profile(text, text, jsonb)
   from public;
 grant execute on function public.submit_preference_profile(text, text, jsonb)
   to authenticated;
+
+create or replace function private.list_my_preference_assignments()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  assignments jsonb;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in to view preference requests.' using errcode = '42501';
+  end if;
+
+  select coalesce(
+    pg_catalog.jsonb_agg(
+      pg_catalog.jsonb_build_object(
+        'draft_id', slots.draft_id,
+        'slot_id', slots.slot_id,
+        'traveler_name', slots.traveler_name,
+        'trip', drafts.trip_json,
+        'profile', slots.profile_json
+      ) order by slots.updated_at desc
+    ),
+    '[]'::jsonb
+  ) into assignments
+  from public.preference_slots as slots
+  join public.preference_drafts as drafts using (draft_id)
+  where slots.member_id = account_user_id
+    and drafts.owner_id <> account_user_id;
+
+  return assignments;
+end;
+$$;
+
+revoke all on function private.list_my_preference_assignments() from public;
+grant execute on function private.list_my_preference_assignments()
+  to authenticated;
+
+create or replace function public.list_my_preference_assignments()
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.list_my_preference_assignments();
+$$;
+
+revoke all on function public.list_my_preference_assignments() from public;
+grant execute on function public.list_my_preference_assignments()
+  to authenticated;

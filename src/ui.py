@@ -86,10 +86,10 @@ from src.preference_invitations import (
     PreferenceInvitation,
     build_preference_invitation_url,
     create_preference_draft,
-    create_slot_invitation,
     get_preference_draft,
     submit_preference_profile,
 )
+from src.preference_status_ui import render_preference_draft_status
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -1121,93 +1121,7 @@ def _render_summary(trip: TripRequest, *, show_edit: bool = True) -> None:
 
 
 def _render_draft_readiness(draft: PreferenceDraft) -> TripRequest | None:
-    account = current_account_session()
-    if account is None:
-        st.warning(
-            "Sign back in to check this group’s responses.",
-            icon=":material/login:",
-        )
-        return None
-    origin = current_app_origin()
-    links = st.session_state.preference_invite_links
-    if not isinstance(links, dict):
-        links = {}
-        st.session_state.preference_invite_links = links
-
-    complete_count = sum(slot.is_complete for slot in draft.slots)
-    st.subheader(f"{complete_count} of {len(draft.slots)} profiles ready")
-    st.progress(
-        int(complete_count / len(draft.slots) * 100),
-        text=(
-            "Everyone has replied."
-            if draft.is_ready
-            else (
-                "You can build now; remaining travelers can reply later."
-                if draft.can_build
-                else "At least two profiles are needed to build the first draft."
-            )
-        ),
-    )
-    for slot in draft.slots:
-        with st.container(border=True, key=f"preference-slot-{slot.slot_id}"):
-            status_col, action_col = st.columns(
-                [3, 2], vertical_alignment="center"
-            )
-            status_col.markdown(f"**{escape(slot.traveler_name)}**")
-            if slot.is_complete:
-                action_col.success("Ready", icon=":material/check_circle:")
-            elif slot.member_id:
-                action_col.info("Joined · waiting", icon=":material/edit_note:")
-            else:
-                action_col.warning("Not joined", icon=":material/schedule:")
-
-            link_details = links.get(slot.slot_id)
-            if (
-                not slot.is_complete
-                and isinstance(link_details, dict)
-                and link_details.get("url")
-            ):
-                st.code(str(link_details["url"]), language=None)
-                st.caption(
-                    "Send only to this traveler. The link expires in 7 days."
-                )
-            elif not slot.is_complete and slot.position > 0 and not slot.member_id:
-                if st.button(
-                    f"Create a new link for {slot.traveler_name}",
-                    key=f"refresh-profile-link-{slot.slot_id}",
-                    icon=":material/link:",
-                    disabled=origin is None,
-                ):
-                    try:
-                        invitation = create_slot_invitation(
-                            draft.draft_id,
-                            slot,
-                            account.user_id,
-                            account.access_token,
-                        )
-                        assert origin is not None
-                        links[slot.slot_id] = {
-                            "traveler_name": invitation.traveler_name,
-                            "url": build_preference_invitation_url(
-                                origin, invitation.token
-                            ),
-                            "expires_at": invitation.expires_at,
-                        }
-                    except Exception:
-                        st.error(
-                            "TripSync could not create a fresh link.",
-                            icon=":material/error:",
-                        )
-                    else:
-                        st.rerun()
-
-    if st.button(
-        "Refresh responses",
-        icon=":material/refresh:",
-        key=f"refresh-preference-draft-{draft.draft_id}",
-    ):
-        st.rerun()
-    return draft.to_trip_request() if draft.can_build else None
+    return render_preference_draft_status(draft, key_prefix="planner-response-status")
 
 
 def _render_review_step() -> None:

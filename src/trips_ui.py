@@ -8,6 +8,7 @@ import streamlit as st
 
 from src.budget import daily_budget_label, euro_range
 from src.auth_ui import (
+    PREFERENCE_ASSIGNMENT_KEY,
     TRIP_INVITATION_NOTICE_KEY,
     TRIP_TRANSFER_NOTICE_KEY,
     current_account_session,
@@ -23,10 +24,13 @@ from src.invitations import (
 from src.models import ItineraryPlan
 from src.planner import itinerary_time_block_label
 from src.preference_invitations import (
+    PreferenceAssignment,
     PreferenceDraft,
     link_saved_trip_to_preference_draft,
+    list_my_preference_assignments,
     list_preference_drafts,
 )
+from src.preference_status_ui import render_preference_draft_status
 from src.trips import (
     SavedTrip,
     WORKING_DRAFT_ID,
@@ -52,23 +56,60 @@ _OPEN_SAVED_ITINERARY_KEY = "open_saved_itinerary"
 _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 _SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
 _SHARE_LINKS_KEY = "trip_share_links"
+_OPEN_RESPONSE_STATUS_KEY = "open_preference_response_status"
+_REVIEW_LATEST_RESPONSES_KEY = "review_latest_preference_responses"
 
 
-def _resume_preference_draft(draft: PreferenceDraft) -> None:
-    """Open a durable pre-recommendation draft in the planner."""
+def _resume_preference_draft(
+    draft: PreferenceDraft,
+    record: SavedTrip | None = None,
+) -> None:
+    """Open current responses while preserving the intended saved-trip identity."""
 
     st.session_state.trip_basics = draft.trip.model_dump(mode="json")
     st.session_state.trip_request = (
         draft.to_trip_request().model_dump(mode="json")
-        if draft.is_ready
+        if draft.can_build
         else None
     )
     st.session_state.traveler_count = len(draft.slots)
     st.session_state.preference_collection_mode = "Invite separately"
     st.session_state.active_preference_draft_id = draft.draft_id
     st.session_state.preference_invite_links = {}
+    st.session_state.saved_trip_id = record.trip_id if record is not None else None
+    st.session_state.saved_trip_owner_id = (
+        record.owner_id if record is not None else None
+    )
+    st.session_state.saved_trip_access_role = (
+        record.access_role if record is not None else "owner"
+    )
+    st.session_state.saved_itinerary_version_id = None
+    st.session_state.saved_trip_read_mode = False
     st.session_state.planner_step = "review"
     st.session_state.app_workspace = "Plan a trip"
+
+
+def _show_response_status(record_key: str) -> None:
+    """Open a group's response details inside My trips."""
+
+    st.session_state[_OPEN_RESPONSE_STATUS_KEY] = record_key
+    st.session_state.pop(_REVIEW_LATEST_RESPONSES_KEY, None)
+
+
+def _show_latest_response_review(record_key: str) -> None:
+    """Open an inline review before rebuilding with newer responses."""
+
+    st.session_state[_OPEN_RESPONSE_STATUS_KEY] = record_key
+    st.session_state[_REVIEW_LATEST_RESPONSES_KEY] = record_key
+
+
+def _close_response_status(record_key: str) -> None:
+    """Close response details for the selected My trips record."""
+
+    if st.session_state.get(_OPEN_RESPONSE_STATUS_KEY) == record_key:
+        st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
+    if st.session_state.get(_REVIEW_LATEST_RESPONSES_KEY) == record_key:
+        st.session_state.pop(_REVIEW_LATEST_RESPONSES_KEY, None)
 
 
 def _load_preference_drafts(account) -> list[PreferenceDraft]:
@@ -85,6 +126,67 @@ def _load_preference_drafts(account) -> list[PreferenceDraft]:
             icon=":material/group_off:",
         )
         return []
+
+
+def _load_my_preference_assignments(account) -> list[PreferenceAssignment]:
+    """Load preference requests previously claimed by this account."""
+
+    if account is None:
+        return []
+    try:
+        return list_my_preference_assignments(account.access_token)
+    except Exception:
+        return []
+
+
+def _open_preference_assignment(assignment: PreferenceAssignment) -> None:
+    """Resume a claimed named preference request in the planner."""
+
+    st.session_state[PREFERENCE_ASSIGNMENT_KEY] = {
+        "draft_id": assignment.draft_id,
+        "slot_id": assignment.slot_id,
+        "traveler_name": assignment.traveler_name,
+        "trip": assignment.trip.model_dump(mode="json"),
+        "profile": (
+            assignment.profile.model_dump(mode="json")
+            if assignment.profile is not None
+            else None
+        ),
+    }
+    st.session_state.trip_basics = assignment.trip.model_dump(mode="json")
+    st.session_state.planner_step = "profile"
+    st.session_state.app_workspace = "Plan a trip"
+
+
+def _render_my_preference_assignments(
+    assignments: list[PreferenceAssignment],
+) -> None:
+    """Show durable pending preference requests in the traveler account."""
+
+    if not assignments:
+        return
+    st.markdown("### Trips waiting for your preferences")
+    st.caption(
+        "These named requests remain available after you sign out or close the link."
+    )
+    for assignment in assignments:
+        with st.container(border=True):
+            st.markdown(f"**{assignment.traveler_name}’s preferences**")
+            st.caption(
+                f"{assignment.trip.destination}, {assignment.trip.country} · "
+                f"{assignment.trip.days} days"
+            )
+            st.button(
+                "Complete preferences",
+                type="primary",
+                icon=":material/edit_note:",
+                key=(
+                    f"complete-preferences-{assignment.draft_id}-"
+                    f"{assignment.slot_id}"
+                ),
+                on_click=_open_preference_assignment,
+                args=(assignment,),
+            )
 
 
 def _render_preference_drafts(drafts: list[PreferenceDraft]) -> None:
@@ -106,7 +208,7 @@ def _render_preference_drafts(drafts: list[PreferenceDraft]) -> None:
             action_col.button(
                 "Review",
                 key=f"resume-preference-draft-{draft.draft_id}",
-                type="primary" if draft.is_ready else "secondary",
+                type="primary" if draft.can_build else "secondary",
                 on_click=_resume_preference_draft,
                 args=(draft,),
             )
@@ -915,6 +1017,7 @@ def _render_saved_trip_collection(
     selector_key: str,
     invited_record_key: str | None = None,
     legacy_matches: dict[str, PreferenceDraft] | None = None,
+    preference_drafts_by_id: dict[str, PreferenceDraft] | None = None,
     account=None,
 ) -> None:
     """Render one independently selectable group of saved trips."""
@@ -923,6 +1026,7 @@ def _render_saved_trip_collection(
         st.caption("No saved trips in this section yet.")
         return
     legacy_matches = legacy_matches or {}
+    preference_drafts_by_id = preference_drafts_by_id or {}
     records_by_key = {record.record_key: record for record in records}
     versions_by_record_key = {
         record.record_key: itinerary_versions(
@@ -1015,6 +1119,39 @@ def _render_saved_trip_collection(
                     )
                     st.rerun()
         _render_trip_brief(record)
+        preference_draft = preference_drafts_by_id.get(
+            record.preference_draft_id or ""
+        )
+        if record.is_owner and preference_draft is not None:
+            complete_count = sum(
+                slot.is_complete for slot in preference_draft.slots
+            )
+            st.caption(
+                f"Preference responses: {complete_count} of "
+                f"{len(preference_draft.slots)} ready · this itinerary uses "
+                f"{len(record.trip.travelers)} profiles"
+            )
+            latest_trip = (
+                preference_draft.to_trip_request()
+                if preference_draft.can_build
+                else None
+            )
+            if latest_trip is not None and latest_trip != record.trip:
+                st.info(
+                    "New or updated traveler responses are available. Your "
+                    "existing draft has not changed.",
+                    icon=":material/mark_email_unread:",
+                )
+                st.button(
+                    "Review latest responses",
+                    key=(
+                        f"review-latest-responses-{content_mode}-"
+                        f"{record.record_key}"
+                    ),
+                    icon=":material/rate_review:",
+                    on_click=_show_latest_response_review,
+                    args=(record.record_key,),
+                )
         can_start_new = record.can_create_itineraries and (
             content_mode == "published" or working_draft is None
         )
@@ -1029,7 +1166,75 @@ def _render_saved_trip_collection(
                         on_click=_start_new_itinerary,
                         args=(record,),
                     )
+                if preference_draft is not None:
+                    st.button(
+                        "View response status",
+                        icon=":material/group:",
+                        key=(
+                            f"view-response-status-{content_mode}-"
+                            f"{record.record_key}"
+                        ),
+                        on_click=_show_response_status,
+                        args=(record.record_key,),
+                    )
                 _render_owner_sharing(record)
+            if (
+                preference_draft is not None
+                and st.session_state.get(_OPEN_RESPONSE_STATUS_KEY)
+                == record.record_key
+            ):
+                with st.container(border=True):
+                    with st.container(horizontal=True):
+                        reviewing_latest = (
+                            st.session_state.get(_REVIEW_LATEST_RESPONSES_KEY)
+                            == record.record_key
+                        )
+                        st.markdown(
+                            "#### Review latest responses"
+                            if reviewing_latest
+                            else "#### Traveler response status"
+                        )
+                        st.button(
+                            "Close",
+                            icon=":material/close:",
+                            key=(
+                                f"close-response-status-{content_mode}-"
+                                f"{record.record_key}"
+                            ),
+                            on_click=_close_response_status,
+                            args=(record.record_key,),
+                        )
+                    render_preference_draft_status(
+                        preference_draft,
+                        key_prefix=(
+                            f"my-trips-response-status-{content_mode}-"
+                            f"{record.record_key}"
+                        ),
+                    )
+                    if reviewing_latest:
+                        latest_names = [
+                            slot.traveler_name
+                            for slot in preference_draft.slots
+                            if slot.is_complete
+                        ]
+                        st.info(
+                            "Your saved draft remains unchanged until you choose "
+                            "to update recommendations. The next recommendation "
+                            f"set will use {len(latest_names)} profiles: "
+                            f"{', '.join(latest_names)}.",
+                            icon=":material/info:",
+                        )
+                        st.button(
+                            "Update recommendations",
+                            type="primary",
+                            icon=":material/auto_awesome:",
+                            key=(
+                                f"update-recommendations-{content_mode}-"
+                                f"{record.record_key}"
+                            ),
+                            on_click=_resume_preference_draft,
+                            args=(preference_draft, record),
+                        )
         if can_start_new:
             st.caption(
                 "Start from this trip's curated activities with an empty shortlist."
@@ -1145,6 +1350,7 @@ def _render_saved_trip_sections(
     active_preference_drafts: list[PreferenceDraft],
     invited_record_key: str | None,
     legacy_matches: dict[str, PreferenceDraft],
+    preference_drafts_by_id: dict[str, PreferenceDraft],
     account,
 ) -> None:
     """Render Group/Self organization inside one lifecycle tab."""
@@ -1186,6 +1392,7 @@ def _render_saved_trip_sections(
             selector_key=f"{selector_prefix}group-trip-selector",
             invited_record_key=invited_record_key,
             legacy_matches=legacy_matches,
+            preference_drafts_by_id=preference_drafts_by_id,
             account=account,
         )
 
@@ -1225,6 +1432,11 @@ def render_saved_trips() -> None:
         st.toast(notice, icon=":material/check_circle:")
 
     drafts = _load_preference_drafts(account)
+    pending_assignments = [
+        assignment
+        for assignment in _load_my_preference_assignments(account)
+        if assignment.profile is None
+    ]
     records = list_saved_trips(
         st.session_state.feedback_session_id,
         auth_access_token=(account.access_token if account else None),
@@ -1249,7 +1461,7 @@ def render_saved_trips() -> None:
         draft for draft in drafts if draft.draft_id not in represented_draft_ids
     ]
 
-    draft_count = len(active_drafts) + sum(
+    draft_count = len(pending_assignments) + len(active_drafts) + sum(
         working_itinerary_draft(record.state) is not None
         or not itinerary_versions(
             record.state,
@@ -1276,6 +1488,7 @@ def render_saved_trips() -> None:
     )
     if draft_tab.open:
         with draft_tab:
+            _render_my_preference_assignments(pending_assignments)
             _render_saved_trip_sections(
                 content_mode="drafts",
                 group_records=group_records,
@@ -1283,6 +1496,7 @@ def render_saved_trips() -> None:
                 active_preference_drafts=active_drafts,
                 invited_record_key=invited_record_key,
                 legacy_matches=legacy_matches,
+                preference_drafts_by_id={draft.draft_id: draft for draft in drafts},
                 account=account,
             )
     if published_tab.open:
@@ -1294,6 +1508,7 @@ def render_saved_trips() -> None:
                 active_preference_drafts=active_drafts,
                 invited_record_key=invited_record_key,
                 legacy_matches=legacy_matches,
+                preference_drafts_by_id={draft.draft_id: draft for draft in drafts},
                 account=account,
             )
 

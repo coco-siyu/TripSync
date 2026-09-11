@@ -19,16 +19,15 @@ draft/published itinerary status are implemented.
   - Add itinerary time blocks and explicit draft/published status. **Done.**
   - Preserve loading of existing saved trips and versions.
 
-- [ ] **MVP-02: Persist the shared working draft**
+- [x] **MVP-02: Persist the shared working draft**
   - Store one organizer-controlled editable draft separately from immutable
     published versions.
   - Grant submitted preference members read-only access to the working draft.
   - Ensure member-facing reads exclude individual profiles and sensitive notes.
   - Depends on MVP-01.
-  - Current progress: one organizer-editable working draft is stored separately
-    from immutable published versions. Members receive a read-only, aggregated
-    interface through a server-sanitized database projection. Apply the latest
-    Supabase schema and complete shared-account QA before closing this item.
+  - One organizer-editable working draft is stored separately from immutable
+    published versions. Shared-account QA verified that members receive a
+    read-only, server-sanitized view of both draft and published versions. **Done.**
 
 ### P0 — Core group flow
 
@@ -41,11 +40,13 @@ collection paths, and organizers can build once two profiles are ready.
   - Use one concise submitted form with stable widget keys.
   - Depends on MVP-01.
 
-- [ ] **MVP-04: Allow the organizer to build before every reply**
+- [x] **MVP-04: Allow the organizer to build before every reply**
   - Enable draft creation once two profiles are complete.
   - Show complete and pending travelers clearly.
   - Keep later profile submissions without silently changing an existing draft.
   - Depends on MVP-02 and MVP-03.
+  - Partially completed drafts become buildable at two profiles; late replies
+    remain in the preference draft for a deliberate later rebuild. **Done.**
 
 ### P0 — Planner and publishing
 
