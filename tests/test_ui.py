@@ -208,6 +208,19 @@ class PreferenceFlowHelpersTests(unittest.TestCase):
             "Rome · 3 days · 1 saved itinerary · saved 2026-09-09 22:24 UTC",
         )
 
+    def test_named_traveler_trip_label_explains_automatic_access(self) -> None:
+        record = SavedTrip(
+            trip_id="group-trip",
+            title="Rome · 3 days",
+            trip=build_sample_trip(),
+            state={PREFERENCE_DRAFT_STATE_KEY: "d" * 32},
+            updated_at="2026-09-09T22:24:38.185733+00:00",
+            owner_id="owner-user",
+            access_role="traveler",
+        )
+
+        self.assertIn("included as a traveler", _trip_option_label(record, 0))
+
 
 class StreamlitInteractionTests(unittest.TestCase):
     @staticmethod
@@ -1040,7 +1053,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             next(
                 button
                 for button in app.button
-                if button.label == "Continue editing"
+                if button.label == "Continue editing itinerary"
             ).click().run(timeout=10)
 
         self.assertFalse(app.exception)
@@ -1121,10 +1134,23 @@ class StreamlitInteractionTests(unittest.TestCase):
                     for item in app.info
                 )
             )
+            self.assertEqual(
+                sum(
+                    button.label == "Traveler responses"
+                    for button in app.button
+                ),
+                1,
+            )
+            self.assertFalse(
+                any(
+                    button.label == "Review latest responses"
+                    for button in app.button
+                )
+            )
             next(
                 button
                 for button in app.button
-                if button.label == "Review latest responses"
+                if button.label == "Traveler responses"
             ).click().run(timeout=10)
 
             self.assertEqual(app.session_state["app_workspace"], "My trips")
@@ -1209,7 +1235,7 @@ class StreamlitInteractionTests(unittest.TestCase):
             next(
                 button
                 for button in app.button
-                if button.label == "View response status"
+                if button.label == "Traveler responses"
             ).click().run(timeout=10)
 
         self.assertFalse(app.exception)
@@ -1257,7 +1283,10 @@ class StreamlitInteractionTests(unittest.TestCase):
         self.assertNotIn("Coco:", visible_text)
         self.assertNotIn("Must-do for Coco", visible_text)
         self.assertFalse(
-            any(button.label == "Continue editing" for button in app.button)
+            any(
+                button.label == "Continue editing itinerary"
+                for button in app.button
+            )
         )
 
     def test_same_name_saved_trips_can_be_selected_independently(self) -> None:
@@ -1419,6 +1448,50 @@ class StreamlitInteractionTests(unittest.TestCase):
             any("read-only" in item.value for item in app.info)
         )
         self.assertTrue(
+            any(button.label == "Remove from My trips" for button in app.button)
+        )
+        self.assertFalse(
+            any(
+                button.label in {"Create new itinerary", "Edit recommendations"}
+                for button in app.button
+            )
+        )
+
+    def test_named_traveler_automatically_receives_read_only_trip(self) -> None:
+        trip = build_sample_trip()
+        session = AccountSession(
+            user_id="traveler-user",
+            email="traveler@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        shared_record = SavedTrip(
+            trip_id="group-trip",
+            title="Rome with friends",
+            trip=trip,
+            state={PREFERENCE_DRAFT_STATE_KEY: "d" * 32},
+            updated_at="2026-09-15T12:00:00+00:00",
+            owner_id="owner-user",
+            access_role="traveler",
+        )
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[shared_record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+
+        self.assertFalse(app.exception)
+        self.assertTrue(
+            any(
+                "accepted its preference request" in item.value
+                for item in app.info
+            )
+        )
+        self.assertFalse(
             any(button.label == "Remove from My trips" for button in app.button)
         )
         self.assertFalse(

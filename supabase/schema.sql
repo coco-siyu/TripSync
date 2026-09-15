@@ -922,8 +922,9 @@ revoke all on function public.revoke_trip_sharing(text) from public;
 grant execute on function public.revoke_trip_sharing(text) to authenticated;
 
 -- Phase 2.5 group setup: collect one named preference profile per traveler
--- before recommendations exist. These capabilities are deliberately separate
--- from saved-trip viewer/collaborator access.
+-- before recommendations exist. A claimed traveler slot later provides derived
+-- read-only access when its linked group trip is saved; ordinary sharing links
+-- remain a separate way to invite people who were not named travelers.
 create table if not exists public.preference_drafts (
   draft_id text primary key check (draft_id ~ '^[a-f0-9]{32}$'),
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -1413,3 +1414,70 @@ $$;
 revoke all on function public.list_my_preference_assignments() from public;
 grant execute on function public.list_my_preference_assignments()
   to authenticated;
+
+-- Rebuild the sanitized shared-trip projection after the preference tables exist.
+-- Explicit sharing memberships retain their role. A signed-in account attached
+-- to a named preference slot receives derived viewer access to any saved trip
+-- linked to that preference draft. No duplicate trip_members row is required.
+create or replace function private.list_shared_trips()
+returns table (
+  session_id text,
+  trip_id text,
+  title text,
+  trip_json jsonb,
+  state_json jsonb,
+  updated_at timestamptz,
+  access_role text
+)
+language sql
+security definer
+set search_path = ''
+as $$
+  with access_grants as (
+    select
+      members.owner_id,
+      members.trip_id,
+      members.role as access_role
+    from public.trip_members as members
+    where members.member_id = (select auth.uid())
+      and members.role in ('viewer', 'collaborator')
+
+    union all
+
+    select
+      trips.session_id as owner_id,
+      trips.trip_id,
+      'traveler'::text as access_role
+    from public.saved_trips as trips
+    join public.preference_drafts as drafts
+      on drafts.draft_id = trips.state_json ->> 'preference_draft_id'
+      and drafts.owner_id::text = trips.session_id
+    join public.preference_slots as slots
+      on slots.draft_id = drafts.draft_id
+    where slots.member_id = (select auth.uid())
+      and trips.session_id <> (select auth.uid())::text
+      and not exists (
+        select 1
+        from public.trip_members as explicit_membership
+        where explicit_membership.owner_id = trips.session_id
+          and explicit_membership.trip_id = trips.trip_id
+          and explicit_membership.member_id = (select auth.uid())
+      )
+  )
+  select
+    trips.session_id,
+    trips.trip_id,
+    trips.title,
+    private.sanitize_shared_trip(trips.trip_json),
+    private.sanitize_shared_trip_state(trips.state_json),
+    trips.updated_at,
+    grants.access_role
+  from access_grants as grants
+  join public.saved_trips as trips
+    on trips.session_id = grants.owner_id
+    and trips.trip_id = grants.trip_id
+  order by trips.updated_at desc;
+$$;
+
+revoke all on function private.list_shared_trips() from public;
+grant execute on function private.list_shared_trips() to authenticated;

@@ -57,7 +57,6 @@ _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 _SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
 _SHARE_LINKS_KEY = "trip_share_links"
 _OPEN_RESPONSE_STATUS_KEY = "open_preference_response_status"
-_REVIEW_LATEST_RESPONSES_KEY = "review_latest_preference_responses"
 
 
 def _resume_preference_draft(
@@ -93,14 +92,6 @@ def _show_response_status(record_key: str) -> None:
     """Open a group's response details inside My trips."""
 
     st.session_state[_OPEN_RESPONSE_STATUS_KEY] = record_key
-    st.session_state.pop(_REVIEW_LATEST_RESPONSES_KEY, None)
-
-
-def _show_latest_response_review(record_key: str) -> None:
-    """Open an inline review before rebuilding with newer responses."""
-
-    st.session_state[_OPEN_RESPONSE_STATUS_KEY] = record_key
-    st.session_state[_REVIEW_LATEST_RESPONSES_KEY] = record_key
 
 
 def _close_response_status(record_key: str) -> None:
@@ -108,8 +99,6 @@ def _close_response_status(record_key: str) -> None:
 
     if st.session_state.get(_OPEN_RESPONSE_STATUS_KEY) == record_key:
         st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
-    if st.session_state.get(_REVIEW_LATEST_RESPONSES_KEY) == record_key:
-        st.session_state.pop(_REVIEW_LATEST_RESPONSES_KEY, None)
 
 
 def _load_preference_drafts(account) -> list[PreferenceDraft]:
@@ -936,7 +925,7 @@ def _render_saved_itinerary(
         with st.container(horizontal=True):
             if is_working_draft and record.is_owner:
                 st.button(
-                    "Continue editing",
+                    "Continue editing itinerary",
                     icon=":material/edit:",
                     key=f"edit-working-draft-{record.record_key}",
                     on_click=_open_working_draft_for_edit,
@@ -994,7 +983,9 @@ def _trip_option_label(
 ) -> str:
     noun = "itinerary" if version_count == 1 else "itineraries"
     sharing = (
-        " · shared with you"
+        " · included as a traveler"
+        if record.access_role == "traveler"
+        else " · shared with you"
         if not record.is_owner
         else " · planned together"
         if record.preference_draft_id
@@ -1077,7 +1068,13 @@ def _render_saved_trip_collection(
     with st.container(border=True):
         st.subheader(record.title)
         st.caption(f"Last saved {record.updated_at[:16].replace('T', ' ')} UTC")
-        if not record.is_owner:
+        if record.access_role == "traveler":
+            st.info(
+                "Included as a named traveler · read-only. This trip appears "
+                "automatically because you accepted its preference request.",
+                icon=":material/badge:",
+            )
+        elif not record.is_owner:
             st.info(
                 "Shared with you · read-only. You can view the latest draft and "
                 "published itineraries, while only the organizer can make changes.",
@@ -1122,6 +1119,7 @@ def _render_saved_trip_collection(
         preference_draft = preference_drafts_by_id.get(
             record.preference_draft_id or ""
         )
+        has_new_preference_responses = False
         if record.is_owner and preference_draft is not None:
             complete_count = sum(
                 slot.is_complete for slot in preference_draft.slots
@@ -1136,21 +1134,14 @@ def _render_saved_trip_collection(
                 if preference_draft.can_build
                 else None
             )
-            if latest_trip is not None and latest_trip != record.trip:
+            has_new_preference_responses = (
+                latest_trip is not None and latest_trip != record.trip
+            )
+            if has_new_preference_responses:
                 st.info(
                     "New or updated traveler responses are available. Your "
                     "existing draft has not changed.",
                     icon=":material/mark_email_unread:",
-                )
-                st.button(
-                    "Review latest responses",
-                    key=(
-                        f"review-latest-responses-{content_mode}-"
-                        f"{record.record_key}"
-                    ),
-                    icon=":material/rate_review:",
-                    on_click=_show_latest_response_review,
-                    args=(record.record_key,),
                 )
         can_start_new = record.can_create_itineraries and (
             content_mode == "published" or working_draft is None
@@ -1168,7 +1159,7 @@ def _render_saved_trip_collection(
                     )
                 if preference_draft is not None:
                     st.button(
-                        "View response status",
+                        "Traveler responses",
                         icon=":material/group:",
                         key=(
                             f"view-response-status-{content_mode}-"
@@ -1185,15 +1176,7 @@ def _render_saved_trip_collection(
             ):
                 with st.container(border=True):
                     with st.container(horizontal=True):
-                        reviewing_latest = (
-                            st.session_state.get(_REVIEW_LATEST_RESPONSES_KEY)
-                            == record.record_key
-                        )
-                        st.markdown(
-                            "#### Review latest responses"
-                            if reviewing_latest
-                            else "#### Traveler response status"
-                        )
+                        st.markdown("#### Traveler responses")
                         st.button(
                             "Close",
                             icon=":material/close:",
@@ -1211,7 +1194,7 @@ def _render_saved_trip_collection(
                             f"{record.record_key}"
                         ),
                     )
-                    if reviewing_latest:
+                    if has_new_preference_responses:
                         latest_names = [
                             slot.traveler_name
                             for slot in preference_draft.slots
@@ -1239,7 +1222,10 @@ def _render_saved_trip_collection(
             st.caption(
                 "Start from this trip's curated activities with an empty shortlist."
             )
-        elif not record.can_create_itineraries:
+        elif (
+            not record.can_create_itineraries
+            and record.access_role != "traveler"
+        ):
             if st.button(
                 "Remove from My trips",
                 icon=":material/person_remove:",
@@ -1265,7 +1251,7 @@ def _render_saved_trip_collection(
                 )
                 if record.is_owner:
                     st.button(
-                        "Continue editing",
+                        "Continue editing itinerary",
                         icon=":material/edit:",
                         key=f"continue-working-draft-{record.record_key}",
                         on_click=_open_working_draft_for_edit,

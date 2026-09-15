@@ -8,6 +8,9 @@ The current version of TripSync was built to meet the LLM Zoomcamp project requi
 
 **Live demo:** [tripsync.streamlit.app](https://tripsync.streamlit.app/)
 
+**Command to run it locally:**
+./.venv/bin/python -m streamlit run app.py
+
 ## Why I built it
 
 The idea came from planning trips with family and friends. Getting everyone to
@@ -85,8 +88,10 @@ can edit or publish.
 During trip setup, an organizer can instead choose **Invite separately**. Each
 named link is tied to one traveler slot, requires sign-in, and can only edit that
 slot. The organizer sees which profiles are ready and can start recommendations
-after at least two are complete. These setup invitations do not grant access to a
-saved trip or its itinerary versions.
+after at least two are complete. Once the organizer saves the linked group trip,
+accounts that accepted named preference requests automatically receive read-only
+access to its draft and published itinerary versions. The general sharing link
+remains available for people who were not named travelers.
 **My trips** separates **Drafts** from **Published** plans, then keeps
 invitation-based and shared trips under **Group planning**, while trips entered
 without invitations stay under **Self planning**. When a
