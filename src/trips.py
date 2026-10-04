@@ -126,6 +126,24 @@ def working_itinerary_draft(state: dict) -> dict | None:
     return draft
 
 
+def validate_itinerary_for_publication(
+    trip: TripRequest,
+    plan: ItineraryPlan | dict,
+) -> ItineraryPlan:
+    """Reject a structurally valid plan that does not match its saved trip."""
+
+    validated = ItineraryPlan.model_validate(plan)
+    if validated.destination.casefold() != trip.destination.casefold() or (
+        validated.country.casefold() != trip.country.casefold()
+    ):
+        raise ValueError("The itinerary destination does not match this trip")
+    if len(validated.days) != trip.days:
+        raise ValueError("The itinerary must include every trip day")
+    if not any(day.activities for day in validated.days):
+        raise ValueError("Add at least one activity before publishing")
+    return validated
+
+
 def state_for_working_itinerary_draft(state: dict) -> dict:
     """Restore the editable draft into ordinary planner state."""
 
@@ -498,6 +516,43 @@ def save_shared_itinerary_version(
 
     del record, state, access_token, itinerary_label
     raise ValueError("Only the trip organizer can publish itinerary versions")
+
+
+def delete_trip(
+    record: SavedTrip,
+    *,
+    session_id: str = "local",
+    auth_access_token: str | None = None,
+) -> None:
+    """Delete exactly one organizer-owned trip and its stored itineraries."""
+
+    if not record.trip_id.strip() or not record.is_owner:
+        raise ValueError("Only the trip organizer can delete this trip")
+    if record.owner_id and record.owner_id != session_id:
+        raise ValueError("Only the trip organizer can delete this trip")
+    if is_configured():
+        if not auth_access_token:
+            raise ValueError("Sign in before deleting this trip")
+        result = rpc_authenticated(
+            "delete_owned_trip",
+            {"target_trip_id": record.trip_id},
+            auth_access_token,
+        )
+        if not isinstance(result, dict) or not result.get("deleted"):
+            raise RuntimeError("The trip could not be deleted")
+        return
+    if not DEFAULT_FEEDBACK_DATABASE_PATH.exists():
+        raise ValueError("This trip no longer exists")
+    with closing(sqlite3.connect(DEFAULT_FEEDBACK_DATABASE_PATH)) as connection:
+        with connection:
+            _ensure_schema(connection, session_id)
+            cursor = connection.execute(
+                "DELETE FROM saved_trips WHERE trip_id = ? AND session_id = ?",
+                (record.trip_id, session_id),
+            )
+            deleted_rows = cursor.rowcount
+    if deleted_rows != 1:
+        raise ValueError("This trip no longer exists")
 
 
 def list_saved_trips(

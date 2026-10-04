@@ -74,6 +74,7 @@ from src.search import (
 from src.trips import (
     PREFERENCE_DRAFT_STATE_KEY,
     save_trip,
+    validate_itinerary_for_publication,
 )
 from src.auth_ui import (
     PREFERENCE_ASSIGNMENT_KEY,
@@ -2228,11 +2229,62 @@ def _render_change_proposals(
                         st.rerun()
 
 
+def _required_publication_warnings(
+    trip: TripRequest,
+    plan: ItineraryPlan,
+    activity_by_id: dict[str, Activity],
+) -> tuple[str, ...]:
+    """Return serious traveler conflicts that require organizer acknowledgment."""
+
+    scheduled_ids = {
+        activity.activity_id
+        for day in plan.days
+        for activity in day.activities
+    }
+    scheduled_activities = [
+        activity_by_id[activity_id]
+        for activity_id in scheduled_ids
+        if activity_id in activity_by_id
+    ]
+    warnings: list[str] = []
+    allergy_names = [
+        traveler.name
+        for traveler in trip.travelers
+        if "nut allergy" in traveler.food_restrictions
+    ]
+    if allergy_names and any(
+        activity.category == "food_market"
+        for activity in scheduled_activities
+    ):
+        warnings.append(
+            "Food-market stops are included, but allergen handling is not verified "
+            f"for {', '.join(allergy_names)}. Confirm directly with each vendor."
+        )
+    low_walking_names = [
+        traveler.name
+        for traveler in trip.travelers
+        if traveler.walking_tolerance.value == "low"
+    ]
+    high_walking_stops = [
+        activity.name
+        for activity in scheduled_activities
+        if activity.walking_level.value == "high"
+    ]
+    if low_walking_names and high_walking_stops:
+        warnings.append(
+            "High-walking stops conflict with the low walking preference for "
+            f"{', '.join(low_walking_names)}: {', '.join(sorted(high_walking_stops))}."
+        )
+    return tuple(warnings)
+
+
 def _save_current_trip(
     trip: TripRequest,
     *,
     save_itinerary_version: bool,
     save_working_draft: bool = False,
+    required_publication_warnings: tuple[str, ...] = (),
+    publication_warnings_acknowledged: bool = False,
 ) -> Any:
     """Persist the current planning state, including an itinerary snapshot."""
 
@@ -2253,6 +2305,15 @@ def _save_current_trip(
     access_role = str(st.session_state.get("saved_trip_access_role") or "owner")
     if access_role != "owner":
         raise ValueError("Only the trip organizer can save or publish itineraries")
+    if save_itinerary_version:
+        validate_itinerary_for_publication(trip, planning_state["itinerary_plan"])
+        if (
+            required_publication_warnings
+            and not publication_warnings_acknowledged
+        ):
+            raise ValueError(
+                "Acknowledge the safety and accessibility warnings before publishing"
+            )
     saved = save_trip(
         trip,
         planning_state,
@@ -2412,6 +2473,32 @@ def _render_itinerary(
             access_role = str(
                 st.session_state.get("saved_trip_access_role") or "owner"
             )
+            publication_warnings = _required_publication_warnings(
+                trip,
+                plan,
+                activity_by_id,
+            )
+            warnings_acknowledged = not publication_warnings
+            if publication_warnings:
+                st.markdown("#### Required before publishing")
+                for warning in publication_warnings:
+                    st.warning(warning, icon=":material/health_and_safety:")
+                warning_key = hashlib.sha256(
+                    json.dumps(
+                        {
+                            "plan": plan.model_dump(mode="json"),
+                            "warnings": publication_warnings,
+                        },
+                        sort_keys=True,
+                    ).encode("utf-8")
+                ).hexdigest()[:16]
+                warnings_acknowledged = st.checkbox(
+                    "I acknowledge these safety and accessibility warnings",
+                    key=f"publication-warning-acknowledgment-{warning_key}",
+                )
+                st.caption(
+                    "Saving a draft remains available without acknowledgment."
+                )
             with st.container(horizontal=True):
                 if access_role == "owner" and st.button(
                     "Save draft",
@@ -2437,13 +2524,20 @@ def _render_itinerary(
                     icon=":material/publish:",
                     key="save-itinerary",
                     type="primary",
+                    disabled=(
+                        access_role != "owner" or not warnings_acknowledged
+                    ),
                 ):
                     try:
                         saved = _save_current_trip(
                             trip,
                             save_itinerary_version=True,
+                            required_publication_warnings=publication_warnings,
+                            publication_warnings_acknowledged=warnings_acknowledged,
                         )
-                    except (RuntimeError, ValueError):
+                    except ValueError as error:
+                        st.error(str(error), icon=":material/error:")
+                    except RuntimeError:
                         st.error(
                             "TripSync could not publish this itinerary version. "
                             "Your collaboration access may have changed; return to "

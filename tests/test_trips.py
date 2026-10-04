@@ -16,6 +16,7 @@ from src.trips import (
     WORKING_DRAFT_STATE_KEY,
     SavedTrip,
     claim_anonymous_trips,
+    delete_trip,
     itinerary_versions,
     list_saved_trips,
     revise_itinerary_plan,
@@ -23,12 +24,141 @@ from src.trips import (
     save_trip,
     state_for_itinerary_version,
     state_for_working_itinerary_draft,
+    validate_itinerary_for_publication,
     working_itinerary_draft,
 )
 from src.trips_ui import itinerary_comparison_for_versions, itinerary_plan_for_version
 
 
 class SavedTripsTests(unittest.TestCase):
+    @staticmethod
+    def _publishable_plan(*, destination: str = "Rome", days: int = 2) -> dict:
+        plan_days = []
+        for day_number in range(1, days + 1):
+            activities = []
+            activity_hours = 0.0
+            if day_number == 1:
+                activities = [
+                    {
+                        "activity_id": "rome_pantheon",
+                        "activity_name": "Pantheon",
+                        "duration_hours": 1.0,
+                        "source": "shortlist",
+                        "must_do_owners": [],
+                        "traveler_names": ["A"],
+                        "reason": "A saved choice.",
+                    }
+                ]
+                activity_hours = 1.0
+            plan_days.append(
+                {
+                    "day_number": day_number,
+                    "activities": activities,
+                    "activity_hours": activity_hours,
+                    "transition_hours": 0.0,
+                    "planned_hours": activity_hours,
+                    "capacity_hours": 6.0,
+                    "pace_override_approved": False,
+                }
+            )
+        return {
+            "destination": destination,
+            "country": "Italy",
+            "pace": "balanced",
+            "auto_fill": False,
+            "days": plan_days,
+            "unscheduled": [],
+        }
+
+    def test_publication_validation_requires_matching_complete_nonempty_plan(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+
+        validated = validate_itinerary_for_publication(
+            trip,
+            self._publishable_plan(),
+        )
+        self.assertEqual(len(validated.days), 2)
+        with self.assertRaisesRegex(ValueError, "every trip day"):
+            validate_itinerary_for_publication(
+                trip,
+                self._publishable_plan(days=1),
+            )
+        with self.assertRaisesRegex(ValueError, "destination"):
+            validate_itinerary_for_publication(
+                trip,
+                self._publishable_plan(destination="Florence"),
+            )
+        empty_plan = self._publishable_plan()
+        empty_plan["days"][0]["activities"] = []
+        empty_plan["days"][0]["activity_hours"] = 0.0
+        empty_plan["days"][0]["planned_hours"] = 0.0
+        with self.assertRaisesRegex(ValueError, "at least one activity"):
+            validate_itinerary_for_publication(trip, empty_plan)
+
+    def test_authenticated_owner_deletes_exact_trip_through_rpc(self) -> None:
+        record = SavedTrip(
+            "owned-trip",
+            "Rome plan",
+            TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]}),
+            {},
+            "2026-09-15T12:00:00+00:00",
+            "owner-user",
+        )
+        with (
+            patch("src.trips.is_configured", return_value=True),
+            patch(
+                "src.trips.rpc_authenticated",
+                return_value={"deleted": True},
+            ) as rpc_mock,
+        ):
+            delete_trip(
+                record,
+                session_id="owner-user",
+                auth_access_token="access-token",
+            )
+
+        rpc_mock.assert_called_once_with(
+            "delete_owned_trip",
+            {"target_trip_id": "owned-trip"},
+            "access-token",
+        )
+
+    def test_non_owner_cannot_delete_trip(self) -> None:
+        record = SavedTrip(
+            "shared-trip",
+            "Rome plan",
+            TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]}),
+            {},
+            "2026-09-15T12:00:00+00:00",
+            "owner-user",
+            "traveler",
+        )
+        with (
+            patch("src.trips.rpc_authenticated") as rpc_mock,
+            self.assertRaisesRegex(ValueError, "Only the trip organizer"),
+        ):
+            delete_trip(
+                record,
+                session_id="traveler-user",
+                auth_access_token="access-token",
+            )
+        rpc_mock.assert_not_called()
+
+    def test_local_delete_removes_only_the_selected_trip(self) -> None:
+        trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "trips.db"
+            with (
+                patch("src.trips.DEFAULT_FEEDBACK_DATABASE_PATH", database),
+                patch("src.trips.is_configured", return_value=False),
+            ):
+                first = save_trip(trip, {}, session_id="owner-user")
+                second = save_trip(trip, {}, session_id="owner-user")
+                delete_trip(first, session_id="owner-user")
+                remaining = list_saved_trips("owner-user")
+
+        self.assertEqual([record.trip_id for record in remaining], [second.trip_id])
+
     def test_working_draft_is_replaced_then_cleared_when_published(self) -> None:
         trip = TripRequest.model_validate({"destination":"Rome", "country":"Italy", "days":2, "budget_level":"moderate", "pace":"balanced", "travelers":[{"name":"A", "interests":["art"], "walking_tolerance":"low"},{"name":"B", "interests":["history"], "walking_tolerance":"moderate"}]})
         first_state = {

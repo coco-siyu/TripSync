@@ -84,7 +84,9 @@ their password while signed in, keep private plans across devices, and
 permanently delete their account and account-linked data. A signed-in owner can
 also create a seven-day member link from **My trips → Share trip**. Members can
 view the latest working draft and published versions, while only the organizer
-can edit or publish.
+can edit, publish, or permanently delete the trip. Deletion requires a separate
+confirmation and removes every saved itinerary version and the trip's access
+records.
 During trip setup, an organizer can instead choose **Invite separately**. Each
 named link is tied to one traveler slot, requires sign-in, and can only edit that
 slot. The organizer sees which profiles are ready and can start recommendations
@@ -98,6 +100,9 @@ without invitations stay under **Self planning**. When a
 group itinerary is first saved, its originating preference draft is recorded in
 the saved state so later itinerary versions remain in the same group. Older
 exact matches can be linked once with **Confirm group link**.
+Drafts can be saved while advisory warnings are present. Publishing additionally
+checks that the itinerary matches the trip, covers every day, contains an
+activity, and explicitly acknowledges serious allergy or walking conflicts.
 Signing in atomically moves plans saved in that browser into the account. Apply
 `supabase/schema.sql` again when upgrading an existing deployment; it installs
 the private-trip policies, guarded browser-plan transfer, Phase 2 sharing, and

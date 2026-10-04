@@ -36,6 +36,7 @@ from src.preference_invitations import (
     PreferenceSlot,
 )
 from src.ui import (
+    _required_publication_warnings,
     build_sample_trip,
     build_trip_request,
     catalog_city_options,
@@ -45,13 +46,93 @@ from src.ui import (
     parse_tag_text,
     split_destination,
 )
-from src.trips_ui import _trip_option_label
+from src.trips_ui import _group_planning_label, _trip_option_label
 
 
 APP_PATH = Path(__file__).resolve().parents[1] / "app.py"
 
 
 class PreferenceFlowHelpersTests(unittest.TestCase):
+    def test_group_planning_label_distinguishes_requests_from_trips(self) -> None:
+        self.assertEqual(
+            _group_planning_label(1, 1),
+            "Group planning · 1 preference request · 1 trip",
+        )
+        self.assertEqual(
+            _group_planning_label(2, 0),
+            "Group planning · 2 preference requests",
+        )
+        self.assertEqual(_group_planning_label(0, 0), "Group planning · 0 trips")
+
+    def test_publication_warnings_cover_allergy_and_walking_conflicts(self) -> None:
+        trip_payload = build_sample_trip().model_dump(mode="json")
+        trip_payload["travelers"][0]["food_restrictions"] = ["nut allergy"]
+        trip_payload["travelers"][0]["walking_tolerance"] = "low"
+        trip = build_sample_trip().model_validate(trip_payload)
+        activities = load_curated_activities()
+        activity_by_id = {activity.id: activity for activity in activities}
+        high_walking = next(
+            activity for activity in activities
+            if activity.city == "Rome" and activity.walking_level.value == "high"
+        )
+        plan = ItineraryPlan.model_validate(
+            {
+                "destination": "Rome",
+                "country": "Italy",
+                "pace": "balanced",
+                "auto_fill": False,
+                "days": [
+                    {
+                        "day_number": 1,
+                        "activities": [
+                            {
+                                "activity_id": "rome_testaccio_market",
+                                "activity_name": "Testaccio Market",
+                                "duration_hours": 1.0,
+                                "source": "shortlist",
+                                "must_do_owners": [],
+                                "traveler_names": ["Coco"],
+                                "reason": "Saved choice.",
+                            },
+                            {
+                                "activity_id": high_walking.id,
+                                "activity_name": high_walking.name,
+                                "duration_hours": 1.0,
+                                "source": "shortlist",
+                                "must_do_owners": [],
+                                "traveler_names": ["Coco"],
+                                "reason": "Saved choice.",
+                            },
+                        ],
+                        "activity_hours": 2.0,
+                        "transition_hours": 0.0,
+                        "planned_hours": 2.0,
+                        "capacity_hours": 6.0,
+                        "pace_override_approved": False,
+                    },
+                    *[
+                        {
+                            "day_number": day_number,
+                            "activities": [],
+                            "activity_hours": 0.0,
+                            "transition_hours": 0.0,
+                            "planned_hours": 0.0,
+                            "capacity_hours": 6.0,
+                            "pace_override_approved": False,
+                        }
+                        for day_number in (2, 3)
+                    ],
+                ],
+                "unscheduled": [],
+            }
+        )
+
+        warnings = _required_publication_warnings(trip, plan, activity_by_id)
+
+        self.assertEqual(len(warnings), 2)
+        self.assertIn("allergen handling", warnings[0])
+        self.assertIn("low walking preference", warnings[1])
+
     def test_combine_interest_tags_keeps_preset_and_typed_entries(self) -> None:
         self.assertEqual(
             combine_interest_tags(["art"], ["Renaissance painting", " art "]),
@@ -1390,7 +1471,10 @@ class StreamlitInteractionTests(unittest.TestCase):
 
         self.assertFalse(app.exception)
         self.assertTrue(
-            any(item.label == "Group planning (1)" for item in app.expander)
+            any(
+                item.label == "Group planning · 1 trip"
+                for item in app.expander
+            )
         )
         self.assertTrue(
             any(item.label == "Self planning (1)" for item in app.expander)
@@ -1452,10 +1536,60 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         self.assertFalse(
             any(
-                button.label in {"Create new itinerary", "Edit recommendations"}
+                button.label in {
+                    "Create new itinerary",
+                    "Delete trip",
+                    "Edit recommendations",
+                }
                 for button in app.button
             )
         )
+
+    def test_organizer_deletes_a_trip_only_after_confirmation(self) -> None:
+        trip = build_sample_trip()
+        session = AccountSession(
+            user_id="owner-user",
+            email="owner@example.com",
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_000_000_000,
+        )
+        record = SavedTrip(
+            trip_id="owned-trip",
+            title="Rome with friends",
+            trip=trip,
+            state={},
+            updated_at="2026-09-15T12:00:00+00:00",
+            owner_id="owner-user",
+        )
+        with (
+            patch("src.trips_ui.list_saved_trips", return_value=[record]),
+            patch("src.trips_ui.list_preference_drafts", return_value=[]),
+            patch("src.trips_ui.delete_trip") as delete_mock,
+        ):
+            app = AppTest.from_file(str(APP_PATH))
+            app.session_state["app_workspace"] = "My trips"
+            app.session_state["account_session"] = session.as_dict()
+            app.run(timeout=10)
+            next(
+                button for button in app.button
+                if button.label == "Delete trip"
+            ).click().run(timeout=10)
+            self.assertTrue(
+                any("cannot be undone" in warning.value for warning in app.warning)
+            )
+            next(
+                button for button in app.button
+                if button.label == "Delete permanently"
+            ).click().run(timeout=10)
+
+        self.assertFalse(app.exception)
+        delete_mock.assert_called_once_with(
+            record,
+            session_id=app.session_state["feedback_session_id"],
+            auth_access_token="access-token",
+        )
+        self.assertNotIn("delete_trip_confirmation", app.session_state)
 
     def test_named_traveler_automatically_receives_read_only_trip(self) -> None:
         trip = build_sample_trip()
@@ -1496,7 +1630,11 @@ class StreamlitInteractionTests(unittest.TestCase):
         )
         self.assertFalse(
             any(
-                button.label in {"Create new itinerary", "Edit recommendations"}
+                button.label in {
+                    "Create new itinerary",
+                    "Delete trip",
+                    "Edit recommendations",
+                }
                 for button in app.button
             )
         )
@@ -2189,6 +2327,10 @@ class StreamlitInteractionTests(unittest.TestCase):
     def test_itinerary_save_button_persists_trip_and_version(self) -> None:
         app = self._sample_results_app()
         app.button(key="build-itinerary").click().run()
+        next(
+            checkbox for checkbox in app.checkbox
+            if checkbox.label.startswith("I acknowledge")
+        ).check().run()
 
         with patch("src.ui.save_trip") as save:
             save.return_value = SimpleNamespace(
@@ -2252,6 +2394,10 @@ class StreamlitInteractionTests(unittest.TestCase):
         app = self._sample_results_app()
         app.session_state["active_preference_draft_id"] = "d" * 32
         app.button(key="build-itinerary").click().run()
+        next(
+            checkbox for checkbox in app.checkbox
+            if checkbox.label.startswith("I acknowledge")
+        ).check().run()
 
         with patch("src.ui.save_trip") as save:
             save.return_value = SimpleNamespace(

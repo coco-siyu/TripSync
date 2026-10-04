@@ -64,12 +64,16 @@ collection paths, and organizers can build once two profiles are ready.
   - Show group/day warnings without excluding activities or blocking publishing.
   - Depends on MVP-01 and MVP-05.
 
-- [ ] **MVP-07: Complete the draft-to-publish lifecycle**
+- [x] **MVP-07: Complete the draft-to-publish lifecycle**
   - Let the organizer edit the shared working draft.
   - Let members view the latest draft after refreshing.
   - Publish an immutable version and allow a new draft from that version.
   - Block only invalid schedules and required unacknowledged warnings.
   - Depends on MVP-02, MVP-05, and MVP-06.
+  - Working drafts remain replaceable, published versions remain immutable, and
+    only the organizer can edit, publish, or permanently delete a trip. Publish
+    validates the full schedule and requires explicit acknowledgment of serious
+    allergy or walking conflicts. **Done.**
 
 ### P0 — Catalog and release quality
 

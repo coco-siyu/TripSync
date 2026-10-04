@@ -34,6 +34,7 @@ from src.preference_status_ui import render_preference_draft_status
 from src.trips import (
     SavedTrip,
     WORKING_DRAFT_ID,
+    delete_trip,
     itinerary_versions,
     list_saved_trips,
     revise_itinerary_plan,
@@ -57,6 +58,7 @@ _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 _SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
 _SHARE_LINKS_KEY = "trip_share_links"
 _OPEN_RESPONSE_STATUS_KEY = "open_preference_response_status"
+_DELETE_TRIP_CONFIRMATION_KEY = "delete_trip_confirmation"
 
 
 def _resume_preference_draft(
@@ -99,6 +101,40 @@ def _close_response_status(record_key: str) -> None:
 
     if st.session_state.get(_OPEN_RESPONSE_STATUS_KEY) == record_key:
         st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
+
+
+def _request_trip_deletion(record_key: str) -> None:
+    """Open the destructive confirmation for one owned trip."""
+
+    st.session_state[_DELETE_TRIP_CONFIRMATION_KEY] = record_key
+
+
+def _cancel_trip_deletion(record_key: str) -> None:
+    """Close the deletion confirmation if it belongs to this trip."""
+
+    if st.session_state.get(_DELETE_TRIP_CONFIRMATION_KEY) == record_key:
+        st.session_state.pop(_DELETE_TRIP_CONFIRMATION_KEY, None)
+
+
+def _finish_trip_deletion(record: SavedTrip) -> None:
+    """Clear UI state that points to a trip which was just deleted."""
+
+    _cancel_trip_deletion(record.record_key)
+    if st.session_state.get(_OPEN_RESPONSE_STATUS_KEY) == record.record_key:
+        st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
+    open_itinerary = st.session_state.get(_OPEN_SAVED_ITINERARY_KEY)
+    if isinstance(open_itinerary, dict) and (
+        open_itinerary.get("record_key") == record.record_key
+    ):
+        st.session_state.pop(_OPEN_SAVED_ITINERARY_KEY, None)
+    for selector_key in (
+        "group-trip-selector",
+        "self-trip-selector",
+        "published-group-trip-selector",
+        "published-self-trip-selector",
+    ):
+        if st.session_state.get(selector_key) == record.record_key:
+            st.session_state.pop(selector_key, None)
 
 
 def _load_preference_drafts(account) -> list[PreferenceDraft]:
@@ -201,6 +237,19 @@ def _render_preference_drafts(drafts: list[PreferenceDraft]) -> None:
                 on_click=_resume_preference_draft,
                 args=(draft,),
             )
+
+
+def _group_planning_label(preference_count: int, trip_count: int) -> str:
+    """Describe the two different item types shown in group planning."""
+
+    parts: list[str] = []
+    if preference_count:
+        noun = "preference request" if preference_count == 1 else "preference requests"
+        parts.append(f"{preference_count} {noun}")
+    if trip_count or not parts:
+        noun = "trip" if trip_count == 1 else "trips"
+        parts.append(f"{trip_count} {noun}")
+    return "Group planning · " + " · ".join(parts)
 
 
 def _dismiss_trip_notice(key: str) -> None:
@@ -1169,6 +1218,59 @@ def _render_saved_trip_collection(
                         args=(record.record_key,),
                     )
                 _render_owner_sharing(record)
+                st.button(
+                    "Delete trip",
+                    icon=":material/delete:",
+                    key=f"delete-trip-{content_mode}-{record.record_key}",
+                    on_click=_request_trip_deletion,
+                    args=(record.record_key,),
+                )
+            if (
+                st.session_state.get(_DELETE_TRIP_CONFIRMATION_KEY)
+                == record.record_key
+            ):
+                with st.container(border=True):
+                    st.warning(
+                        "Delete this trip and all of its saved itinerary versions? "
+                        "People with access will no longer see it. This cannot be undone.",
+                        icon=":material/warning:",
+                    )
+                    with st.container(horizontal=True):
+                        st.button(
+                            "Cancel",
+                            key=f"cancel-delete-trip-{content_mode}-{record.record_key}",
+                            on_click=_cancel_trip_deletion,
+                            args=(record.record_key,),
+                        )
+                        if st.button(
+                            "Delete permanently",
+                            type="primary",
+                            icon=":material/delete_forever:",
+                            key=(
+                                f"confirm-delete-trip-{content_mode}-"
+                                f"{record.record_key}"
+                            ),
+                        ):
+                            try:
+                                delete_trip(
+                                    record,
+                                    session_id=st.session_state.feedback_session_id,
+                                    auth_access_token=(
+                                        account.access_token if account else None
+                                    ),
+                                )
+                            except (RuntimeError, ValueError):
+                                st.error(
+                                    "TripSync could not delete this trip. Apply the "
+                                    "latest Supabase schema and try again.",
+                                    icon=":material/error:",
+                                )
+                            else:
+                                _finish_trip_deletion(record)
+                                st.session_state[_SAVED_ITINERARY_FLASH_KEY] = (
+                                    f"Deleted {record.title}."
+                                )
+                                st.rerun()
             if (
                 preference_draft is not None
                 and st.session_state.get(_OPEN_RESPONSE_STATUS_KEY)
@@ -1355,11 +1457,13 @@ def _render_saved_trip_sections(
     shown_preference_drafts = (
         active_preference_drafts if content_mode == "drafts" else []
     )
-    group_count = len(shown_preference_drafts) + len(visible_group_records)
+    preference_count = len(shown_preference_drafts)
+    trip_count = len(visible_group_records)
+    group_count = preference_count + trip_count
     selector_prefix = "" if content_mode == "drafts" else "published-"
 
     with st.expander(
-        f"Group planning ({group_count})",
+        _group_planning_label(preference_count, trip_count),
         expanded=bool(group_count),
     ):
         st.caption(

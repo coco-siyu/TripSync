@@ -1481,3 +1481,76 @@ $$;
 
 revoke all on function private.list_shared_trips() from public;
 grant execute on function private.list_shared_trips() to authenticated;
+
+-- Organizer-only deletion keeps the saved trip and its dependent sharing rows
+-- atomic. If this was the final saved trip linked to a preference draft, remove
+-- that now-orphaned group setup as well.
+create or replace function private.delete_owned_trip(target_trip_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  account_user_id uuid := auth.uid();
+  linked_draft_id text;
+  removed_preference_draft boolean := false;
+begin
+  if account_user_id is null then
+    raise exception 'Sign in before deleting a trip.' using errcode = '42501';
+  end if;
+  if target_trip_id is null or pg_catalog.length(pg_catalog.btrim(target_trip_id))
+    not between 1 and 200 then
+    raise exception 'Trip identifier is invalid.' using errcode = '22023';
+  end if;
+
+  select state_json ->> 'preference_draft_id'
+  into linked_draft_id
+  from public.saved_trips
+  where session_id = account_user_id::text
+    and trip_id = target_trip_id
+  for update;
+
+  if not found then
+    raise exception 'Only the trip organizer can delete this trip.'
+      using errcode = '42501';
+  end if;
+
+  delete from public.saved_trips
+  where session_id = account_user_id::text
+    and trip_id = target_trip_id;
+
+  if linked_draft_id ~ '^[a-f0-9]{32}$'
+    and not exists (
+      select 1
+      from public.saved_trips
+      where session_id = account_user_id::text
+        and state_json ->> 'preference_draft_id' = linked_draft_id
+    ) then
+    delete from public.preference_drafts
+    where draft_id = linked_draft_id
+      and owner_id = account_user_id;
+    removed_preference_draft := found;
+  end if;
+
+  return pg_catalog.jsonb_build_object(
+    'deleted', true,
+    'removed_preference_draft', removed_preference_draft
+  );
+end;
+$$;
+
+revoke all on function private.delete_owned_trip(text) from public;
+grant execute on function private.delete_owned_trip(text) to authenticated;
+
+create or replace function public.delete_owned_trip(target_trip_id text)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select private.delete_owned_trip(target_trip_id);
+$$;
+
+revoke all on function public.delete_owned_trip(text) from public;
+grant execute on function public.delete_owned_trip(text) to authenticated;
