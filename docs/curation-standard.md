@@ -20,6 +20,12 @@ Both are valid catalog entries, but deterministic ranking uses the level only
 as a tie-breaker so broader discovery cannot crowd out richer records with the
 same preference fit.
 
+The curator workspace presents these internal values as actions rather than
+publication states: `conservative` records show **Check details**, while
+`curated` records show **Details checked**. Both remain published. A curator can
+save partial corrections without changing the level, or choose **Save and
+confirm details** after checking the complete planning record.
+
 Use the common tag vocabulary whenever applicable: `ancient rome`,
 `archaeology`, `architecture`, `art`, `culture`, `cycling`, `design`, `food`,
 `history`, `industrial design`, `local culture`, `music`, `nature`, `outdoor`,

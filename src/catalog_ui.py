@@ -103,11 +103,30 @@ def _activity_categories(current: str) -> list[str]:
     return options if current in options else [current, *options]
 
 
+def _planning_review_label(activity: Activity) -> str:
+    """Describe the next catalog action without implying publication state."""
+
+    return (
+        "Details checked"
+        if activity.curation_level == "curated"
+        else "Check details"
+    )
+
+
 def _render_published_activity_editor(activity: Activity) -> None:
     """Edit a live activity without changing its stable activity identifier."""
 
     st.subheader(f"Edit {activity.name}")
     st.caption("The activity name, city, and country are kept fixed so links and saved plans remain stable.")
+    if activity.curation_level == "conservative":
+        st.info(
+            "Check the category, interests, walking, budget, duration, accessibility, "
+            "booking information, description, and sources. You can save corrections "
+            "without confirming every planning detail yet.",
+            icon=":material/fact_check:",
+        )
+    else:
+        st.caption("Planning review: Details checked")
     categories = _activity_categories(activity.category)
     with st.form(f"published-activity-editor-{activity.id}", border=True):
         category = st.selectbox(
@@ -179,8 +198,24 @@ def _render_published_activity_editor(activity: Activity) -> None:
             help="Community-maintained or curator-entered information. Keep the official link for current hours.",
         )
         osm_url = st.text_input("OpenStreetMap reference URL", value=str(activity.osm_url or ""))
-        save = st.form_submit_button("Validate and save changes", icon=":material/save:", type="primary")
-    if save:
+        confirm_details = False
+        with st.container(horizontal=True):
+            save = st.form_submit_button(
+                "Save changes",
+                icon=":material/save:",
+                type=(
+                    "primary"
+                    if activity.curation_level == "curated"
+                    else "secondary"
+                ),
+            )
+            if activity.curation_level == "conservative":
+                confirm_details = st.form_submit_button(
+                    "Save and confirm details",
+                    icon=":material/fact_check:",
+                    type="primary",
+                )
+    if save or confirm_details:
         try:
             normalized_official_url = official_url.strip().rstrip("/")
             existing_official_url = str(activity.official_url or "").rstrip("/")
@@ -191,6 +226,9 @@ def _render_published_activity_editor(activity: Activity) -> None:
             )
             updated = Activity.model_validate({
                 **activity.model_dump(mode="json"),
+                "curation_level": (
+                    "curated" if confirm_details else activity.curation_level
+                ),
                 "category": category,
                 "category_tags": category_tags,
                 "interests": interests,
@@ -222,7 +260,10 @@ def _render_published_activity_editor(activity: Activity) -> None:
                 "osm_url": osm_url or None,
             })
             update_activity(updated)
-            st.success(f"Saved changes to {updated.name}.")
+            if confirm_details:
+                st.success(f"Planning details confirmed for {updated.name}.")
+            else:
+                st.success(f"Saved changes to {updated.name}.")
             st.rerun()
         except (ValidationError, ValueError) as error:
             st.error(str(error), icon=":material/error:")
@@ -264,6 +305,7 @@ def _render_published_catalog() -> None:
                 "City": activity.city,
                 "Country": activity.country,
                 "Category": activity.category.replace("_", " "),
+                "Planning review": _planning_review_label(activity),
                 "Interests": ", ".join(activity.interests),
             }
             for activity in filtered
@@ -337,9 +379,7 @@ def _duplicate_table_rows(activities: list[Activity]) -> list[dict[str, object]]
             "Name": activity.name,
             "City": activity.city,
             "Country": activity.country,
-            "Review status": (
-                "Published" if activity.curation_level == "curated" else "New to review"
-            ),
+            "Planning review": _planning_review_label(activity),
             "Category": activity.category.replace("_", " ").title(),
             "Aliases": ", ".join(activity.aliases),
         }
