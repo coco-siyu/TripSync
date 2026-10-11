@@ -36,6 +36,7 @@ def activity_embedding_text(activity: Activity) -> str:
     return "\n".join(
         [
             f"Name: {activity.name}",
+            f"Aliases: {', '.join(activity.aliases)}",
             f"Category: {activity.category.replace('_', ' ')}",
             f"Tags: {', '.join(activity.category_tags)}",
             f"Interests: {', '.join(activity.interests)}",

@@ -40,6 +40,10 @@ def activity_match_keys(activity: Activity) -> frozenset[str]:
         {
             canonicalize_activity_key(activity.id),
             canonicalize_activity_key(activity.name),
+            *(
+                canonicalize_activity_key(alias)
+                for alias in activity.aliases
+            ),
         }
     )
 

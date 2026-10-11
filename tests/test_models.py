@@ -130,6 +130,20 @@ class TripRequestTests(unittest.TestCase):
 
 
 class ActivityTests(unittest.TestCase):
+    def test_activity_aliases_preserve_case_and_deduplicate(self) -> None:
+        raw_activity = json.loads(SAMPLE_DATA_PATH.read_text(encoding="utf-8"))[0]
+        raw_activity["aliases"] = ["  Coliseum  ", "coliseum", "Colosseo"]
+
+        activity = Activity.model_validate(raw_activity)
+
+        self.assertEqual(activity.aliases, ["Coliseum", "Colosseo"])
+
+    def test_existing_activity_defaults_to_curated_detail_level(self) -> None:
+        raw_activity = json.loads(SAMPLE_DATA_PATH.read_text(encoding="utf-8"))[0]
+        activity = Activity.model_validate(raw_activity)
+
+        self.assertEqual(activity.curation_level, "curated")
+
     def test_sample_catalog_is_valid_and_has_unique_ids(self) -> None:
         raw_activities = json.loads(SAMPLE_DATA_PATH.read_text(encoding="utf-8"))
         activities = [Activity.model_validate(item) for item in raw_activities]

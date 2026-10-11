@@ -291,6 +291,7 @@ def rank_activities(
 ) -> list[GroupFitResult]:
     """Score and rank activities with stable tie-breaking."""
 
+    activity_by_id = {activity.id: activity for activity in activities}
     results = [
         score_activity(
             activity,
@@ -302,8 +303,10 @@ def rank_activities(
     return sorted(
         results,
         key=lambda result: (
+            not any(fit.must_do_match for fit in result.traveler_fits),
             -result.total_score,
             -result.coverage_count,
+            activity_by_id[result.activity_id].curation_level == "conservative",
             result.activity_name.casefold(),
             result.activity_id,
         ),

@@ -105,6 +105,39 @@ class CatalogDltTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least one destination"):
             ingest_cities([], "Italy")
 
+    @patch("src.catalog_dlt.resolve_city")
+    @patch("src.catalog_dlt.dlt.pipeline")
+    def test_ingestion_stops_at_the_requested_city_target(
+        self,
+        mock_pipeline_factory: MagicMock,
+        mock_resolve_city: MagicMock,
+    ) -> None:
+        city = supported_city("Rome")
+        mock_resolve_city.return_value = city
+        candidates = [
+            CatalogCandidate(
+                f"Q{index}", f"Museum {index}", 41.8 + index / 100,
+                12.4 + index / 100, f"https://example.test/{index}",
+                ("museum",), (),
+            )
+            for index in range(1, 6)
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            catalog_path = Path(directory) / "activities.json"
+            outcome = ingest_cities(
+                ["Rome"],
+                "Italy",
+                destination_path=Path(directory) / "ingestion.duckdb",
+                catalog_path=catalog_path,
+                review_path=Path(directory) / "review.json",
+                target_city_size=3,
+                fetcher=lambda _: candidates,
+            )
+            published = load_curated_activities(catalog_path)
+
+        self.assertEqual(outcome.published_by_city, {"Rome": 3})
+        self.assertEqual(len(published), 3)
+
     def test_destination_queue_deduplicates_active_pairs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "queue.json"

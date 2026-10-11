@@ -1,0 +1,1073 @@
+[
+  {
+    "review_id": "rome_rome:q850212",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q850212",
+      "name": "1994 World Aquatics Championships",
+      "latitude": 41.932492,
+      "longitude": 12.457357,
+      "source_url": "https://www.wikidata.org/wiki/Q850212",
+      "wikidata_types": [
+        "FINA World Aquatics Championships"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/1994_World_Aquatics_Championships",
+      "official_url": null,
+      "image_url": null,
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q666536",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q666536",
+      "name": "2005 conclave",
+      "latitude": 41.905833333,
+      "longitude": 12.455833333,
+      "source_url": "https://www.wikidata.org/wiki/Q666536",
+      "wikidata_types": [
+        "conclave",
+        "papal election"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/2005_conclave",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Benedykt%20xvi-crop.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1463845",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1463845",
+      "name": "410 sack of Rome",
+      "latitude": 41.89,
+      "longitude": 12.48,
+      "source_url": "https://www.wikidata.org/wiki/Q1463845",
+      "wikidata_types": [
+        "looting",
+        "sack"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Sack_of_Rome_(410)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Sack%20of%20Rome%20by%20the%20Visigoths%20on%2024%20August%20410%20by%20JN%20Sylvestre%201890.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q338432",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q338432",
+      "name": "Accademia Nazionale dei Lincei",
+      "latitude": 41.893333333,
+      "longitude": 12.466666666,
+      "source_url": "https://www.wikidata.org/wiki/Q338432",
+      "wikidata_types": [
+        "academy of sciences",
+        "national academy"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Accademia_Nazionale_dei_Lincei",
+      "official_url": "https://www.lincei.it/it/home",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/2016%20Palazzo%20Corsini%20-%20Lungara%2003.jpg",
+      "official_site_verified": true,
+      "official_visit_url": null,
+      "official_hours_url": null,
+      "official_tickets_url": null,
+      "official_site_checked_at": "2026-10-05T00:54:55.687113+00:00"
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q181410",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q181410",
+      "name": "Accademia Nazionale di Santa Cecilia",
+      "latitude": 41.929,
+      "longitude": 12.4745,
+      "source_url": "https://www.wikidata.org/wiki/Q181410",
+      "wikidata_types": [
+        "conservatory"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Accademia_Nazionale_di_Santa_Cecilia",
+      "official_url": "https://santacecilia.it/",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Campo%20Marzio%20-%20Accademia%20di%20Santa%20Cecilia%202.JPG",
+      "official_site_verified": true,
+      "official_visit_url": null,
+      "official_hours_url": "https://santacecilia.it/concerti/biglietteria/",
+      "official_tickets_url": "https://santacecilia.it/concerti/biglietti-prezzi/",
+      "official_site_checked_at": "2026-10-05T00:54:55.687113+00:00"
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q945850",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q945850",
+      "name": "Apollo and Daphne",
+      "latitude": 41.913888888,
+      "longitude": 12.491944444,
+      "source_url": "https://www.wikidata.org/wiki/Q945850",
+      "wikidata_types": [
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Apollo_and_Daphne_(Bernini)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Apollo%20and%20Daphne%20%28Bernini%29%20%28cropped%29.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q189417",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q189417",
+      "name": "Appian Way",
+      "latitude": 41.841389,
+      "longitude": 12.5325,
+      "source_url": "https://www.wikidata.org/wiki/Q189417",
+      "wikidata_types": [
+        "Roman road"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Appian_Way",
+      "official_url": "https://www.camminodellappia.it",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Appian%20Way.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q600139",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q600139",
+      "name": "Aqua Virgo",
+      "latitude": 41.91022222,
+      "longitude": 12.62688889,
+      "source_url": "https://www.wikidata.org/wiki/Q600139",
+      "wikidata_types": [
+        "Roman aqueduct"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Aqua_Virgo",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Resti%20dell%27acquedotto%20dell%27Acqua%20Vergine%20alla%20Rinascente.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q194103",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q194103",
+      "name": "Aventine Hill",
+      "latitude": 41.883333333,
+      "longitude": 12.483333333,
+      "source_url": "https://www.wikidata.org/wiki/Q194103",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Aventine_Hill",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ripa%20-%20Aventino%20-%20CavalieriDiMalta.JPG",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q733305",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q733305",
+      "name": "basketball at the 1960 Summer Olympics",
+      "latitude": 41.9296,
+      "longitude": 12.4707,
+      "source_url": "https://www.wikidata.org/wiki/Q733305",
+      "wikidata_types": [
+        "Olympic sports discipline event"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Basketball_at_the_1960_Summer_Olympics",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/USA%20-%20Italia%20Pallacanestro%20Olimpiadi%201960.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1231749",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1231749",
+      "name": "Baths of Titus",
+      "latitude": 41.892555555,
+      "longitude": 12.494052777,
+      "source_url": "https://www.wikidata.org/wiki/Q1231749",
+      "wikidata_types": [
+        "ancient Roman structure",
+        "real property",
+        "thermae"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Baths_of_Titus",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Musei%20vaticani%20-%20sala%20della%20Rotonda%20-%20Porphyrschale.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q729490",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q729490",
+      "name": "Bocca della Verità",
+      "latitude": 41.888055555,
+      "longitude": 12.481666666,
+      "source_url": "https://www.wikidata.org/wiki/Q729490",
+      "wikidata_types": [
+        "manhole cover",
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Bocca_della_Verit%C3%A0",
+      "official_url": "http://www.dpsusa.com/bocca_verita_history.shtml",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Et%C3%A0%20imperiale%2C%20chiusino%20a%20forma%20di%20mascherone%20di%20divinit%C3%A0%20fluviale%2C%20detta%20bocca%20della%20verit%C3%A0%2C%20collocata%20qui%20nel%201632.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q893556",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q893556",
+      "name": "Borgo",
+      "latitude": 41.904066,
+      "longitude": 12.461629,
+      "source_url": "https://www.wikidata.org/wiki/Q893556",
+      "wikidata_types": [
+        "neighborhood",
+        "rione of Rome"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Borgo_(rione_of_Rome)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Passetto%20di%20Borgo%20from%20Castel%20Sant%27Angelo%2001.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Neighborhood needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q843669",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q843669",
+      "name": "boxing at the 1960 Summer Olympics",
+      "latitude": 41.825337,
+      "longitude": 12.46657,
+      "source_url": "https://www.wikidata.org/wiki/Q843669",
+      "wikidata_types": [
+        "Olympic sports discipline event"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Boxing_at_the_1960_Summer_Olympics",
+      "official_url": null,
+      "image_url": null,
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q216104",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q216104",
+      "name": "Caelian Hill",
+      "latitude": 41.883587497,
+      "longitude": 12.494992342,
+      "source_url": "https://www.wikidata.org/wiki/Q216104",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Caelian_Hill",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Caelian%20Hill.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1031342",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1031342",
+      "name": "Campitelli",
+      "latitude": 41.88803,
+      "longitude": 12.486391,
+      "source_url": "https://www.wikidata.org/wiki/Q1031342",
+      "wikidata_types": [
+        "neighborhood",
+        "rione of Rome"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Campitelli",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Piazza%20del%20Campidoglio%202015.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Neighborhood needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q242839",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q242839",
+      "name": "Campus Martius",
+      "latitude": 41.89777778,
+      "longitude": 12.47722222,
+      "source_url": "https://www.wikidata.org/wiki/Q242839",
+      "wikidata_types": [
+        "terrain"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Campus_Martius",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Campus%20Martius.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q34925",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q34925",
+      "name": "Capitoline Hill",
+      "latitude": 41.893333333,
+      "longitude": 12.483055555,
+      "source_url": "https://www.wikidata.org/wiki/Q34925",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Capitoline_Hill",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Aracoeli-fachada.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q728399",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q728399",
+      "name": "Cinecittà",
+      "latitude": 41.85,
+      "longitude": 12.566667,
+      "source_url": "https://www.wikidata.org/wiki/Q728399",
+      "wikidata_types": [
+        "film studio"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Cinecitt%C3%A0",
+      "official_url": "https://cinecitta.com/",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ingressostorico%20cinecitta.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1570519",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1570519",
+      "name": "Colossus of Nero",
+      "latitude": 41.891111,
+      "longitude": 12.491389,
+      "source_url": "https://www.wikidata.org/wiki/Q1570519",
+      "wikidata_types": [
+        "colossal statue",
+        "lost sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Colossus_of_Nero",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Lawrence%20Alma-Tadema%2002.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q599302",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q599302",
+      "name": "Column of Antoninus Pius",
+      "latitude": 41.90166667,
+      "longitude": 12.47611111,
+      "source_url": "https://www.wikidata.org/wiki/Q599302",
+      "wikidata_types": [
+        "sculpture",
+        "victory column"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Column_of_Antoninus_Pius",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Musei%20vaticani%20-%20base%20colonna%20antonina%2001106.JPG",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q265384",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q265384",
+      "name": "Column of Marcus Aurelius",
+      "latitude": 41.900833333,
+      "longitude": 12.48,
+      "source_url": "https://www.wikidata.org/wiki/Q265384",
+      "wikidata_types": [
+        "victory column"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Column_of_Marcus_Aurelius",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Colonna%20di%20Marco%20aurelio%20-%20Frontale.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q369075",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q369075",
+      "name": "Column of Phocas",
+      "latitude": 41.8925,
+      "longitude": 12.484722222,
+      "source_url": "https://www.wikidata.org/wiki/Q369075",
+      "wikidata_types": [
+        "victory column"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Column_of_Phocas",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Colonna%20di%20Foca%20Forum%20Romanum%20Rome.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q766487",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q766487",
+      "name": "David",
+      "latitude": 41.914,
+      "longitude": 12.492,
+      "source_url": "https://www.wikidata.org/wiki/Q766487",
+      "wikidata_types": [
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/David_(Bernini)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Bernini%27s%20David%2002.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1333433",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1333433",
+      "name": "Ecstasy of Saint Teresa",
+      "latitude": 41.904722222,
+      "longitude": 12.494166666,
+      "source_url": "https://www.wikidata.org/wiki/Q1333433",
+      "wikidata_types": [
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Ecstasy_of_Saint_Teresa",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Ecstasy%20of%20Saint%20Teresa%20September%202015-2a.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q907387",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q907387",
+      "name": "equestrian statue of Marcus Aurelius",
+      "latitude": 41.892741638,
+      "longitude": 12.482241461,
+      "source_url": "https://www.wikidata.org/wiki/Q907387",
+      "wikidata_types": [
+        "equestrian statue"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Equestrian_statue_of_Marcus_Aurelius",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Equestrian%20statue%20of%20Marcus%20Aurelius%20%28Rome%29.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1368377",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1368377",
+      "name": "Esposizione Universale di Roma",
+      "latitude": 41.836,
+      "longitude": 12.466,
+      "source_url": "https://www.wikidata.org/wiki/Q1368377",
+      "wikidata_types": [
+        "world's fair"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/EUR,_Rome",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/EUR%20Piazza%20Guglielmo%20Marconi.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q211233",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q211233",
+      "name": "Esquiline Hill",
+      "latitude": 41.895555555,
+      "longitude": 12.496666666,
+      "source_url": "https://www.wikidata.org/wiki/Q211233",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Esquiline_Hill",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/A%20handbook%20of%20Rome%20and%20the%20Campagna%20%281899%29%20%2814762604401%29.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1368481",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1368481",
+      "name": "Esquilino",
+      "latitude": 41.89305556,
+      "longitude": 12.50388889,
+      "source_url": "https://www.wikidata.org/wiki/Q1368481",
+      "wikidata_types": [
+        "neighborhood",
+        "rione of Rome"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Esquilino_(rione_of_Rome)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Esquilino%20da%20s%20M%20Maggiore%201240961.JPG",
+      "official_site_verified": false
+    },
+    "reason": "Neighborhood needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q748224",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q748224",
+      "name": "fencing at the 1960 Summer Olympics",
+      "latitude": 41.8931,
+      "longitude": 12.4828,
+      "source_url": "https://www.wikidata.org/wiki/Q748224",
+      "wikidata_types": [
+        "Olympic sports discipline event"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Fencing_at_the_1960_Summer_Olympics",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Sabre%20podium%201960%20Olympics%20men.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q900182",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q900182",
+      "name": "field hockey at the 1960 Summer Olympics",
+      "latitude": 41.8266,
+      "longitude": 12.4569,
+      "source_url": "https://www.wikidata.org/wiki/Q900182",
+      "wikidata_types": [
+        "Olympic sports discipline event"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Field_hockey_at_the_1960_Summer_Olympics",
+      "official_url": null,
+      "image_url": null,
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q266973",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q266973",
+      "name": "football at the 1960 Summer Olympics",
+      "latitude": 41.9339,
+      "longitude": 12.4547,
+      "source_url": "https://www.wikidata.org/wiki/Q266973",
+      "wikidata_types": [
+        "Olympic sports discipline event"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Football_at_the_1960_Summer_Olympics",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Yugoslavia%20olimpic%20gold%20medalist%201960.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q303091",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q303091",
+      "name": "gymnastics at the 1960 Summer Olympics",
+      "latitude": 41.88026,
+      "longitude": 12.49276,
+      "source_url": "https://www.wikidata.org/wiki/Q303091",
+      "wikidata_types": [
+        "Olympic sports discipline event"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Gymnastics_at_the_1960_Summer_Olympics",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Olympic%20rings%20with%20white%20rims.svg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q523026",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q523026",
+      "name": "historic centre of Rome",
+      "latitude": 41.899,
+      "longitude": 12.47,
+      "source_url": "https://www.wikidata.org/wiki/Q523026",
+      "wikidata_types": [
+        "old town"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Historic_district_of_Rome",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/20140803%20Rome%20View%20from%20Janiculum%200286.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q319496",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q319496",
+      "name": "Italian Open",
+      "latitude": 41.929222222,
+      "longitude": 12.455961111,
+      "source_url": "https://www.wikidata.org/wiki/Q319496",
+      "wikidata_types": [
+        "recurring tennis tournament"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Italian_Open_(tennis)",
+      "official_url": "http://www.internazionalibnlditalia.com/en/",
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Il%20Centrale%20%28108607831%29.jpeg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q303001",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q303001",
+      "name": "Janiculum",
+      "latitude": 41.891666666,
+      "longitude": 12.461111111,
+      "source_url": "https://www.wikidata.org/wiki/Q303001",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Janiculum",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Janiculum.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q841388",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q841388",
+      "name": "Lapis Niger",
+      "latitude": 41.8925,
+      "longitude": 12.48472222,
+      "source_url": "https://www.wikidata.org/wiki/Q841388",
+      "wikidata_types": [
+        "Ancient Roman inscription",
+        "shrine",
+        "stele"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Lapis_Niger",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Lapis%20Niger%20in%20the%20Roman%20Forum%20%28149201570%29.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q468405",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q468405",
+      "name": "Lateran",
+      "latitude": 41.88583333,
+      "longitude": 12.50583333,
+      "source_url": "https://www.wikidata.org/wiki/Q468405",
+      "wikidata_types": [
+        "building complex"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Lateran",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Archbasilica%20of%20St.%20John%20Lateran%20HD.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q645181",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q645181",
+      "name": "Lateran Obelisk",
+      "latitude": 41.886833,
+      "longitude": 12.504778,
+      "source_url": "https://www.wikidata.org/wiki/Q645181",
+      "wikidata_types": [
+        "obelisk"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Lateran_Obelisk",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Obelisk-Lateran.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q370350",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q370350",
+      "name": "Leonine City",
+      "latitude": 41.90305556,
+      "longitude": 12.45972222,
+      "source_url": "https://www.wikidata.org/wiki/Q370350",
+      "wikidata_types": [
+        "defensive wall"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Leonine_City",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Torre%20Giovanni%20Giardini%20Vaticani%2020110705.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q2329591",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q2329591",
+      "name": "Magistral Palace",
+      "latitude": 41.905277777,
+      "longitude": 12.480555555,
+      "source_url": "https://www.wikidata.org/wiki/Q2329591",
+      "wikidata_types": [
+        "building"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Palazzo_Malta",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Palazzo%20Magistrale%20%28Rome%29%201.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q692719",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q692719",
+      "name": "Monte Mario",
+      "latitude": 41.925,
+      "longitude": 12.45166667,
+      "source_url": "https://www.wikidata.org/wiki/Q692719",
+      "wikidata_types": [
+        "hill"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Monte_Mario",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Roma-monte%20mario.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1419959",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1419959",
+      "name": "Monti",
+      "latitude": 41.894962,
+      "longitude": 12.4892253,
+      "source_url": "https://www.wikidata.org/wiki/Q1419959",
+      "wikidata_types": [
+        "neighborhood",
+        "rione of Rome"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Monti_(rione_of_Rome)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Monti%20-%20via%20Panisperna%201040339.JPG",
+      "official_site_verified": false
+    },
+    "reason": "Neighborhood needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1789776",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1789776",
+      "name": "Moschea di Roma",
+      "latitude": 41.934722222,
+      "longitude": 12.495,
+      "source_url": "https://www.wikidata.org/wiki/Q1789776",
+      "wikidata_types": [
+        "mosque"
+      ],
+      "review_flags": [],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Mosque_of_Rome",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Grande%20Mosqu%C3%A9e%20de%20Rome%2002.JPG",
+      "official_site_verified": false
+    },
+    "reason": "Type is not yet in TripSync's trusted attraction rules.",
+    "confidence": 0.5,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  },
+  {
+    "review_id": "rome_rome:q1989744",
+    "city": "Rome",
+    "country": "Italy",
+    "candidate_json": {
+      "wikidata_id": "Q1989744",
+      "name": "Moses",
+      "latitude": 41.893772222,
+      "longitude": 12.493305555,
+      "source_url": "https://www.wikidata.org/wiki/Q1989744",
+      "wikidata_types": [
+        "sculpture"
+      ],
+      "review_flags": [
+        "Standalone artwork: prefer the venue where it can be visited."
+      ],
+      "wikipedia_url": "https://en.wikipedia.org/wiki/Moses_(Michelangelo)",
+      "official_url": null,
+      "image_url": "http://commons.wikimedia.org/wiki/Special:FilePath/Michelangelo%27s%20Moses%20%28Rome%29.jpg",
+      "official_site_verified": false
+    },
+    "reason": "Sculpture needs context before it becomes a trip activity.",
+    "confidence": 0.65,
+    "updated_at": "2026-10-05T00:54:55.692767+00:00"
+  }
+]

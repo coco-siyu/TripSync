@@ -95,6 +95,13 @@ def insert(table: str, row: dict[str, Any]) -> None:
     client().table(table).insert(row).execute()
 
 
+def insert_many(table: str, rows: list[dict[str, Any]]) -> None:
+    """Insert a server-side batch without overwriting existing records."""
+
+    if rows:
+        client().table(table).insert(rows).execute()
+
+
 def select(
     table: str,
     *,

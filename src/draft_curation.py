@@ -226,6 +226,7 @@ def automatic_activity_fields(candidate: dict, city: str) -> dict | None:
     name = candidate["name"].strip()
     return {
         "name": name,
+        "curation_level": "conservative",
         "category": draft.category,
         "category_tags": list(draft.category_tags),
         "interests": list(draft.interests),

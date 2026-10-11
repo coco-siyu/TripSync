@@ -274,14 +274,36 @@ when previously saved official sites should be rechecked too.
 The new fields live inside the existing `activity_json` JSONB value, so this
 enrichment does not require rerunning `supabase/schema.sql`.
 
+### Reconcile packaged catalog additions
+
+The packaged JSON catalog is a local fallback and initial seed, not an automatic
+database migration. To compare one packaged destination with an existing
+Supabase catalog, run the read-only command first:
+
+```bash
+python -m src.catalog_sync --city Rome --country Italy
+```
+
+After reviewing every missing record, insert only those missing IDs by repeating
+the count reported by the dry run:
+
+```bash
+python -m src.catalog_sync --city Rome --country Italy --apply --expect 23
+```
+
+The command never updates existing catalog rows and never deletes records. It
+aborts when the reviewed missing count has changed.
+
 ### One-off city import
 
 The Curate catalog workspace is primarily for managing the live catalog: filter
 published activities by country and city, edit their planning fields, and delete
-selected records after confirming the action. Its optional city form is a direct
-import: clear, Pydantic-validated attractions are published immediately, while
-hotels, airports, transport, organisations, tragic events, and uncertain places
-are not added.
+selected records after confirming the action. The Remove duplicates tab compares
+the complete filtered catalog in two side-by-side tables. A confirmed merge keeps
+one canonical record, optionally preserves the removed name as a searchable alias,
+then removes the duplicate. Its optional city form is a direct import: clear,
+Pydantic-validated attractions are published immediately, while hotels, airports,
+transport, organisations, tragic events, and uncertain places are not added.
 
 For an on-demand city outside the scheduled destination queue, use:
 

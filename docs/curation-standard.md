@@ -14,6 +14,12 @@ Every approved activity must pass the shared `Activity` Pydantic model:
 - family suitability, accessibility notes, reservation expectation, and a
   factual description.
 
+Each record also carries a `curation_level`. Established, individually reviewed
+records are `curated`; automatically classified records are `conservative`.
+Both are valid catalog entries, but deterministic ranking uses the level only
+as a tie-breaker so broader discovery cannot crowd out richer records with the
+same preference fit.
+
 Use the common tag vocabulary whenever applicable: `ancient rome`,
 `archaeology`, `architecture`, `art`, `culture`, `cycling`, `design`, `food`,
 `history`, `industrial design`, `local culture`, `music`, `nature`, `outdoor`,
@@ -26,6 +32,11 @@ grounded, its tags describe what a traveler experiences, and its duration,
 walking, budget, and booking fields are plausible. Do not use travel
 infrastructure as an activity. Institutions such as universities and libraries
 need a clear visitor experience.
+
+The destination release report also checks stable source identity and diversity
+across category, budget, walking, and mapped city areas. Mapped areas use small
+coordinate cells as a coverage check; TripSync does not invent neighborhood
+names when the source does not provide one.
 
 ## Common evaluation contract
 

@@ -16,7 +16,14 @@ from uuid import uuid4
 
 import dlt
 
-from src.catalog import auto_curate_candidates, save_activities, save_review_candidates
+from src.catalog import (
+    ACTIVITY_CATALOG_PATH,
+    REVIEW_CANDIDATES_PATH,
+    auto_curate_candidates,
+    load_curated_activities,
+    save_activities,
+    save_review_candidates,
+)
 from src.catalog_import import (
     CatalogCandidate,
     CatalogImportError,
@@ -114,12 +121,16 @@ def ingest_destinations(
     limit: int = 50,
     destination_path: Path = DEFAULT_DESTINATION,
     catalog_path: Path | None = None,
+    review_path: Path | None = None,
+    target_city_size: int | None = None,
     fetcher: Callable[[CitySource], list[CatalogCandidate]] | None = None,
 ) -> IngestionOutcome:
     """Fetch configured destinations and publish safe attractions directly."""
 
     if not 1 <= limit <= 250:
         raise ValueError("limit must be between 1 and 250")
+    if target_city_size is not None and target_city_size < 1:
+        raise ValueError("target_city_size must be positive")
     destination_list = list(destinations)
     if not destination_list:
         raise ValueError("at least one destination is required")
@@ -152,8 +163,26 @@ def ingest_destinations(
         activities, _ = auto_curate_candidates(
             enriched_candidates, city.name, city.country
         )
-        save_review_candidates(enriched_candidates, city.name, city.country)
-        added, _ = save_activities(activities, catalog_path) if catalog_path else save_activities(activities)
+        save_review_candidates(
+            enriched_candidates,
+            city.name,
+            city.country,
+            review_path or REVIEW_CANDIDATES_PATH,
+        )
+        effective_catalog_path = catalog_path or ACTIVITY_CATALOG_PATH
+        if target_city_size is not None:
+            existing = load_curated_activities(effective_catalog_path)
+            city_ids = {
+                item.id
+                for item in existing
+                if item.city.casefold() == city.name.casefold()
+                and item.country.casefold() == city.country.casefold()
+            }
+            remaining = max(0, target_city_size - len(city_ids))
+            activities = [item for item in activities if item.id not in city_ids][
+                :remaining
+            ]
+        added, _ = save_activities(activities, effective_catalog_path)
         summary[city.name] = len(added)
     return IngestionOutcome(summary, failures)
 
@@ -188,11 +217,33 @@ def main() -> None:
         help="For scheduled runs, retrieve this many queue destinations this week; 0 retrieves all.",
     )
     parser.add_argument("--limit", type=int, default=50, help="Candidates per city (1–250).")
+    parser.add_argument(
+        "--catalog-path",
+        type=Path,
+        help="Write to a local JSON catalog instead of the configured shared catalog.",
+    )
+    parser.add_argument(
+        "--review-path",
+        type=Path,
+        help="Write ambiguous candidates to a local JSON review queue.",
+    )
+    parser.add_argument(
+        "--target-city-size",
+        type=int,
+        help="Stop publishing new records when each requested city reaches this size.",
+    )
     arguments = parser.parse_args()
     if arguments.cities:
         if not arguments.country:
             parser.error("--country is required with --cities")
-        outcome = ingest_cities(arguments.cities, arguments.country, limit=arguments.limit)
+        outcome = ingest_cities(
+            arguments.cities,
+            arguments.country,
+            limit=arguments.limit,
+            catalog_path=arguments.catalog_path,
+            review_path=arguments.review_path,
+            target_city_size=arguments.target_city_size,
+        )
     else:
         queue = load_destination_queue(arguments.destination_queue)
         initial_destination = load_initial_destination(arguments.destination_queue) or queue[0]
@@ -206,7 +257,13 @@ def main() -> None:
             )
         else:
             destinations = rotate_destinations(queue, arguments.rotate_size)
-        outcome = ingest_destinations(destinations, limit=arguments.limit)
+        outcome = ingest_destinations(
+            destinations,
+            limit=arguments.limit,
+            catalog_path=arguments.catalog_path,
+            review_path=arguments.review_path,
+            target_city_size=arguments.target_city_size,
+        )
 
         if uses_cursor:
             run_id = str(uuid4())

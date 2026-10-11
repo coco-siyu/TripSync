@@ -15,6 +15,7 @@ from src.catalog import (
     delete_review_candidates,
     load_curated_activities,
     load_review_candidates,
+    merge_activities,
     review_curate_candidates,
     save_activities,
     save_review_candidates,
@@ -23,8 +24,11 @@ from src.catalog import (
 )
 from src.catalog_backfill import backfill_official_sites
 from src.catalog_quality import (
+    ROME_CATALOG_TARGET,
+    activity_release_issues,
     catalog_quality_rows,
     destination_quality_rows,
+    summarize_destination_release,
     summarize_catalog_quality,
 )
 from src.catalog_import import CatalogImportError, fetch_candidates, resolve_city
@@ -325,6 +329,219 @@ def _render_published_catalog() -> None:
                     _show_catalog_write_error(error)
 
 
+def _duplicate_table_rows(activities: list[Activity]) -> list[dict[str, object]]:
+    """Return compact comparison rows while retaining stable list positions."""
+
+    return [
+        {
+            "Name": activity.name,
+            "City": activity.city,
+            "Country": activity.country,
+            "Review status": (
+                "Published" if activity.curation_level == "curated" else "New to review"
+            ),
+            "Category": activity.category.replace("_", " ").title(),
+            "Aliases": ", ".join(activity.aliases),
+        }
+        for activity in activities
+    ]
+
+
+def _render_duplicate_merge_workspace(
+    activities: list[Activity], *, key_prefix: str
+) -> None:
+    """Compare all filtered activities and merge one duplicate into another."""
+
+    if len(activities) < 2:
+        st.info(
+            "At least two published activities are needed to review duplicates.",
+            icon=":material/compare_arrows:",
+        )
+        return
+
+    st.caption(
+        "Choose a location, then compare every matching catalog activity. "
+        "The kept activity retains its planning details; the removed name can remain searchable as an alias."
+    )
+    filter_columns = st.columns([1, 1, 1.4])
+    countries = sorted({activity.country for activity in activities}, key=str.casefold)
+    with filter_columns[0]:
+        country = st.selectbox(
+            "Country",
+            ["All countries", *countries],
+            key=f"{key_prefix}-country",
+        )
+    cities = sorted(
+        {
+            activity.city
+            for activity in activities
+            if country == "All countries" or activity.country == country
+        },
+        key=str.casefold,
+    )
+    with filter_columns[1]:
+        city = st.selectbox(
+            "City",
+            ["All cities", *cities],
+            key=f"{key_prefix}-city",
+        )
+    with filter_columns[2]:
+        query = st.text_input(
+            "Find an activity",
+            placeholder="Search names, aliases, or categories",
+            key=f"{key_prefix}-search",
+        )
+
+    normalized_query = query.strip().casefold()
+    filtered = [
+        activity
+        for activity in activities
+        if (country == "All countries" or activity.country == country)
+        and (city == "All cities" or activity.city == city)
+        and (
+            not normalized_query
+            or normalized_query in activity.name.casefold()
+            or normalized_query in activity.category.replace("_", " ").casefold()
+            or any(normalized_query in alias.casefold() for alias in activity.aliases)
+        )
+    ]
+    filtered.sort(
+        key=lambda activity: (
+            activity.curation_level == "curated",
+            activity.country.casefold(),
+            activity.city.casefold(),
+            activity.name.casefold(),
+        )
+    )
+    if len(filtered) < 2:
+        st.info(
+            "This filter has fewer than two activities. Widen the location or clear the search to compare records.",
+            icon=":material/filter_alt:",
+        )
+        return
+
+    rows = pd.DataFrame(_duplicate_table_rows(filtered))
+    keep_column, remove_column = st.columns(2, gap="large")
+    with keep_column:
+        st.markdown("#### 1. Activity to keep")
+        st.caption("This record and its planning details remain in the catalog.")
+        keep_event = st.dataframe(
+            rows,
+            hide_index=True,
+            height=420,
+            on_select="rerun",
+            selection_mode="single-row",
+            key=f"{key_prefix}-keep-table",
+        )
+    with remove_column:
+        st.markdown("#### 2. Duplicate to remove")
+        st.caption("This record is removed after the kept record is saved safely.")
+        remove_event = st.dataframe(
+            rows,
+            hide_index=True,
+            height=420,
+            on_select="rerun",
+            selection_mode="single-row",
+            key=f"{key_prefix}-remove-table",
+        )
+
+    keep_ids = _selected_activity_ids(filtered, keep_event.selection.rows)
+    remove_ids = _selected_activity_ids(filtered, remove_event.selection.rows)
+    keep = next((item for item in filtered if item.id in keep_ids), None)
+    remove = next((item for item in filtered if item.id in remove_ids), None)
+    with st.container(border=True):
+        st.markdown("#### Review merge")
+        if keep is None or remove is None:
+            st.info(
+                "Select one activity in each table to review the merge.",
+                icon=":material/touch_app:",
+            )
+            return
+
+        same_record = keep.id == remove.id
+        same_destination = (
+            keep.city.casefold() == remove.city.casefold()
+            and keep.country.casefold() == remove.country.casefold()
+        )
+        summary_columns = st.columns(2)
+        summary_columns[0].markdown(f"**Keep:** {keep.name}")
+        summary_columns[1].markdown(f"**Remove:** {remove.name}")
+        if same_record:
+            st.error(
+                "Choose different records in the two tables.",
+                icon=":material/error:",
+            )
+        elif not same_destination:
+            st.error(
+                "The two records must belong to the same city and country.",
+                icon=":material/location_off:",
+            )
+        else:
+            st.info(
+                "Existing published itinerary snapshots stay unchanged. Future searches and must-do matching can use the removed name to find the kept activity.",
+                icon=":material/info:",
+            )
+        keep_alias = st.checkbox(
+            f"Keep “{remove.name}” as a searchable alias for “{keep.name}”.",
+            value=True,
+            key=f"{key_prefix}-keep-alias-{keep.id}-{remove.id}",
+            disabled=same_record or not same_destination,
+        )
+        confirmed = st.checkbox(
+            "I reviewed both records and want to merge this duplicate permanently.",
+            key=f"{key_prefix}-confirm-{keep.id}-{remove.id}",
+            disabled=same_record or not same_destination,
+        )
+        if st.button(
+            "Merge and remove duplicate",
+            icon=":material/merge:",
+            type="primary",
+            key=f"{key_prefix}-merge",
+            disabled=same_record or not same_destination or not confirmed,
+        ):
+            try:
+                updated = merge_activities(
+                    keep.id,
+                    remove.id,
+                    preserve_removed_name_as_alias=keep_alias,
+                )
+                st.session_state["catalog-duplicate-merge-result"] = (
+                    f"Kept {updated.name} and removed {remove.name}."
+                )
+                st.rerun()
+            except (ValidationError, ValueError) as error:
+                st.error(str(error), icon=":material/error:")
+            except Exception as error:  # noqa: BLE001 - remote persistence must not crash the UI
+                _show_catalog_write_error(error)
+
+
+@st.dialog("Remove duplicate activities", width="large")
+def _render_duplicate_merge_dialog() -> None:
+    """Open the same comparison workflow in a wider focused surface."""
+
+    _render_duplicate_merge_workspace(
+        load_curated_activities(), key_prefix="duplicate-dialog"
+    )
+
+
+def _render_duplicate_catalog() -> None:
+    """Render the complete-catalog duplicate review workflow."""
+
+    st.subheader("Remove duplicate activities")
+    completed = st.session_state.pop("catalog-duplicate-merge-result", None)
+    if completed:
+        st.success(completed, icon=":material/task_alt:")
+    if st.button(
+        "Expand duplicate workspace",
+        icon=":material/open_in_full:",
+        key="open-duplicate-dialog",
+    ):
+        _render_duplicate_merge_dialog()
+    _render_duplicate_merge_workspace(
+        load_curated_activities(), key_prefix="duplicate-inline"
+    )
+
+
 def _render_catalog_quality() -> None:
     """Show official-source coverage and run one automatic retry for all gaps."""
 
@@ -366,6 +583,39 @@ def _render_catalog_quality() -> None:
         f"{summary.coordinates}/{summary.total}",
     )
 
+    rome_activities = [
+        item
+        for item in activities
+        if item.city.casefold() == "rome" and item.country.casefold() == "italy"
+    ]
+    if rome_activities:
+        release = summarize_destination_release(
+            rome_activities, target=ROME_CATALOG_TARGET
+        )
+        with st.container(border=True):
+            st.markdown("#### Rome MVP release gate")
+            target_columns = st.columns(5)
+            target_columns[0].metric("Published", f"{release.total}/{release.target}")
+            target_columns[1].metric(
+                "Identity ready", f"{release.release_ready}/{release.total}"
+            )
+            target_columns[2].metric("Categories", release.categories)
+            target_columns[3].metric(
+                "Budget / walking", f"{release.budget_levels} / {release.walking_levels}"
+            )
+            target_columns[4].metric("Mapped city areas", release.location_zones)
+            if release.ready:
+                st.success(
+                    "Rome meets the MVP size, identity, and diversity gate.",
+                    icon=":material/verified:",
+                )
+            else:
+                st.info(
+                    "Keep expanding or resolving the displayed gaps before marking MVP-08 complete. "
+                    "Mapped city areas are coordinate cells, not invented neighborhood names.",
+                    icon=":material/info:",
+                )
+
     st.markdown("#### Coverage by destination")
     st.dataframe(
         pd.DataFrame(destination_quality_rows(activities)),
@@ -385,6 +635,7 @@ def _render_catalog_quality() -> None:
     quality_filter = st.selectbox(
         "Show activities",
         [
+            "Missing release identity",
             "Missing verified official site",
             "Missing official hours link",
             "Missing official ticket link",
@@ -392,7 +643,12 @@ def _render_catalog_quality() -> None:
         ],
         key="catalog-quality-filter",
     )
-    if quality_filter == "Missing verified official site":
+    if quality_filter == "Missing release identity":
+        filtered = [
+            activity for activity in activities
+            if activity_release_issues(activity)
+        ]
+    elif quality_filter == "Missing verified official site":
         filtered = [
             activity for activity in activities
             if not activity.official_site_verified
@@ -662,9 +918,10 @@ def render_catalog_workspace() -> None:
     st.markdown('<div class="ts-section-label">Build the catalog</div>', unsafe_allow_html=True)
     st.title("Curate places your travelers will love")
     st.caption("Manage published activities, resolve ambiguous places, and fetch new source candidates.")
-    published_tab, quality_tab, review_tab, fetch_tab = st.tabs(
+    published_tab, duplicate_tab, quality_tab, review_tab, fetch_tab = st.tabs(
         [
             "Published activities",
+            "Remove duplicates",
             "Data quality",
             "Needs review",
             "Fetch & batch curate",
@@ -675,6 +932,9 @@ def render_catalog_workspace() -> None:
     if published_tab.open:
         with published_tab:
             _render_published_catalog()
+    if duplicate_tab.open:
+        with duplicate_tab:
+            _render_duplicate_catalog()
     if quality_tab.open:
         with quality_tab:
             _render_catalog_quality()

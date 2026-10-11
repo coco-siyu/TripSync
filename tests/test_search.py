@@ -79,6 +79,23 @@ def make_trip(
 
 
 class TextRetrievalTests(unittest.TestCase):
+    def test_retrieves_canonical_activity_by_merged_alias(self) -> None:
+        gallery = make_activity(
+            "rome_gallery",
+            "Canonical Gallery",
+            interests=["art"],
+        ).model_copy(update={"aliases": ["Old Gallery Name"]})
+
+        response = retrieve_activities(
+            [gallery],
+            make_trip(interests=["old gallery name"]),
+        )
+
+        self.assertEqual(
+            [result.activity_id for result in response.results],
+            ["rome_gallery"],
+        )
+
     @patch("src.search.semantic_similarity_scores")
     def test_hosted_hybrid_retrieval_ranks_semantic_matches(self, semantic_scores) -> None:
         art = make_activity("rome_art", "Gallery", interests=["art"])

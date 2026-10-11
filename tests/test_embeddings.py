@@ -13,6 +13,7 @@ from src.models import Activity
 def make_activity() -> Activity:
     return Activity(
         id="rome_gallery", name="Rome Gallery", city="Rome", country="Italy",
+        aliases=["Galleria di Roma"],
         category="museum", category_tags=["renaissance"], interests=["art"],
         walking_level="low", budget_level="moderate", duration_hours=2,
         indoor=True, family_friendly=True, accessibility_notes="Step-free entry.",
@@ -25,6 +26,7 @@ class HostedEmbeddingTests(unittest.TestCase):
     def test_activity_document_contains_grounded_search_fields(self) -> None:
         document = activity_embedding_text(make_activity())
         self.assertIn("Rome Gallery", document)
+        self.assertIn("Galleria di Roma", document)
         self.assertIn("renaissance", document)
         self.assertIn("painting collection", document)
 

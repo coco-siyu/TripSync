@@ -77,11 +77,16 @@ collection paths, and organizers can build once two profiles are ready.
 
 ### P0 — Catalog and release quality
 
-- [ ] **MVP-08: Expand and validate the Rome catalog**
+- [x] **MVP-08: Expand and validate the Rome catalog**
   - Run automated Rome discovery toward roughly 40 published activities.
   - Require complete planning fields and reliable source/location identity.
   - Reject incomplete entries and retain ambiguous entries in the review queue.
   - Verify category, budget, walking, and neighborhood diversity.
+  - The bundled Rome catalog now contains 40 validated activities. Twenty-three
+    automated additions are labeled conservative, ambiguous candidates remain
+    unpublished in the review queue, and the admin quality workspace reports
+    source identity plus category, budget, walking, and mapped-area diversity.
+    **Done.**
 
 - [ ] **MVP-09: Verify the release**
   - Add unit tests for new models, permissions, time blocks, budgets, and publish
@@ -93,6 +98,11 @@ collection paths, and organizers can build once two profiles are ready.
   - Depends on MVP-03 through MVP-08.
 
 ## Week two: stretch scope
+
+- [ ] **UX-01: Add read-only traveler preference review**
+  - Let organizers reopen submitted named traveler profiles while reviewing a trip.
+  - Let a traveler review their own submitted preferences after responding.
+  - Decide the final placement and any later editing rules before implementation.
 
 - [ ] **COL-01: Add post-itinerary voting**
   - Store like, neutral, or dislike per member and scheduled item.

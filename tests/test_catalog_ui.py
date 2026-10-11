@@ -15,6 +15,7 @@ from src.catalog import (
     load_candidate_batch,
     load_curated_activities,
     load_review_candidates,
+    merge_activities,
     review_curate_candidates,
     save_activities,
     save_review_candidates,
@@ -22,6 +23,66 @@ from src.catalog import (
 
 
 class CatalogUiTests(unittest.TestCase):
+    def test_duplicate_merge_keeps_canonical_record_and_removed_name_alias(self) -> None:
+        candidates = [
+            {
+                "name": "Example Museum",
+                "source_url": "https://www.wikidata.org/wiki/Q1",
+                "wikidata_types": ["museum"],
+            },
+            {
+                "name": "Example Museum of Art",
+                "source_url": "https://www.wikidata.org/wiki/Q2",
+                "wikidata_types": ["museum"],
+            },
+        ]
+        activities, skipped = auto_curate_candidates(
+            candidates, "Example City", "Example Country"
+        )
+        self.assertEqual(skipped, {})
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "activities.json"
+            save_activities(activities, path)
+            updated = merge_activities(
+                activities[0].id,
+                activities[1].id,
+                path,
+            )
+
+            remaining = load_curated_activities(path)
+            self.assertEqual([activity.id for activity in remaining], [activities[0].id])
+            self.assertEqual(updated.aliases, [activities[1].name])
+            self.assertEqual(remaining[0].aliases, [activities[1].name])
+
+    def test_duplicate_merge_refuses_records_from_different_destinations(self) -> None:
+        first, _ = auto_curate_candidates(
+            [{
+                "name": "Example Museum",
+                "source_url": "https://www.wikidata.org/wiki/Q1",
+                "wikidata_types": ["museum"],
+            }],
+            "Example City",
+            "Example Country",
+        )
+        second, _ = auto_curate_candidates(
+            [{
+                "name": "Other Museum",
+                "source_url": "https://www.wikidata.org/wiki/Q2",
+                "wikidata_types": ["museum"],
+            }],
+            "Other City",
+            "Example Country",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "activities.json"
+            save_activities([*first, *second], path)
+
+            with self.assertRaisesRegex(ValueError, "same city and country"):
+                merge_activities(first[0].id, second[0].id, path)
+
+            self.assertEqual(len(load_curated_activities(path)), 2)
+
     def test_batch_curation_skips_hotels_and_publishes_valid_activities(self) -> None:
         candidates = [
             {

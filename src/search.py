@@ -62,6 +62,7 @@ def _contains_phrase(document: str, phrase: str) -> bool:
 def _activity_document(activity: Activity) -> str:
     fields = [
         activity.name,
+        *activity.aliases,
         activity.category.replace("_", " "),
         *activity.category_tags,
         *activity.interests,
@@ -203,6 +204,10 @@ def retrieve_activities(
     destination_ids = tuple(
         activity.id for activity in destination_activities
     )
+    conservative_by_id = {
+        activity.id: activity.curation_level == "conservative"
+        for activity in destination_activities
+    }
     owners_by_interest = _interest_owners(trip)
 
     retrieved = [
@@ -220,6 +225,7 @@ def retrieve_activities(
     retrieved.sort(
         key=lambda result: (
             -result.relevance_score,
+            conservative_by_id[result.activity_id],
             result.activity_id,
         )
     )
@@ -303,7 +309,11 @@ def retrieve_activities(
                         ),
                     ))
                 retrieved.sort(
-                    key=lambda result: (-result.relevance_score, result.activity_id)
+                    key=lambda result: (
+                        -result.relevance_score,
+                        conservative_by_id[result.activity_id],
+                        result.activity_id,
+                    )
                 )
 
     used_fallback = False

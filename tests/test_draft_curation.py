@@ -88,7 +88,9 @@ class CandidateQualityGateTests(unittest.TestCase):
         )
 
         self.assertEqual([activity.name for activity in automatic], ["Example Museum"])
+        self.assertEqual(automatic[0].curation_level, "conservative")
         self.assertIn("Example University", auto_skipped)
         self.assertIn("Example Hotel", auto_skipped)
         self.assertEqual([activity.name for activity in review], ["Example University"])
+        self.assertEqual(review[0].curation_level, "curated")
         self.assertIn("Example Museum", review_skipped)

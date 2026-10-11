@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -239,9 +239,11 @@ class Activity(TripSyncModel):
 
     id: str = Field(pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
     name: str = Field(min_length=1, max_length=160)
+    aliases: list[str] = Field(default_factory=list, max_length=24)
     city: str = Field(min_length=1, max_length=120)
     country: str = Field(min_length=1, max_length=80)
     category: str = Field(min_length=1, max_length=60)
+    curation_level: Literal["curated", "conservative"] = "curated"
     category_tags: list[str] = Field(default_factory=list, max_length=6)
     interests: list[str] = Field(min_length=1, max_length=12)
     walking_level: WalkingLevel
@@ -297,6 +299,33 @@ class Activity(TripSyncModel):
     @classmethod
     def normalize_category(cls, value: Any) -> Any:
         return value.strip().lower() if isinstance(value, str) else value
+
+    @field_validator("aliases", mode="before")
+    @classmethod
+    def normalize_aliases(cls, value: Any) -> Any:
+        """Trim and deduplicate alternate names without changing their casing."""
+
+        if not isinstance(value, list):
+            return value
+        aliases: list[Any] = []
+        seen: set[str] = set()
+        for item in value:
+            if not isinstance(item, str):
+                aliases.append(item)
+                continue
+            alias = " ".join(item.split())
+            key = alias.casefold()
+            if alias and key not in seen:
+                aliases.append(alias)
+                seen.add(key)
+        return aliases
+
+    @field_validator("aliases")
+    @classmethod
+    def validate_alias_lengths(cls, value: list[str]) -> list[str]:
+        if any(len(alias) > 160 for alias in value):
+            raise ValueError("activity aliases cannot exceed 160 characters")
+        return value
 
     @field_validator("interests", mode="before")
     @classmethod

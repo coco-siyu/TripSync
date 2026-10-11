@@ -63,6 +63,17 @@ workspace has the equivalent city-and-country form):
 python -m src.catalog_dlt --cities Paris Lyon --country France --limit 50
 ```
 
+To expand the bundled Rome seed without touching Supabase, give both local
+paths and a city-size target. Ambiguous candidates remain in the local review
+queue while publishing stops at the target:
+
+```bash
+python -m src.catalog_dlt --cities Rome --country Italy --limit 100 \
+  --catalog-path data/activities.json \
+  --review-path data/review_candidates.json \
+  --target-city-size 40
+```
+
 To retry official sources for all existing catalog records without changing any
 curated planning fields:
 

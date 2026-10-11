@@ -59,7 +59,9 @@ def build_activity(candidate: dict[str, Any], city: str, country: str, fields: d
     candidate_site_verified = bool(candidate.get("official_site_verified"))
     return Activity.model_validate({
         "id": activity_id(city, name), "name": name, "city": city, "country": country,
-        "category": fields["category"], "category_tags": fields.get("category_tags", []), "interests": fields["interests"],
+        "category": fields["category"],
+        "curation_level": fields.get("curation_level", "curated"),
+        "category_tags": fields.get("category_tags", []), "interests": fields["interests"],
         "walking_level": fields["walking_level"], "budget_level": fields["budget_level"],
         "duration_hours": fields["duration_hours"], "indoor": fields["indoor"],
         "family_friendly": fields["family_friendly"],
@@ -109,6 +111,14 @@ def _load_local_activities(path: Path) -> list[Activity]:
         return []
     raw = json.loads(path.read_text(encoding="utf-8"))
     return [Activity.model_validate(item) for item in raw]
+
+
+def load_packaged_activities(
+    path: Path = ACTIVITY_CATALOG_PATH,
+) -> list[Activity]:
+    """Load the version-controlled catalog without contacting Supabase."""
+
+    return _load_local_activities(path)
 
 
 def _remote_rows(activities: list[Activity]) -> list[dict[str, Any]]:
@@ -496,6 +506,64 @@ def delete_activities(
         else:
             _write_activities(retained, path)
     return removed
+
+
+def merge_activities(
+    keep_activity_id: str,
+    remove_activity_id: str,
+    path: Path = ACTIVITY_CATALOG_PATH,
+    *,
+    preserve_removed_name_as_alias: bool = True,
+) -> Activity:
+    """Keep one activity and remove a same-destination duplicate.
+
+    The removed name and its existing aliases are attached to the canonical
+    record so future text search and must-do matching still recognize them.
+    Published itinerary snapshots remain unchanged because they store their
+    own scheduled-activity details.
+    """
+
+    if keep_activity_id == remove_activity_id:
+        raise ValueError("Choose two different activities to merge")
+    activities = load_curated_activities(path)
+    by_id = {activity.id: activity for activity in activities}
+    keep = by_id.get(keep_activity_id)
+    remove = by_id.get(remove_activity_id)
+    if keep is None or remove is None:
+        raise ValueError("Both activities must still exist in the catalog")
+    if (
+        keep.city.casefold() != remove.city.casefold()
+        or keep.country.casefold() != remove.country.casefold()
+    ):
+        raise ValueError("Duplicate activities must be in the same city and country")
+
+    alias_candidates = [*keep.aliases, *remove.aliases]
+    if preserve_removed_name_as_alias:
+        alias_candidates.insert(len(keep.aliases), remove.name)
+    aliases: list[str] = []
+    seen = {keep.name.casefold()}
+    for alias in alias_candidates:
+        key = alias.casefold()
+        if key not in seen:
+            aliases.append(alias)
+            seen.add(key)
+    updated = Activity.model_validate(
+        {**keep.model_dump(mode="json"), "aliases": aliases}
+    )
+
+    if _uses_supabase(path):
+        # Save the canonical record first. A transient failure can leave the
+        # duplicate in place, but can never delete it before its alias is safe.
+        update_activities([updated], path=path)
+        delete_activities([remove.id], path=path)
+    else:
+        rewritten = [
+            updated if activity.id == keep.id else activity
+            for activity in activities
+            if activity.id != remove.id
+        ]
+        _write_activities(rewritten, path)
+    return updated
 
 
 def delete_candidates_from_batch(path: Path, candidate_ids: list[str]) -> int:

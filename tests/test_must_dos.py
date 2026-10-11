@@ -44,6 +44,13 @@ class MustDoResolutionTests(unittest.TestCase):
             matches_must_do(self.vatican_museums, "vaticanmuseums")
         )
 
+    def test_removed_activity_alias_still_matches_must_do(self) -> None:
+        activity = self.vatican_museums.model_copy(
+            update={"aliases": ["Musei Vaticani"]}
+        )
+
+        self.assertTrue(matches_must_do(activity, "musei-vaticani"))
+
     def test_resolution_combines_owners_without_duplicate_activity(self) -> None:
         travelers = [
             TravelerProfile(
