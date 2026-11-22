@@ -1228,10 +1228,13 @@ def _render_invited_profile_step() -> None:
         '<div class="ts-section-label">Your named invitation</div>',
         unsafe_allow_html=True,
     )
-    st.title(f"Add {assignment.traveler_name}’s preferences")
+    st.title(
+        f"{'Edit' if existing is not None else 'Add'} "
+        f"{assignment.traveler_name}’s preferences"
+    )
     st.caption(
         f"For {trip.destination}, {trip.country} · {trip.days} days. "
-        "Only this named profile can be changed from your link."
+        "Only the signed-in traveler assigned to this profile can change it."
     )
     if existing is not None:
         st.success("Your preferences are already in the group draft. You can update them below.")

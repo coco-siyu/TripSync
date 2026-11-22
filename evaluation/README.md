@@ -178,8 +178,8 @@ The current six-case deterministic baseline is:
 | Must-do coverage | 1.000 |
 | Shortlist coverage | 1.000 |
 | Mean traveler coverage | 1.000 |
-| Mean fairness | 0.704 |
-| Mean capacity utilization | 0.764 |
+| Mean fairness | 0.802 |
+| Mean capacity utilization | 0.732 |
 | Deterministic stability | 1.000 |
 
 The fairness result is intentionally reported rather than hidden behind the perfect

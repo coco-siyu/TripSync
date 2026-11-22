@@ -65,6 +65,11 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
             --ink: #3A2E2B;
             --muted: #8A7A75;
             --paper: #FFFFFF;
+            --line: rgba(90, 66, 59, 0.12);
+            --surface: rgba(255, 255, 255, 0.76);
+            --surface-strong: rgba(255, 255, 255, 0.94);
+            --shadow-soft: 0 8px 24px rgba(58, 46, 43, 0.06);
+            --shadow-raised: 0 16px 42px rgba(58, 46, 43, 0.09);
         }
 
         [data-testid="stAppViewContainer"] {
@@ -80,15 +85,15 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
 
         .block-container {
             max-width: 1180px;
-            padding-top: 1rem;
+            padding-top: 0.75rem;
             padding-bottom: 5.5rem;
         }
 
         .st-key-workspace-nav {
             border-bottom: 1px solid var(--page-glow);
             isolation: isolate;
-            margin-bottom: 1.7rem;
-            padding: 0.35rem 0 0.9rem;
+            margin-bottom: 1.25rem;
+            padding: 0.35rem 0 0.75rem;
             position: relative;
             z-index: 20;
         }
@@ -124,13 +129,16 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         .st-key-workspace-page button[data-testid^="stBaseButton-primary"] {
             background: var(--page-primary);
             border-color: var(--page-primary);
-            box-shadow: 0 8px 20px var(--page-glow);
+            box-shadow: 0 6px 16px var(--page-glow);
+            font-weight: 800;
         }
 
         .st-key-workspace-page button[data-testid="stBaseButton-secondary"] {
-            background: rgba(255,255,255,0.72);
-            border-color: var(--page-accent);
+            background: rgba(255,255,255,0.82);
+            border-color: color-mix(in srgb, var(--page-accent) 64%, white);
+            box-shadow: none;
             color: var(--page-primary);
+            font-weight: 700;
         }
 
         .st-key-workspace-page button[data-testid="stBaseButton-secondary"]:hover {
@@ -192,14 +200,15 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         .st-key-workspace-page {
             background: linear-gradient(
                 180deg,
-                var(--page-soft) 0,
-                rgba(255,255,255,0.34) 25rem,
-                rgba(255,255,255,0) 48rem
+                color-mix(in srgb, var(--page-soft) 52%, white) 0,
+                rgba(255,255,255,0.82) 24rem,
+                rgba(255,255,255,0.62) 54rem
             );
-            border-top: 6px solid var(--page-accent);
-            border-radius: 1.8rem;
-            box-shadow: 0 18px 48px var(--page-glow);
-            padding: 1.45rem 1.5rem 2.25rem;
+            border: 1px solid var(--line);
+            border-top: 4px solid var(--page-accent);
+            border-radius: 1.35rem;
+            box-shadow: var(--shadow-raised);
+            padding: 1.75rem 1.75rem 2.5rem;
             transition: background 220ms ease, border-color 220ms ease;
         }
 
@@ -207,6 +216,49 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         .st-key-workspace-page .ts-section-label,
         .st-key-workspace-page .ts-score {
             color: var(--page-primary);
+        }
+
+        .st-key-workspace-page h1 {
+            font-size: clamp(2.35rem, 4vw, 3.25rem);
+            letter-spacing: -0.035em;
+            line-height: 1.03;
+            margin-bottom: 0.45rem;
+            max-width: 48rem;
+        }
+
+        .st-key-workspace-page h2 {
+            color: var(--ink);
+            font-size: clamp(1.7rem, 2.8vw, 2.2rem);
+            letter-spacing: -0.025em;
+            line-height: 1.12;
+            margin-bottom: 0.4rem;
+            margin-top: 1.2rem;
+        }
+
+        .st-key-workspace-page h3 {
+            color: var(--ink);
+            font-size: clamp(1.25rem, 2vw, 1.55rem);
+            letter-spacing: -0.015em;
+            line-height: 1.2;
+            margin-bottom: 0.25rem;
+        }
+
+        .st-key-workspace-page h4 {
+            color: var(--ink);
+            font-size: 1.05rem;
+            letter-spacing: -0.005em;
+            line-height: 1.3;
+            margin-bottom: 0.2rem;
+        }
+
+        .st-key-workspace-page p {
+            line-height: 1.55;
+        }
+
+        .st-key-workspace-page [data-testid="stCaptionContainer"] {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.5;
         }
 
         .st-key-workspace-page div[data-testid="stVerticalBlockBorderWrapper"] {
@@ -356,10 +408,10 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         .st-key-progress-card {
-            background: rgba(255,255,255,0.78);
-            border: 1px solid #EADBD2;
-            border-radius: 1.1rem;
-            box-shadow: 0 8px 22px rgba(140,70,64,0.05);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 0.9rem;
+            box-shadow: none;
             margin-bottom: 1.15rem;
             padding: 0.35rem 0.9rem 0.12rem;
         }
@@ -368,29 +420,29 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         .st-key-travelers-shell,
         .st-key-summary-card,
         .st-key-shortlist-card {
-            border-radius: 1.55rem;
-            box-shadow: 0 14px 36px rgba(140,70,64,0.08);
+            border-radius: 1.15rem;
+            box-shadow: var(--shadow-soft);
             padding: 1.45rem 1.55rem 1.2rem;
         }
 
         .st-key-trip-card {
-            background: var(--paper);
-            border: 1px solid #EADBD2;
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
         }
 
         .st-key-travelers-shell {
-            background: var(--paper);
+            background: var(--surface-strong);
             border: 1px solid rgba(47,90,73,0.16);
             color: #173D2E;
         }
 
         .st-key-summary-card {
-            background: linear-gradient(120deg, #FFFDF9 0%, #FBE6C3 100%);
+            background: linear-gradient(120deg, #FFFDF9 0%, #FCECCF 100%);
             border: 1px solid rgba(168,108,23,0.16);
         }
 
         .st-key-shortlist-card {
-            background: linear-gradient(130deg, #FFFFFF 0%, #E8F1F3 100%);
+            background: linear-gradient(130deg, #FFFFFF 0%, #EDF4F5 100%);
             border: 1px solid rgba(99,152,169,0.30);
             margin-top: 1.5rem;
         }
@@ -400,20 +452,20 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         div[class*="st-key-itinerary-day-"] {
-            background: rgba(255,255,255,0.96);
-            border: 1px solid #EADBD2;
-            border-left: 5px solid var(--lagoon);
-            border-radius: 1.25rem;
-            box-shadow: 0 10px 28px rgba(58,46,43,0.07);
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--lagoon);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-soft);
             margin: 0.8rem 0;
             padding: 0.55rem 0.95rem;
         }
 
         div[class*="st-key-traveler-card-"] {
-            background: rgba(255,255,255,0.83);
+            background: var(--surface);
             border: 1px solid rgba(47,90,73,0.16);
-            border-top: 5px solid var(--mint-dark);
-            border-radius: 1.2rem;
+            border-top: 4px solid var(--mint-dark);
+            border-radius: 1rem;
             padding: 1rem 1.05rem 0.85rem;
         }
 
@@ -432,18 +484,18 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         div[class*="st-key-result-card-"] {
-            background: rgba(255,255,255,0.98);
-            border: 1px solid #EADBD2;
-            border-top: 5px solid var(--lagoon);
-            border-radius: 1.35rem;
-            box-shadow: 0 10px 26px rgba(58,46,43,0.06);
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+            border-top: 4px solid var(--lagoon);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-soft);
             padding: 1.15rem 1.25rem 0.85rem;
             margin-bottom: 0.85rem;
         }
 
         div[class*="st-key-result-card-1-"] {
             border-top-color: var(--nectarine);
-            box-shadow: 0 14px 34px rgba(140,70,64,0.10);
+            box-shadow: 0 12px 30px rgba(140,70,64,0.09);
         }
 
         div[class*="st-key-result-card-2-"] {
@@ -455,16 +507,17 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         div[class*="st-key-result-card-"]:hover {
-            box-shadow: 0 18px 42px rgba(140,70,64,0.12);
-            transform: translateY(-2px);
+            box-shadow: 0 14px 34px rgba(140,70,64,0.11);
+            transform: translateY(-1px);
             transition: all 160ms ease;
         }
 
         .ts-section-label {
             color: var(--page-primary);
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             font-weight: 800;
-            letter-spacing: 0.13em;
+            letter-spacing: 0.11em;
+            margin-bottom: 0.25rem;
             text-transform: uppercase;
         }
 
@@ -552,7 +605,9 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: 1.25rem;
+            background: rgba(255,255,255,0.34);
+            border-color: var(--line);
+            border-radius: 1rem;
         }
 
         div[data-testid="stForm"] {
@@ -561,7 +616,37 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
         }
 
         div[data-testid="stAlert"] {
-            border-radius: 0.85rem;
+            border-radius: 0.8rem;
+            box-shadow: none;
+        }
+
+        .st-key-workspace-page [data-testid="stTabs"] [data-baseweb="tab-list"] {
+            border-bottom: 1px solid var(--line);
+            gap: 0.25rem;
+        }
+
+        .st-key-workspace-page [data-testid="stTabs"] button[data-baseweb="tab"] {
+            color: var(--muted);
+            font-weight: 700;
+            padding-left: 0.9rem;
+            padding-right: 0.9rem;
+        }
+
+        .st-key-workspace-page [data-testid="stTabs"] button[aria-selected="true"] {
+            color: var(--page-primary);
+            font-weight: 800;
+        }
+
+        .st-key-workspace-page [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+            background-color: var(--page-primary);
+            height: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            div[class*="st-key-result-card-"]:hover {
+                transform: none;
+                transition: none;
+            }
         }
 
         @media (max-width: 700px) {
@@ -590,8 +675,12 @@ def apply_styles(workspace: str = "Plan a trip") -> None:
             }
 
             .st-key-workspace-page {
-                border-radius: 1.35rem;
-                padding: 1rem 0.85rem 1.5rem;
+                border-radius: 1rem;
+                padding: 1.15rem 0.9rem 1.65rem;
+            }
+
+            .st-key-workspace-page h1 {
+                font-size: clamp(2.05rem, 10vw, 2.75rem);
             }
         }
         </style>

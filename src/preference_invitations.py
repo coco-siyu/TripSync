@@ -319,6 +319,98 @@ def list_my_preference_assignments(
     return assignments
 
 
+def reviewable_preference_profiles(
+    record: SavedTrip,
+    viewer_id: str | None,
+    *,
+    owned_draft: PreferenceDraft | None = None,
+    assignments: tuple[PreferenceAssignment, ...] = (),
+) -> tuple[TravelerProfile, ...]:
+    """Return only the submitted profiles the current account may review.
+
+    Organizer profiles come from an owner-scoped preference draft. Everyone
+    else can receive only the profile attached to their own account-scoped
+    assignment. Shared-trip data alone is never used because that projection is
+    intentionally stripped of private traveler answers.
+    """
+
+    draft_id = record.preference_draft_id
+    normalized_viewer_id = str(viewer_id or "").strip()
+    if draft_id is None or not normalized_viewer_id:
+        return ()
+
+    if record.is_owner:
+        if (
+            record.owner_id != normalized_viewer_id
+            or owned_draft is None
+            or owned_draft.draft_id != draft_id
+            or owned_draft.owner_id != normalized_viewer_id
+        ):
+            return ()
+        return tuple(
+            slot.profile
+            for slot in owned_draft.slots
+            if slot.profile is not None
+        )
+
+    return tuple(
+        assignment.profile
+        for assignment in assignments
+        if assignment.draft_id == draft_id and assignment.profile is not None
+    )
+
+
+def editable_preference_assignment(
+    record: SavedTrip,
+    viewer_id: str | None,
+    *,
+    owned_draft: PreferenceDraft | None = None,
+    assignments: tuple[PreferenceAssignment, ...] = (),
+) -> PreferenceAssignment | None:
+    """Return the current account's own submitted slot for editing, if any."""
+
+    draft_id = record.preference_draft_id
+    normalized_viewer_id = str(viewer_id or "").strip()
+    if draft_id is None or not normalized_viewer_id:
+        return None
+
+    if record.is_owner:
+        if (
+            record.owner_id != normalized_viewer_id
+            or owned_draft is None
+            or owned_draft.draft_id != draft_id
+            or owned_draft.owner_id != normalized_viewer_id
+        ):
+            return None
+        own_slot = next(
+            (
+                slot
+                for slot in owned_draft.slots
+                if slot.member_id == normalized_viewer_id
+                and slot.profile is not None
+            ),
+            None,
+        )
+        if own_slot is None:
+            return None
+        return PreferenceAssignment(
+            draft_id=owned_draft.draft_id,
+            slot_id=own_slot.slot_id,
+            traveler_name=own_slot.traveler_name,
+            trip=owned_draft.trip,
+            profile=own_slot.profile,
+        )
+
+    return next(
+        (
+            assignment
+            for assignment in assignments
+            if assignment.draft_id == draft_id and assignment.profile is not None
+        ),
+        None,
+    )
+
+
 def submit_preference_profile(
     assignment: PreferenceAssignment,
     profile: TravelerProfile | dict[str, Any],

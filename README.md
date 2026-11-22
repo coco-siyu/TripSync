@@ -82,7 +82,7 @@ Without Supabase credentials, TripSync uses local SQLite data in `data/`.
 With all three Supabase values configured, travelers can create accounts, change
 their password while signed in, keep private plans across devices, and
 permanently delete their account and account-linked data. A signed-in owner can
-also create a seven-day member link from **My trips → Share trip**. Members can
+also create a seven-day member link from **My trips → Share**. Members can
 view the latest working draft and published versions, while only the organizer
 can edit, publish, or permanently delete the trip. Deletion requires a separate
 confirmation and removes every saved itinerary version and the trip's access
@@ -94,6 +94,13 @@ after at least two are complete. Once the organizer saves the linked group trip,
 accounts that accepted named preference requests automatically receive read-only
 access to its draft and published itinerary versions. The general sharing link
 remains available for people who were not named travelers.
+From the saved group trip, the organizer can review every completed traveler
+profile through **Traveler preferences**. A named traveler can use **My
+preferences** to review only the response bound to their own account. These
+review panels do not edit another person's answers; each named traveler can open
+their own prefilled form through **Edit my preferences**. Ordinary shared viewers
+cannot open individual profiles. Preference edits never rewrite an existing
+draft or published version—the organizer decides whether to update recommendations.
 **My trips** separates **Drafts** from **Published** plans, then keeps
 invitation-based and shared trips under **Group planning**, while trips entered
 without invitations stay under **Self planning**. When a
@@ -123,7 +130,9 @@ days, and removes the token from the browser URL immediately after it is
 accepted. **Revoke sharing** invalidates outstanding links and removes existing
 members. Shared reads use a server-sanitized projection: traveler names, notes,
 must-do ownership, and personalized itinerary reasons are excluded before the
-payload reaches the member's browser.
+payload reaches the member's browser. A named traveler's own submitted profile
+is loaded separately through an account-scoped function rather than restored
+from that shared-trip payload.
 
 Account deletion requires a fresh password verification. Its zero-argument
 database function derives the deletion target from the authenticated JWT,

@@ -1609,34 +1609,64 @@ class StreamlitInteractionTests(unittest.TestCase):
             owner_id="owner-user",
             access_role="traveler",
         )
+        assignment = PreferenceAssignment(
+            draft_id="d" * 32,
+            slot_id="s" * 32,
+            traveler_name=trip.travelers[1].name,
+            trip=TripBasics.model_validate(
+                trip.model_dump(mode="json", exclude={"travelers"})
+            ),
+            profile=trip.travelers[1],
+        )
         with (
             patch("src.trips_ui.list_saved_trips", return_value=[shared_record]),
             patch("src.trips_ui.list_preference_drafts", return_value=[]),
+            patch(
+                "src.trips_ui.list_my_preference_assignments",
+                return_value=[assignment],
+            ),
         ):
             app = AppTest.from_file(str(APP_PATH))
             app.session_state["app_workspace"] = "My trips"
             app.session_state["account_session"] = session.as_dict()
             app.run(timeout=10)
+            self.assertTrue(
+                any(
+                    "accepted its preference request" in item.value
+                    for item in app.info
+                )
+            )
+            self.assertFalse(
+                any(
+                    button.label
+                    in {
+                        "Create new itinerary",
+                        "Delete trip",
+                        "Edit recommendations",
+                        "Remove from My trips",
+                    }
+                    for button in app.button
+                )
+            )
+            next(
+                button for button in app.button if button.label == "My preferences"
+            ).click().run(timeout=10)
+            next(
+                button
+                for button in app.button
+                if button.label == "Edit my preferences"
+            ).click().run(timeout=10)
 
         self.assertFalse(app.exception)
-        self.assertTrue(
-            any(
-                "accepted its preference request" in item.value
-                for item in app.info
-            )
+        self.assertEqual(app.session_state["app_workspace"], "Plan a trip")
+        self.assertEqual(app.session_state["planner_step"], "profile")
+        self.assertEqual(
+            app.title[0].value,
+            f"Edit {assignment.traveler_name}’s preferences",
         )
-        self.assertFalse(
-            any(button.label == "Remove from My trips" for button in app.button)
-        )
-        self.assertFalse(
-            any(
-                button.label in {
-                    "Create new itinerary",
-                    "Delete trip",
-                    "Edit recommendations",
-                }
-                for button in app.button
-            )
+        self.assertEqual(
+            app.session_state[PREFERENCE_ASSIGNMENT_KEY]["slot_id"],
+            assignment.slot_id,
         )
 
     def test_legacy_collaborator_membership_is_read_only(self) -> None:

@@ -21,14 +21,16 @@ from src.invitations import (
     leave_shared_trip,
     revoke_trip_sharing,
 )
-from src.models import ItineraryPlan
+from src.models import ItineraryPlan, TravelerProfile
 from src.planner import itinerary_time_block_label
 from src.preference_invitations import (
     PreferenceAssignment,
     PreferenceDraft,
+    editable_preference_assignment,
     link_saved_trip_to_preference_draft,
     list_my_preference_assignments,
     list_preference_drafts,
+    reviewable_preference_profiles,
 )
 from src.preference_status_ui import render_preference_draft_status
 from src.trips import (
@@ -58,6 +60,7 @@ _SAVED_ITINERARY_FLASH_KEY = "saved_itinerary_flash"
 _SAVED_TRIP_CONFIRMATION_KEY = "saved_trip_confirmation"
 _SHARE_LINKS_KEY = "trip_share_links"
 _OPEN_RESPONSE_STATUS_KEY = "open_preference_response_status"
+_OPEN_TRAVELER_PREFERENCES_KEY = "open_traveler_preferences"
 _DELETE_TRIP_CONFIRMATION_KEY = "delete_trip_confirmation"
 
 
@@ -94,6 +97,7 @@ def _show_response_status(record_key: str) -> None:
     """Open a group's response details inside My trips."""
 
     st.session_state[_OPEN_RESPONSE_STATUS_KEY] = record_key
+    st.session_state.pop(_OPEN_TRAVELER_PREFERENCES_KEY, None)
 
 
 def _close_response_status(record_key: str) -> None:
@@ -101,6 +105,20 @@ def _close_response_status(record_key: str) -> None:
 
     if st.session_state.get(_OPEN_RESPONSE_STATUS_KEY) == record_key:
         st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
+
+
+def _show_traveler_preferences(record_key: str) -> None:
+    """Open the submitted preferences available to the current account."""
+
+    st.session_state[_OPEN_TRAVELER_PREFERENCES_KEY] = record_key
+    st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
+
+
+def _close_traveler_preferences(record_key: str) -> None:
+    """Close read-only submitted preferences for the selected trip."""
+
+    if st.session_state.get(_OPEN_TRAVELER_PREFERENCES_KEY) == record_key:
+        st.session_state.pop(_OPEN_TRAVELER_PREFERENCES_KEY, None)
 
 
 def _request_trip_deletion(record_key: str) -> None:
@@ -122,6 +140,8 @@ def _finish_trip_deletion(record: SavedTrip) -> None:
     _cancel_trip_deletion(record.record_key)
     if st.session_state.get(_OPEN_RESPONSE_STATUS_KEY) == record.record_key:
         st.session_state.pop(_OPEN_RESPONSE_STATUS_KEY, None)
+    if st.session_state.get(_OPEN_TRAVELER_PREFERENCES_KEY) == record.record_key:
+        st.session_state.pop(_OPEN_TRAVELER_PREFERENCES_KEY, None)
     open_itinerary = st.session_state.get(_OPEN_SAVED_ITINERARY_KEY)
     if isinstance(open_itinerary, dict) and (
         open_itinerary.get("record_key") == record.record_key
@@ -485,6 +505,94 @@ def _render_trip_brief(record: SavedTrip) -> None:
         st.caption(f"Must-dos · {' · '.join(must_do_briefs)}")
 
 
+def _preference_value(items: list[str]) -> str:
+    """Format a submitted tag list for compact read-only display."""
+
+    return ", ".join(items) if items else "None provided"
+
+
+def _render_traveler_preferences(
+    profiles: tuple[TravelerProfile, ...],
+    *,
+    editable_assignment: PreferenceAssignment | None,
+    record_key: str,
+    content_mode: Literal["drafts", "published"],
+) -> None:
+    """Render one permission-filtered preference profile without edit controls."""
+
+    with st.container(border=True):
+        with st.container(horizontal=True):
+            st.markdown("#### Traveler preferences")
+            st.button(
+                "Close",
+                icon=":material/close:",
+                key=f"close-preferences-{content_mode}-{record_key}",
+                on_click=_close_traveler_preferences,
+                args=(record_key,),
+            )
+        st.caption(
+            "Submitted preferences are read-only here. Each traveler can edit "
+            "only their own response."
+        )
+        profile = profiles[0]
+        if len(profiles) > 1:
+            profiles_by_name = {item.name: item for item in profiles}
+            selected_name = st.selectbox(
+                "Choose a traveler",
+                options=list(profiles_by_name),
+                key=f"preference-profile-{content_mode}-{record_key}",
+            )
+            profile = profiles_by_name[selected_name]
+
+        st.markdown(f"**{profile.name}**")
+        if (
+            editable_assignment is not None
+            and profile.name.casefold()
+            == editable_assignment.traveler_name.casefold()
+        ):
+            st.button(
+                "Edit my preferences",
+                icon=":material/edit:",
+                key=f"edit-own-preferences-{content_mode}-{record_key}",
+                on_click=_open_preference_assignment,
+                args=(editable_assignment,),
+            )
+        first_col, second_col = st.columns(2)
+        first_col.caption("Interests")
+        first_col.write(_preference_value(profile.interests))
+        second_col.caption("Walking comfort")
+        second_col.write(profile.walking_tolerance.value.title())
+
+        first_col, second_col = st.columns(2)
+        first_col.caption("Daily budget per person")
+        first_col.write(
+            daily_budget_label(profile.daily_budget_level)
+            if profile.daily_budget_level is not None
+            else "Not provided"
+        )
+        second_col.caption("Preferred pace")
+        second_col.write(
+            profile.pace_preference.value.title()
+            if profile.pace_preference is not None
+            else "Not provided"
+        )
+
+        first_col, second_col = st.columns(2)
+        first_col.caption("Preferred time")
+        first_col.write(
+            profile.time_preference.value.title()
+            if profile.time_preference is not None
+            else "Not provided"
+        )
+        second_col.caption("Dietary needs")
+        second_col.write(_preference_value(profile.food_restrictions))
+
+        st.caption("Must-do activities")
+        st.write(_preference_value(profile.must_do_activities))
+        st.caption("Note")
+        st.write(profile.note or "None provided")
+
+
 def _render_owner_sharing(record: SavedTrip) -> None:
     """Let an organizer create a read-only link or revoke shared access."""
 
@@ -496,7 +604,7 @@ def _render_owner_sharing(record: SavedTrip) -> None:
         share_links = {}
         st.session_state[_SHARE_LINKS_KEY] = share_links
     origin = current_app_origin()
-    with st.popover("Share trip", icon=":material/group_add:"):
+    with st.popover("Share", icon=":material/group_add:"):
         st.markdown("**Invite someone to this trip**")
         st.caption(
             "The link expires in 7 days and the recipient must sign in."
@@ -1058,6 +1166,7 @@ def _render_saved_trip_collection(
     invited_record_key: str | None = None,
     legacy_matches: dict[str, PreferenceDraft] | None = None,
     preference_drafts_by_id: dict[str, PreferenceDraft] | None = None,
+    preference_assignments: tuple[PreferenceAssignment, ...] = (),
     account=None,
 ) -> None:
     """Render one independently selectable group of saved trips."""
@@ -1168,6 +1277,18 @@ def _render_saved_trip_collection(
         preference_draft = preference_drafts_by_id.get(
             record.preference_draft_id or ""
         )
+        reviewable_profiles = reviewable_preference_profiles(
+            record,
+            account.user_id if account is not None else None,
+            owned_draft=preference_draft,
+            assignments=preference_assignments,
+        )
+        editable_assignment = editable_preference_assignment(
+            record,
+            account.user_id if account is not None else None,
+            owned_draft=preference_draft,
+            assignments=preference_assignments,
+        )
         has_new_preference_responses = False
         if record.is_owner and preference_draft is not None:
             complete_count = sum(
@@ -1215,6 +1336,17 @@ def _render_saved_trip_collection(
                             f"{record.record_key}"
                         ),
                         on_click=_show_response_status,
+                        args=(record.record_key,),
+                    )
+                if reviewable_profiles:
+                    st.button(
+                        "Traveler preferences",
+                        icon=":material/badge:",
+                        key=(
+                            f"view-traveler-preferences-{content_mode}-"
+                            f"{record.record_key}"
+                        ),
+                        on_click=_show_traveler_preferences,
                         args=(record.record_key,),
                     )
                 _render_owner_sharing(record)
@@ -1320,6 +1452,29 @@ def _render_saved_trip_collection(
                             on_click=_resume_preference_draft,
                             args=(preference_draft, record),
                         )
+        elif reviewable_profiles:
+            st.button(
+                "My preferences",
+                icon=":material/badge:",
+                key=(
+                    f"view-my-preferences-{content_mode}-"
+                    f"{record.record_key}"
+                ),
+                on_click=_show_traveler_preferences,
+                args=(record.record_key,),
+            )
+
+        if (
+            reviewable_profiles
+            and st.session_state.get(_OPEN_TRAVELER_PREFERENCES_KEY)
+            == record.record_key
+        ):
+            _render_traveler_preferences(
+                reviewable_profiles,
+                editable_assignment=editable_assignment,
+                record_key=record.record_key,
+                content_mode=content_mode,
+            )
         if can_start_new:
             st.caption(
                 "Start from this trip's curated activities with an empty shortlist."
@@ -1439,6 +1594,7 @@ def _render_saved_trip_sections(
     invited_record_key: str | None,
     legacy_matches: dict[str, PreferenceDraft],
     preference_drafts_by_id: dict[str, PreferenceDraft],
+    preference_assignments: tuple[PreferenceAssignment, ...],
     account,
 ) -> None:
     """Render Group/Self organization inside one lifecycle tab."""
@@ -1483,6 +1639,7 @@ def _render_saved_trip_sections(
             invited_record_key=invited_record_key,
             legacy_matches=legacy_matches,
             preference_drafts_by_id=preference_drafts_by_id,
+            preference_assignments=preference_assignments,
             account=account,
         )
 
@@ -1499,6 +1656,7 @@ def _render_saved_trip_sections(
             selector_label="Choose a self-planned trip",
             selector_key=f"{selector_prefix}self-trip-selector",
             invited_record_key=invited_record_key,
+            preference_assignments=preference_assignments,
             account=account,
         )
 
@@ -1522,9 +1680,10 @@ def render_saved_trips() -> None:
         st.toast(notice, icon=":material/check_circle:")
 
     drafts = _load_preference_drafts(account)
+    preference_assignments = tuple(_load_my_preference_assignments(account))
     pending_assignments = [
         assignment
-        for assignment in _load_my_preference_assignments(account)
+        for assignment in preference_assignments
         if assignment.profile is None
     ]
     records = list_saved_trips(
@@ -1587,6 +1746,7 @@ def render_saved_trips() -> None:
                 invited_record_key=invited_record_key,
                 legacy_matches=legacy_matches,
                 preference_drafts_by_id={draft.draft_id: draft for draft in drafts},
+                preference_assignments=preference_assignments,
                 account=account,
             )
     if published_tab.open:
@@ -1599,6 +1759,7 @@ def render_saved_trips() -> None:
                 invited_record_key=invited_record_key,
                 legacy_matches=legacy_matches,
                 preference_drafts_by_id={draft.draft_id: draft for draft in drafts},
+                preference_assignments=preference_assignments,
                 account=account,
             )
 

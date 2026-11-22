@@ -88,7 +88,7 @@ collection paths, and organizers can build once two profiles are ready.
     source identity plus category, budget, walking, and mapped-area diversity.
     **Done.**
 
-- [ ] **MVP-09: Verify the release**
+- [x] **MVP-09: Verify the release**
   - Add unit tests for new models, permissions, time blocks, budgets, and publish
     validation.
   - Add itinerary cases for incomplete groups and fairness coverage.
@@ -96,13 +96,23 @@ collection paths, and organizers can build once two profiles are ready.
     Streamlit smoke test.
   - Update user-facing documentation after behavior is verified.
   - Depends on MVP-03 through MVP-08.
+  - The full 315-test suite, deterministic retrieval, itinerary, and LLM
+    contract evaluations, zero-network health check, and local Streamlit health
+    smoke test pass. Permission tests cover owner, named-traveler, and ordinary
+    shared-viewer preference access. **Done.**
 
 ## Week two: stretch scope
 
-- [ ] **UX-01: Add read-only traveler preference review**
+- [x] **UX-01: Add read-only traveler preference review**
   - Let organizers reopen submitted named traveler profiles while reviewing a trip.
   - Let a traveler review their own submitted preferences after responding.
   - Decide the final placement and any later editing rules before implementation.
+  - My trips now shows a read-only profile review beside group-trip controls.
+    Organizers can switch among completed profiles; named travelers can see only
+    their own account-bound submission. Each signed-in traveler, including the
+    organizer, can edit only their own account-bound profile; saved drafts and
+    published versions remain unchanged until the organizer deliberately updates
+    recommendations. **Done.**
 
 - [ ] **COL-01: Add post-itinerary voting**
   - Store like, neutral, or dislike per member and scheduled item.

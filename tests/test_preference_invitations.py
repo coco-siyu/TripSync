@@ -12,7 +12,7 @@ from tests import configure_test_output
 configure_test_output()
 
 from src.invitations import invitation_token_hash
-from src.models import TravelerProfile, TripBasics
+from src.models import TravelerProfile, TripBasics, TripRequest
 from src.preference_invitations import (
     PreferenceAssignment,
     PreferenceDraft,
@@ -20,9 +20,11 @@ from src.preference_invitations import (
     build_preference_invitation_url,
     claim_preference_invitation,
     create_preference_draft,
+    editable_preference_assignment,
     link_saved_trip_to_preference_draft,
     list_my_preference_assignments,
     list_preference_drafts,
+    reviewable_preference_profiles,
     submit_preference_profile,
 )
 from src.trips import PREFERENCE_DRAFT_STATE_KEY, SavedTrip
@@ -47,6 +49,176 @@ def _profile(name: str) -> TravelerProfile:
 
 
 class PreferenceInvitationTests(unittest.TestCase):
+    def test_organizer_can_edit_only_their_own_submitted_slot(self) -> None:
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=_trip(),
+            slots=(
+                PreferenceSlot("a" * 32, "Coco", 0, _profile("Coco"), "owner-user"),
+                PreferenceSlot("b" * 32, "Sam", 1, _profile("Sam"), "member-user"),
+            ),
+            updated_at="2026-09-02T12:00:00+00:00",
+        )
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=draft.to_trip_request(),
+            state={PREFERENCE_DRAFT_STATE_KEY: draft.draft_id},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+        )
+
+        assignment = editable_preference_assignment(
+            record,
+            "owner-user",
+            owned_draft=draft,
+        )
+
+        self.assertIsNotNone(assignment)
+        assert assignment is not None
+        self.assertEqual(assignment.traveler_name, "Coco")
+        self.assertEqual(assignment.slot_id, "a" * 32)
+
+    def test_named_traveler_can_edit_only_their_account_assignment(self) -> None:
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=TripRequest(
+                **_trip().model_dump(mode="json"),
+                travelers=[_profile("Group traveler"), _profile("Another traveler")],
+            ),
+            state={PREFERENCE_DRAFT_STATE_KEY: "d" * 32},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+            access_role="traveler",
+        )
+        own_assignment = PreferenceAssignment(
+            draft_id="d" * 32,
+            slot_id="b" * 32,
+            traveler_name="Sam",
+            trip=_trip(),
+            profile=_profile("Sam"),
+        )
+        unrelated_assignment = PreferenceAssignment(
+            draft_id="e" * 32,
+            slot_id="c" * 32,
+            traveler_name="Alex",
+            trip=_trip(),
+            profile=_profile("Alex"),
+        )
+
+        assignment = editable_preference_assignment(
+            record,
+            "member-user",
+            assignments=(own_assignment, unrelated_assignment),
+        )
+
+        self.assertEqual(assignment, own_assignment)
+
+    def test_ordinary_shared_viewer_has_no_editable_preference_slot(self) -> None:
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=TripRequest(
+                **_trip().model_dump(mode="json"),
+                travelers=[_profile("Group traveler"), _profile("Another traveler")],
+            ),
+            state={PREFERENCE_DRAFT_STATE_KEY: "d" * 32},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+            access_role="viewer",
+        )
+
+        assignment = editable_preference_assignment(record, "viewer-user")
+
+        self.assertIsNone(assignment)
+
+    def test_organizer_can_review_every_submitted_profile(self) -> None:
+        draft = PreferenceDraft(
+            draft_id="d" * 32,
+            owner_id="owner-user",
+            title="Rome · 3 days",
+            trip=_trip(),
+            slots=(
+                PreferenceSlot("a" * 32, "Coco", 0, _profile("Coco"), "owner-user"),
+                PreferenceSlot("b" * 32, "Sam", 1, _profile("Sam"), "member-user"),
+                PreferenceSlot("c" * 32, "Alex", 2),
+            ),
+            updated_at="2026-09-02T12:00:00+00:00",
+        )
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=draft.to_trip_request(),
+            state={PREFERENCE_DRAFT_STATE_KEY: draft.draft_id},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+        )
+
+        profiles = reviewable_preference_profiles(
+            record,
+            "owner-user",
+            owned_draft=draft,
+        )
+
+        self.assertEqual([profile.name for profile in profiles], ["Coco", "Sam"])
+
+    def test_named_traveler_can_review_only_their_account_assignment(self) -> None:
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=TripRequest(
+                **_trip().model_dump(mode="json"),
+                travelers=[_profile("Group traveler"), _profile("Another traveler")],
+            ),
+            state={PREFERENCE_DRAFT_STATE_KEY: "d" * 32},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+            access_role="traveler",
+        )
+        own_assignment = PreferenceAssignment(
+            draft_id="d" * 32,
+            slot_id="b" * 32,
+            traveler_name="Sam",
+            trip=_trip(),
+            profile=_profile("Sam"),
+        )
+        other_assignment = PreferenceAssignment(
+            draft_id="e" * 32,
+            slot_id="c" * 32,
+            traveler_name="Alex",
+            trip=_trip(),
+            profile=_profile("Alex"),
+        )
+
+        profiles = reviewable_preference_profiles(
+            record,
+            "member-user",
+            assignments=(own_assignment, other_assignment),
+        )
+
+        self.assertEqual([profile.name for profile in profiles], ["Sam"])
+
+    def test_shared_viewer_without_named_assignment_cannot_review_profiles(self) -> None:
+        record = SavedTrip(
+            trip_id="saved-trip",
+            title="Rome · 3 days",
+            trip=TripRequest(
+                **_trip().model_dump(mode="json"),
+                travelers=[_profile("Group traveler"), _profile("Another traveler")],
+            ),
+            state={PREFERENCE_DRAFT_STATE_KEY: "d" * 32},
+            updated_at="2026-09-02T12:00:00+00:00",
+            owner_id="owner-user",
+            access_role="viewer",
+        )
+
+        profiles = reviewable_preference_profiles(record, "viewer-user")
+
+        self.assertEqual(profiles, ())
+
     def test_builds_a_separate_preference_invitation_url(self) -> None:
         url = build_preference_invitation_url(
             "https://tripsync.example/app?source=group",

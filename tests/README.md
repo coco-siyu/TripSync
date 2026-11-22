@@ -18,7 +18,9 @@ The current suite covers:
 - grounded narration prompts, structured OpenAI responses, configuration errors,
   and protection against invented or moved activities;
 - Streamlit preference, retrieval, must-do, shortlist, rejected-activity restore,
-  and replacement-undo interactions.
+  and replacement-undo interactions;
+- organizer, named-traveler, and ordinary shared-viewer permission boundaries
+  for submitted-preference review and account-bound self-editing.
 
 Run all tests from the repository root:
 
